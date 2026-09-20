@@ -1,0 +1,8 @@
+.venv/
+.mplconfig/
+__pycache__/
+.DS_Store
+.env
+.env.*
+# Local course reference; not part of the simulation source.
+CancerClonalExpansion.pdf

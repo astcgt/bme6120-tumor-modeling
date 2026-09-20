@@ -1,0 +1,13 @@
+replicate,seed,therapy_generation,stop_reason,status,nadir,relapse_generation
+0,100042,15,cell_limit,relapse,904,28
+1,100043,16,cell_limit,relapse,2742,26
+2,100044,15,cell_limit,relapse,1220,27
+3,100045,15,cell_limit,relapse,678,27
+4,100046,15,cell_limit,relapse,676,29
+5,100047,15,cell_limit,relapse,1562,26
+6,100048,15,cell_limit,relapse,1395,26
+7,100049,15,cell_limit,relapse,1257,26
+8,100050,15,cell_limit,relapse,688,28
+9,100051,15,cell_limit,relapse,920,28
+10,100052,16,cell_limit,relapse,703,30
+11,100053,15,cell_limit,relapse,1501,27
