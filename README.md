@@ -12,6 +12,7 @@ Use the project virtual environment directly; activation is unnecessary:
 
 ```bash
 .venv/bin/python modeling_cancer.py
+.venv/bin/python modeling_cancer.py --suppressor-hits 1
 .venv/bin/python modeling_cancer.py --seed 123 --replicates 30 --output outputs_seed123
 ```
 
@@ -26,10 +27,10 @@ In VS Code, select this project's `.venv/bin/python` as the Python interpreter. 
 
 ### Model assumptions
 
-- Start with 100 unmutated cells and 12 binary genes. Python indices 0–2 are drivers, index 3 confers resistance, and the remaining genes are passengers.
+- Start with 100 unmutated cells and 20 gene loci: 3 oncogenes (Python indices 0–2), 1 resistance gene (3), 2 tumor suppressor genes / TSGs (4–5), and 14 passengers (6–19). Each TSG has two independently mutable alleles; other loci use a binary mutation state. The genotype has 22 bits representing 20 genes, not 22 genes.
 - Each generation replaces each parent cell with 0, 2, or 3 offspring; the parent is not retained. With death probability `d` and probability `q` of three offspring conditional on survival, expected offspring per parent are `(1-d)*(2+q)`.
-- Reaching the driver threshold reduces death probability and increases the probability of three offspring. Additional drivers confer no further advantage. “Two hits” means mutations in two distinct driver genes, not inactivation of both alleles of one tumor suppressor gene.
-- Offspring inherit mutations, and each unmutated gene independently mutates with probability `mutation_rate`. Mutations are irreversible; multiple genes may mutate in one generation. The default rate of 0.001 per gene per offspring is chosen for a short demonstration.
+- Oncogene activation and TSG functional loss each reduce death probability and increase the probability of three offspring; these two effects add, once per category. `driver_hits` retains the separate threshold for the number of mutated oncogenes. `suppressor_hits=1` grants a TSG advantage after either allele is lost; `suppressor_hits=2` (default) requires loss of both alleles of the same TSG. One hit in each of two different TSGs does not satisfy the two-hit rule. The one-hit case is a simplified haploinsufficiency scenario, not a claim about every TSG.
+- Offspring inherit mutations, and each unmutated bit independently mutates with probability `mutation_rate`. Mutations are irreversible; multiple genes may mutate in one generation. The default rate of 0.001 per bit per offspring (per allele for TSGs) is chosen for a short demonstration. Both TSG alleles can mutate in one generation. Allele loss is represented by irreversible inactivating mutations; LOH, deletions, and epigenetic silencing are not separately modeled.
 - Grouping cells by genotype and sampling binomial counts is equivalent to individual-cell sampling under these assumptions, but more efficient. Identical genotypes may have different ancestors, so a genotype is not necessarily a lineage clone.
 - When the tumor first reaches 20,000 cells, continuous treatment starts with the next generation transition. After natural survival, sensitive cells have a 90% additional probability of death and resistant cells have a 4% probability; combined death probability is `1-(1-d)*(1-kill)`.
 - Resistance mutations can arise before or during treatment; treatment does not directly increase the mutation rate. New mutations arise in offspring and affect survival from the next generation.
@@ -43,15 +44,15 @@ The `outputs/` directory contains:
 | File | Purpose |
 | --- | --- |
 | `01_tumor_dashboard.png / .svg` | Cell counts, sensitive/resistant populations, genotype composition, diversity, and mutation frequencies |
-| `02_scenario_comparisons.png / .svg` | Growth with neutral mutations, one driver, or two drivers; heterogeneity at different death rates |
+| `02_scenario_comparisons.png / .svg` | Growth with no TSG advantage, TSG one-hit, or TSG two-hit; heterogeneity at different death rates |
 | `trajectory.csv` | Generation-by-generation statistics for one treatment simulation |
 | `comparisons.csv` | Replicate data, including trials that fail to reach the target size |
 | `therapy_replicates.csv` | Minimum burden, relapse generation, and stopping reason across treatment trials |
 | `run_metadata.json` | Parameters, random seed, and package versions |
 
-PNG figures use 240 dpi; SVG figures scale without loss of quality. Growth curves use symlog to display zero, with an approximately logarithmic scale above 1. In the composition plot, Gxxx is the hexadecimal genotype bitmask, and R indicates a resistance mutation. Major genotypes are selected by their summed proportions across generations.
+PNG figures use 240 dpi; SVG figures scale without loss of quality. Growth curves use symlog to display zero, with an approximately logarithmic scale above 1. In the composition plot, Gxxx is the hexadecimal genotype bitmask, and R indicates a resistance mutation. Major genotypes are selected by their summed proportions across generations. TSG heatmap rows show cells with **any** allele hit, not necessarily functional loss. `suppressor_fraction` records cells meeting the selected TSG threshold; `suppressor_biallelic_fraction` records cells with both alleles lost at at least one TSG. `driver_fraction` continues to refer only to the oncogene threshold.
 
-By default, growth comparisons show the median and 10th–90th percentile interval across 12 trials. This describes variation across trials, not a confidence interval. Death-rate comparisons sample 5,000 cells without replacement from the first generation to cross 5,000 cells and calculate Shannon H; horizontal bars show medians. These are equal-sized **samples**, conditional on reaching the threshold, rather than whole tumors at an exactly matched size. Trials that do not reach the threshold are excluded from H but retained in the CSV; the plot reports how many trials reached it.
+Growth comparisons keep oncogene effects, mutation rates, and loci identical, varying only the TSG advantage: disabled, one-hit, or two-hit. By default, growth comparisons show the median and 10th–90th percentile interval across 12 trials. This describes variation across trials, not a confidence interval. Death-rate comparisons sample 5,000 cells without replacement from the first generation to cross 5,000 cells and calculate Shannon H; horizontal bars show medians. These are equal-sized **samples**, conditional on reaching the threshold, rather than whole tumors at an exactly matched size. Trials that do not reach the threshold are excluded from H but retained in the CSV; the plot reports how many trials reached it.
 
 ### Customize and reuse
 
@@ -61,14 +62,16 @@ Edit parameters in `Config`, or call the model from another Python program:
 from pathlib import Path
 from modeling_cancer import Config, simulate, plot_dashboard
 
-config = Config(driver_hits=2, mutation_rate=0.0005)
+config = Config(suppressor_hits=1, mutation_rate=0.0005)
 result = simulate(config, seed=7, therapy=True)
 plot_dashboard(result, Path("my_figures"))
 ```
 
+Run the allele-state, mutation-conservation, and reproducibility tests with `.venv/bin/python -m unittest -v test_modeling_cancer.py`.
+
 The plotting functions `plot_dashboard`, `run_comparisons`, `set_plot_style`, and `save_figure` can be reused independently. The Agg backend saves figures directly without opening a GUI.
 
-Discussion topics include how drivers change expected offspring per generation; why requiring two drivers delays selective advantage; how pre-existing resistant cells become dominant during treatment; and how death rate, time to target size, and mutation accumulation relate at a fixed sample size. Interpret trends using the actual outputs rather than treating one random trajectory as a universal result.
+Discussion topics include how drivers change expected offspring per generation; why requiring loss of both TSG alleles delays selective advantage; how pre-existing resistant cells become dominant during treatment; and how death rate, time to target size, and mutation accumulation relate at a fixed sample size. Interpret trends using the actual outputs rather than treating one random trajectory as a universal result.
 
 ## 繁體中文
 
@@ -80,6 +83,7 @@ Discussion topics include how drivers change expected offspring per generation; 
 
 ```bash
 .venv/bin/python modeling_cancer.py
+.venv/bin/python modeling_cancer.py --suppressor-hits 1
 .venv/bin/python modeling_cancer.py --seed 123 --replicates 30 --output outputs_seed123
 ```
 
@@ -94,10 +98,10 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 
 ### 模型假設
 
-- 初始有 100 個未突變細胞、12 個二元基因。Python 索引 0–2 是 driver，3 是抗藥基因，其餘是 passenger。
+- 初始有 100 個未突變細胞、20 個基因座：3 個 oncogenes（Python 索引 0–2）、1 個抗藥基因（3）、2 個抑癌基因 TSG（4–5）及 14 個 passengers（6–19）。每個 TSG 各有兩個可獨立突變的等位基因，其餘基因採二元突變狀態。基因型使用 22 個位元表示 20 個基因，並非 22 個基因。
 - 每一代父細胞由 0、2 或 3 個子細胞取代；不另保留父細胞。死亡機率為 `d`，存活後三子細胞機率為 `q`，因此每個父細胞的期望子代數為 `(1-d)*(2+q)`。
-- 達到 driver 門檻會降低死亡率並提高產生三個子細胞的機率。多出的 driver 不再疊加優勢。「兩擊」是兩個不同 driver genes 突變，不是同一抑癌基因的兩個等位基因失活。
-- 子細胞繼承突變，每個尚未突變基因再以 `mutation_rate` 獨立突變。無回復突變，可在同一代累積多個突變。預設每基因每子細胞突變率 0.001 是為短時間演示而設定。
+- Oncogene 活化與 TSG 功能喪失各自降低死亡率並提高三子細胞機率，兩類效果可相加，每類最多計算一次。`driver_hits` 保留為不同 oncogenes 的突變數門檻。`suppressor_hits=1` 表示同一 TSG 任一等位基因失活即產生優勢；`suppressor_hits=2`（預設）則需同一 TSG 的兩個等位基因都失活。不同 TSG 各一擊不符合 two-hit 條件。One-hit 是簡化的單倍劑量不足情境，不代表所有抑癌基因皆如此。
+- 子細胞繼承突變，每個尚未突變位元再以 `mutation_rate` 獨立突變。無回復突變，可在同一代累積多個突變。預設每位元每子細胞突變率 0.001（TSG 為每等位基因）是為短時間演示而設定。TSG 的兩個等位基因可在同一代都突變。失活以不可逆突變表示，未另外區分雜合性缺失（LOH）、缺失或表觀遺傳沉默。
 - 按基因型計數並使用二項分布抽樣，與此假設下逐細胞抽樣等價，但更有效率。同基因型可來自不同祖先，因此圖中的 genotype 並不等同於譜系 clone。
 - 腫瘤首次達到 20,000 個細胞時，下一次世代轉移開始持續治療。自然存活後，敏感細胞有 90% 額外死亡機率，抗藥細胞有 4%；總死亡率為 `1-(1-d)*(1-kill)`。
 - 抗藥突變可在治療前或治療期間出現；治療不會直接提高突變率。新突變在子代產生時發生，其生存優勢於下一代生效。
@@ -111,15 +115,15 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 | 檔案 | 用途 |
 | --- | --- |
 | `01_tumor_dashboard.png / .svg` | 細胞數、敏感／抗藥族群、基因型組成、多樣性、基因突變頻率 |
-| `02_scenario_comparisons.png / .svg` | 無選擇優勢／一擊／兩擊的生長，以及不同死亡率下的異質性 |
+| `02_scenario_comparisons.png / .svg` | 無 TSG 優勢／TSG one-hit／TSG two-hit 的生長，以及不同死亡率下的異質性 |
 | `trajectory.csv` | 單次治療模擬逐代統計 |
 | `comparisons.csv` | 重複試驗數據，包含未達到指定大小的試驗 |
 | `therapy_replicates.csv` | 多次治療試驗的最低負荷、復發代數、停止原因 |
 | `run_metadata.json` | 參數、隨機種子與套件版本 |
 
-PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示，1 以上近似對數尺度。組成圖中的 Gxxx 是基因型 bitmask 的十六進位表示，R 表示含抗藥突變；主要基因型依跨世代累積比例選出。
+PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示，1 以上近似對數尺度。組成圖中的 Gxxx 是基因型 bitmask 的十六進位表示，R 表示含抗藥突變；主要基因型依跨世代累積比例選出。TSG 熱圖列顯示**任一等位基因有突變**的細胞比例，不一定代表功能喪失。`suppressor_fraction` 記錄符合所選 TSG 門檻的細胞比例；`suppressor_biallelic_fraction` 記錄至少一個 TSG 雙等位基因失活的細胞比例。`driver_fraction` 仍只表示達到 oncogene 門檻的比例。
 
-生長比較展示 12 次試驗的中位數及 10–90 百分位區間，這是試驗間變異，並不是信賴區間。死亡率比較使用各試驗首次跨過 5,000 細胞的世代，無放回取樣 5,000 細胞計算 Shannon H；圖上的橫線是中位數。此結果是在達門檻條件下的等大小**樣本**比較，並非精確命中該大小的完整腫瘤。未達門檻者不納入 H，但會保留於 CSV 並顯示成功試驗數。
+生長比較固定 oncogene 效果、突變率與基因座，只改變 TSG 優勢條件：取消優勢、一擊或兩擊。預設展示 12 次試驗的中位數及 10–90 百分位區間，這是試驗間變異，並不是信賴區間。死亡率比較使用各試驗首次跨過 5,000 細胞的世代，無放回取樣 5,000 細胞計算 Shannon H；圖上的橫線是中位數。此結果是在達門檻條件下的等大小**樣本**比較，並非精確命中該大小的完整腫瘤。未達門檻者不納入 H，但會保留於 CSV 並顯示成功試驗數。
 
 ### 修改與重用
 
@@ -129,11 +133,13 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 from pathlib import Path
 from modeling_cancer import Config, simulate, plot_dashboard
 
-config = Config(driver_hits=2, mutation_rate=0.0005)
+config = Config(suppressor_hits=1, mutation_rate=0.0005)
 result = simulate(config, seed=7, therapy=True)
 plot_dashboard(result, Path("my_figures"))
 ```
 
+執行 `.venv/bin/python -m unittest -v test_modeling_cancer.py` 可驗證等位基因狀態、突變守恆與可重現性。
+
 繪圖函數 `plot_dashboard`、`run_comparisons`、`set_plot_style`、`save_figure` 可獨立重用。使用 Agg backend，執行後直接存檔，不彈出 GUI。
 
-討論時可著重：driver 如何改變每代期望子代數；兩擊條件為何延遲選擇優勢；治療前已存在的抗藥細胞如何在治療後占優；相同樣本大小下，死亡率、達到大小所需代數和突變累積的關係。請以實際輸出數據解釋趨勢，避免將單一隨機案例當成普遍定律。
+討論時可著重：driver 如何改變每代期望子代數；TSG 雙等位基因失活條件為何延遲選擇優勢；治療前已存在的抗藥細胞如何在治療後占優；相同樣本大小下，死亡率、達到大小所需代數和突變累積的關係。請以實際輸出數據解釋趨勢，避免將單一隨機案例當成普遍定律。

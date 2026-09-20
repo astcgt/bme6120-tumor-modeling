@@ -1,6 +1,6 @@
 {
   "config": {
-    "n_genes": 12,
+    "n_genes": 20,
     "driver_genes": [
       0,
       1,
@@ -8,6 +8,13 @@
     ],
     "resistance_gene": 3,
     "driver_hits": 1,
+    "suppressor_genes": [
+      4,
+      5
+    ],
+    "suppressor_hits": 2,
+    "suppressor_death_reduction": 0.08,
+    "suppressor_triple_bonus": 0.12,
     "mutation_rate": 0.001,
     "death_rate": 0.3,
     "driver_death_reduction": 0.08,
@@ -23,11 +30,11 @@
   "seed": 42,
   "replicates": 12,
   "stop_reason": "cell_limit",
-  "therapy_generation": 15,
+  "therapy_generation": 16,
   "outcome": {
     "status": "relapse",
-    "nadir": 531,
-    "relapse_generation": 29
+    "nadir": 1595,
+    "relapse_generation": 27
   },
   "numpy_version": "2.0.2",
   "matplotlib_version": "3.9.4"

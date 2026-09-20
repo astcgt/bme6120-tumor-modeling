@@ -3,7 +3,7 @@
 執行：.venv/bin/python modeling_cancer.py
 模型以基因型計數（不是追蹤家系），所有參數均為教學假設，不是臨床估計。
 每代每個細胞死亡或產生 2 / 3 個子細胞；子細胞獨立發生不可逆突變。
-「兩擊」指兩個不同 driver genes 突變，並非同一基因的雙等位基因失活。
+抑癌基因以兩個等位基因建模；one-hit／two-hit 指同一抑癌基因的失活門檻。
 """
 
 # 延後解析型別註記，讓函數與資料類別的型別宣告更容易互相引用。
@@ -31,13 +31,17 @@ import numpy as np
 # 將所有模型參數集中管理；frozen=True 防止執行中意外修改設定。
 @dataclass(frozen=True)
 class Config:
-    # 基因組設定：每個位元代表一個基因是否突變，並指定驅動與抗藥基因。
-    n_genes: int = 12
+    # 20 個基因座：一般基因用一個位元；每個抑癌基因另加一個等位基因位元。
+    n_genes: int = 20
     driver_genes: tuple[int, ...] = (0, 1, 2)
     resistance_gene: int = 3
-    driver_hits: int = 1
+    driver_hits: int = 1  # 保留：不同 oncogene 的突變數門檻
+    suppressor_genes: tuple[int, ...] = (4, 5)
+    suppressor_hits: int = 2  # 同一抑癌基因需要失活的等位基因數
+    suppressor_death_reduction: float = 0.08
+    suppressor_triple_bonus: float = 0.12
     # 突變與生長設定：driver 達標後同時影響自然死亡率和三子細胞機率。
-    mutation_rate: float = 0.001  # 每個子細胞、每個未突變基因、每代
+    mutation_rate: float = 0.001  # 每個子細胞、每個未突變位元、每代；TSG 為每等位基因
     death_rate: float = 0.30
     driver_death_reduction: float = 0.08
     triple_probability: float = 0.04  # 存活後產生三個子細胞的機率
@@ -54,19 +58,22 @@ class Config:
         # 先檢查基因組大小、基因索引是否有效，以及 driver 門檻是否可達。
         if not 2 <= self.n_genes <= 20:
             raise ValueError("n_genes 必須介於 2–20")
-        genes = self.driver_genes + (self.resistance_gene,)
+        genes = self.driver_genes + self.suppressor_genes + (self.resistance_gene,)
         if len(set(genes)) != len(genes) or any(g < 0 or g >= self.n_genes for g in genes):
-            raise ValueError("driver 與 resistance 基因必須互異且位於基因組內")
+            raise ValueError("oncogene、suppressor 與 resistance 基因必須互異且位於基因組內")
         if not 1 <= self.driver_hits <= len(self.driver_genes):
             raise ValueError("driver_hits 超出可用 driver 數目")
+        if not self.suppressor_genes or self.suppressor_hits not in (1, 2):
+            raise ValueError("需要至少一個抑癌基因，suppressor_hits 必須為 1 或 2")
         # 逐一檢查機率參數，避免傳入二項分布時出現無效機率。
         for name in ("mutation_rate", "death_rate", "driver_death_reduction",
                      "triple_probability", "driver_triple_bonus",
+                     "suppressor_death_reduction", "suppressor_triple_bonus",
                      "sensitive_therapy_kill", "resistant_therapy_kill"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} 必須介於 0–1")
         # 額外檢查加總後的機率與模擬規模；單個參數有效不代表組合必然有效。
-        if self.triple_probability + self.driver_triple_bonus > 1:
+        if self.triple_probability + self.driver_triple_bonus + self.suppressor_triple_bonus > 1:
             raise ValueError("產生三個子細胞的總機率不能超過 1")
         if min(self.initial_cells, self.generations, self.therapy_start_size, self.max_cells) <= 0:
             raise ValueError("細胞數、代數與門檻必須為正")
@@ -88,13 +95,38 @@ def driver_count(genotype: int, config: Config) -> int:
     return sum(bool(genotype & (1 << g)) for g in config.driver_genes)
 
 
+def suppressor_alleles(genotype: int, gene: int, config: Config) -> int:
+    """回傳同一抑癌基因失活的等位基因數（0、1 或 2）。"""
+    # 第一個位元沿用基因座索引；第二個放在 n_genes 後，不增加基因座數。
+    second = config.n_genes + config.suppressor_genes.index(gene)
+    return int(bool(genotype & (1 << gene))) + int(bool(genotype & (1 << second)))
+
+
+def suppressor_loss(genotype: int, config: Config) -> bool:
+    # 必須是同一基因達到門檻；兩個不同基因各一擊不等於同一基因兩擊。
+    return any(suppressor_alleles(genotype, gene, config) >= config.suppressor_hits
+               for gene in config.suppressor_genes)
+
+
+def growth_probabilities(genotype: int, config: Config) -> tuple[float, float]:
+    """分開計算 oncogene 活化及抑癌功能喪失的生長優勢，可相加。"""
+    oncogene = driver_count(genotype, config) >= config.driver_hits
+    suppressor = suppressor_loss(genotype, config)
+    # 每一類優勢最多給一次；多個抑癌基因達標不再重複累加。
+    death = max(0, config.death_rate - config.driver_death_reduction * oncogene
+                - config.suppressor_death_reduction * suppressor)
+    triple = (config.triple_probability + config.driver_triple_bonus * oncogene
+              + config.suppressor_triple_bonus * suppressor)
+    return death, triple
+
+
 def mutate_offspring(population: dict[int, int], config: Config,
                      rng: np.random.Generator) -> dict[int, int]:
     """逐基因二項抽樣：與逐細胞獨立突變等價，允許一代多基因突變。"""
     # 複製輸入字典，避免突變抽樣直接改動呼叫端保存的族群。
     population = dict(population)
-    # 依序處理每個基因；後續基因會接續前一基因的結果，因此允許多重突變。
-    for gene in range(config.n_genes):
+    # 依序處理一般基因與 TSG 的兩個等位基因；允許同一代兩個等位基因都突變。
+    for gene in range(config.n_genes + len(config.suppressor_genes)):
         bit = 1 << gene
         # 將讀取與寫入分開，避免同一輪新增的基因型被重複處理。
         updated = dict(population)
@@ -120,13 +152,19 @@ def summarize(population: dict[int, int], generation: int, config: Config) -> di
     # 抗藥基因位元決定敏感／抗藥分類，與是否已達 driver 門檻分開判斷。
     resistant = sum(n for g, n in population.items() if g & (1 << config.resistance_gene))
     # 彙整多樣性：richness 是基因型數；Shannon 用自然對數；Simpson 為 1−Σp²。
-    # driver_fraction 則是具有生長優勢的細胞比例；滅絕時各比例設為零。
+    # driver_fraction 只計 oncogene 達標；suppressor_fraction 計 TSG 達標。
+    # suppressor_biallelic_fraction 計至少一個 TSG 雙等位基因失活；滅絕時皆為零。
     return dict(generation=generation, total=total, resistant=resistant,
                 sensitive=total - resistant, richness=len(population),
                 shannon=float(-np.sum(fractions * np.log(fractions))),
                 simpson=float(1 - np.sum(fractions ** 2)) if total else 0.0,
                 driver_fraction=sum(n for g, n in population.items()
-                                    if driver_count(g, config) >= config.driver_hits) / max(total, 1))
+                                    if driver_count(g, config) >= config.driver_hits) / max(total, 1),
+                suppressor_fraction=sum(n for g, n in population.items()
+                                        if suppressor_loss(g, config)) / max(total, 1),
+                suppressor_biallelic_fraction=sum(n for g, n in population.items()
+                    if any(suppressor_alleles(g, gene, config) == 2
+                           for gene in config.suppressor_genes)) / max(total, 1))
 
 
 def simulate(config: Config = Config(), seed: int = 42, therapy: bool = True,
@@ -169,9 +207,8 @@ def simulate(config: Config = Config(), seed: int = 42, therapy: bool = True,
         # 依基因型批次處理所有父細胞；新世代完全由 offspring 取代。
         offspring = {}
         for genotype, count in population.items():
-            # 判斷是否達 driver 門檻，再降低自然死亡率，最低限制為零。
-            advantage = driver_count(genotype, config) >= config.driver_hits
-            death = max(0, config.death_rate - config.driver_death_reduction * advantage)
+            # 將 oncogene 與抑癌基因的效果合併，再套用治療殺傷。
+            death, triple = growth_probabilities(genotype, config)
             # 治療殺傷作用於自然存活者，因此用兩個存活機率相乘計算總死亡率。
             if therapy_generation is not None:
                 resistant = bool(genotype & (1 << config.resistance_gene))
@@ -179,8 +216,7 @@ def simulate(config: Config = Config(), seed: int = 42, therapy: bool = True,
                 death = 1 - (1 - death) * (1 - kill)
             # 先抽出存活父細胞，再抽出其中產生三個子細胞者；其餘各產生兩個。
             survivors = int(rng.binomial(count, 1 - death))
-            triples = int(rng.binomial(survivors, config.triple_probability +
-                                      config.driver_triple_bonus * advantage))
+            triples = int(rng.binomial(survivors, triple))
             # 每個存活者先貢獻兩個子細胞，三子細胞事件再各加一個。
             n = 2 * survivors + triples
             if n:
@@ -246,7 +282,7 @@ def plot_dashboard(result: Result, output: Path):
     """輸出生長、基因型組成、多樣性與突變頻率四面板圖。"""
     # 建立 2×2 面板，使用自動排版協調標題、座標標籤與色條的空間。
     set_plot_style()
-    fig, axes = plt.subplots(2, 2, figsize=(13.5, 9), layout="constrained")
+    fig, axes = plt.subplots(2, 2, figsize=(15, 11), layout="constrained")
     fig.suptitle("Tumor evolution | treatment & resistance", fontsize=21, fontweight="bold")
     t = np.array([r["generation"] for r in result.history])
     # 面板 A：並列總細胞、敏感細胞與抗藥細胞的逐代數量。
@@ -275,17 +311,18 @@ def plot_dashboard(result: Result, output: Path):
     bands = np.array([[p.get(g, 0) / max(n, 1) for p, n in zip(result.populations, totals)] for g in top])
     others = np.maximum(0, (totals > 0).astype(float) - bands.sum(axis=0))
     # 以十六進位顯示基因型 bitmask；含抗藥基因者附上 R，方便辨識。
-    labels = [f"G{g:03X}" + (" (R)" if g & (1 << result.config.resistance_gene) else "") for g in top]
+    labels = [f"G{g:06X}" + (" (R)" if g & (1 << result.config.resistance_gene) else "") for g in top]
     ax.stackplot(t, *bands, others, labels=labels + ["Other"], colors=COLORS, alpha=0.9)
     ax.set(ylim=(0, 1), ylabel="Fraction of cells", title="B  Genotype composition")
-    ax.legend(loc="upper left", fontsize=8, frameon=False, ncol=3)
+    ax.legend(loc="upper left", fontsize=8, frameon=False, ncol=2)
     # 面板 C：exp(Shannon H) 將熵轉為有效基因型數，滅絕時另外定義為零。
     ax = axes[1, 0]
     ax.plot(t, [np.exp(r["shannon"]) if r["total"] else 0 for r in result.history], color=COLORS[2])
     ax.set(ylabel="Effective genotypes: exp(Shannon H)", title="C  Genetic heterogeneity")
-    # 面板 D：每列為一個基因、每欄為一代，數值為攜帶該突變的細胞比例。
+    # 面板 D：TSG 顯示任一等位基因失活的細胞比例，不代表已達功能喪失門檻。
     ax = axes[1, 1]
-    frequency = np.array([[sum(n for g, n in p.items() if g & (1 << gene)) / max(total, 1)
+    frequency = np.array([[sum(n for g, n in p.items() if (suppressor_alleles(g, gene, result.config) > 0
+                               if gene in result.config.suppressor_genes else bool(g & (1 << gene)))) / max(total, 1)
                            for p, total in zip(result.populations, totals)]
                           for gene in range(result.config.n_genes)])
     # 用網格邊界繪製熱圖，固定色階 0–1，便於比較不同基因的突變頻率。
@@ -294,9 +331,11 @@ def plot_dashboard(result: Result, output: Path):
                          frequency, cmap="YlGnBu", vmin=0, vmax=1, shading="flat")
     # 顯示時將零起算索引改成 Gene 1 起算，並標出 driver 與 resistance。
     labels = [f"Gene {g + 1}" + (" · driver" if g in result.config.driver_genes else
-                                  " · resistance" if g == result.config.resistance_gene else "")
+                                  " · resistance" if g == result.config.resistance_gene else
+                                  " · TSG (any hit)" if g in result.config.suppressor_genes else "")
               for g in range(result.config.n_genes)]
     ax.set(yticks=range(result.config.n_genes), yticklabels=labels, title="D  Mutation frequencies")
+    ax.tick_params(axis="y", labelsize=8)
     ax.grid(False)
     fig.colorbar(mesh, ax=ax, label="Mutant fraction", pad=0.02)
     # 所有面板共用世代標籤及整數刻度，最後一次輸出整張展示圖。
@@ -332,13 +371,13 @@ def run_comparisons(config: Config, repeats: int, seed: int, output: Path) -> li
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.4), layout="constrained")
     fig.suptitle("What changes tumor growth and diversity?", fontsize=20, fontweight="bold")
     rows = []
-    # 生長比較固定觀察 18 代，分別模擬無選擇優勢、一擊與兩擊條件。
+    # 生長比較固定觀察 18 代，固定 oncogene 設定，比較無 TSG 優勢、TSG 一擊與兩擊條件。
     growth_horizon = 18
-    for condition, label in enumerate(("Neutral mutations", "One driver required", "Two drivers required")):
-        # 用 replace 建立新設定而不修改原始 Config；中性情境將兩種 driver 優勢設零。
-        cfg = replace(config, generations=growth_horizon, max_cells=10**12, driver_hits=2 if condition == 2 else 1)
+    for condition, label in enumerate(("No TSG advantage", "TSG one-hit", "TSG two-hit")):
+        # 用 replace 建立新設定而不修改原始 Config；控制組只取消 TSG 優勢；所有情境保留相同 oncogene 效果與突變率。
+        cfg = replace(config, generations=growth_horizon, max_cells=10**12, suppressor_hits=1 if condition == 1 else 2)
         if condition == 0:
-            cfg = replace(cfg, driver_death_reduction=0, driver_triple_bonus=0)
+            cfg = replace(cfg, suppressor_death_reduction=0, suppressor_triple_bonus=0)
         # 收集每次試驗的完整生長曲線；不同條件與重複試驗使用不同種子。
         trajectories = []
         for rep in range(repeats):
@@ -353,13 +392,14 @@ def run_comparisons(config: Config, repeats: int, seed: int, output: Path) -> li
             trajectories.append(values)
             rows.append(dict(experiment="growth", condition=label, replicate=rep,
                              seed=run_seed, reached_target="", generation=result.history[-1]["generation"],
-                             total=result.history[-1]["total"], shannon=result.history[-1]["shannon"]))
+                             total=result.history[-1]["total"], shannon=result.history[-1]["shannon"],
+                             suppressor_fraction=result.history[-1]["suppressor_fraction"]))
         # 逐代計算中位數與 10–90 百分位；陰影是試驗間變異，不是信賴區間。
         low, median, high = np.percentile(trajectories, [10, 50, 90], axis=0)
         axes[0].plot(range(growth_horizon + 1), median, color=COLORS[condition], label=label)
         axes[0].fill_between(range(growth_horizon + 1), low, high, color=COLORS[condition], alpha=0.14)
     # 完成生長面板的對數尺度與圖例，讓三種情境易於比較。
-    axes[0].set(title="A  Growth advantage", xlabel="Generation", ylabel="Cells · median & 10–90% interval")
+    axes[0].set(title="A  Tumor suppressor hit requirement", xlabel="Generation", ylabel="Cells · median & 10–90% interval")
     axes[0].set_yscale("symlog", linthresh=1)
     axes[0].legend(frameon=False, fontsize=9)
     # 死亡率比較：首次達標後固定取樣 5,000 個細胞，降低跨門檻大小差異的影響。
@@ -379,7 +419,8 @@ def run_comparisons(config: Config, repeats: int, seed: int, output: Path) -> li
             rows.append(dict(experiment="death_rate", condition=death, replicate=rep,
                              seed=run_seed, reached_target=sample is not None,
                              generation=result.history[-1]["generation"],
-                             total=result.history[-1]["total"], shannon=sample["shannon"] if sample else ""))
+                             total=result.history[-1]["total"], shannon=sample["shannon"] if sample else "",
+                             suppressor_fraction=sample["suppressor_fraction"] if sample else ""))
         # 散點左右微幅偏移只改善重疊顯示；黑色橫線標示該組中位數。
         if values:
             jitter = np.random.default_rng(seed + index).uniform(-0.10, 0.10, len(values))
@@ -408,6 +449,8 @@ def write_csv(path: Path, rows: list[dict]):
 def main():
     # 命令列入口：允許指定亂數種子、重複次數及輸出資料夾。
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--suppressor-hits", type=int, choices=(1, 2), default=2,
+                        help="TSG allele-loss threshold for the main treatment scenario")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--replicates", type=int, default=12)
     parser.add_argument("--output", type=Path, default=Path("outputs"))
@@ -417,7 +460,7 @@ def main():
         parser.error("--replicates must be >= 1")
     args.output.mkdir(parents=True, exist_ok=True)
     # 執行預設治療案例，輸出四面板圖與逐代統計，再執行情境比較。
-    config = Config()
+    config = Config(suppressor_hits=args.suppressor_hits)
     result = simulate(config, args.seed)
     plot_dashboard(result, args.output)
     write_csv(args.output / "trajectory.csv", result.history)
