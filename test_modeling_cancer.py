@@ -3,10 +3,29 @@ import unittest
 from dataclasses import replace
 import numpy as np
 from modeling_cancer import (Config, suppressor_alleles, suppressor_loss,
-                             growth_probabilities, mutate_offspring, simulate)
+                             growth_probabilities, mutate_offspring, simulate, il11_environment)
 
 
 class SuppressorTests(unittest.TestCase):
+    def test_il11_shared_environment(self):
+        # 關閉或沒有生產者時，共享效果為零；TSG 與 oncogene 不需跟著突變。
+        c = Config(il11_enabled=True)
+        producer = 1 << c.il11_gene
+        self.assertEqual(il11_environment({0: 100}, c), (0, 0))
+        self.assertEqual(il11_environment({producer: 100}, replace(c, il11_enabled=False)), (0, 0))
+        fraction, benefit = il11_environment({0: 98, producer: 2}, c)
+        self.assertAlmostEqual(fraction, 0.02)
+        self.assertAlmostEqual(benefit, c.il11_max_death_reduction / 2)
+        self.assertLess(growth_probabilities(0, c, benefit)[0], growth_probabilities(0, c)[0])
+        self.assertEqual(growth_probabilities(0, c, benefit), growth_probabilities(producer, c, benefit))
+        # 零效果時，開關不影響突變抽樣與族群歷程。
+        off = Config(generations=6, il11_max_death_reduction=0)
+        self.assertEqual(simulate(off, seed=7).populations,
+                         simulate(replace(off, il11_enabled=True), seed=7).populations)
+        for invalid in (replace(c, il11_half_fraction=0), replace(c, il11_gene=0)):
+            with self.assertRaises(ValueError):
+                invalid.validate()
+
     def test_same_gene_two_hits(self):
         c = Config()
         first = 1 << c.suppressor_genes[0]

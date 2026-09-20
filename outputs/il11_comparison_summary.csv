@@ -1,0 +1,3 @@
+condition,generation,replicates,median_total,median_il11_percent,median_shared_death_reduction,median_nonproducer_expected_offspring
+IL11 OFF,18,12,74000.0,0.0,0.0,1.428
+IL11 ON,18,12,117773.5,1.5829576299907293,0.026507722525683012,1.4820757539523934

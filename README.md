@@ -62,6 +62,22 @@ Growth comparisons keep oncogene effects, mutation rates, and loci identical, va
 
 The dedicated figure reuses the same 12 trials per scenario from the growth experiment; no therapy is applied. Panel A uses a linear cell-count axis, panel B shows the percentage meeting each scenario's TSG-loss threshold (symlog, linear below 0.01%), and panel C shows every trial at generation 18 with median bars. The threshold differs by definition; panel B measures the resulting phenotype, not an identical mutation state in both groups. Bands show trial variation, not confidence intervals. Overlap and stochastic reversals are retained rather than selecting favorable seeds.
 
+### IL11+ populations and shared fitness
+
+Enable the functional IL11 locus with `Config(il11_enabled=True)` or:
+
+```bash
+.venv/bin/python modeling_cancer.py --il11
+```
+
+The default is OFF. ON repurposes passenger index 6 (Gene 7) as IL11; OFF retains it as a neutral passenger, keeping 20 loci and identical mutation opportunities. Thus ON has 13 passengers plus IL11, while OFF has 14 passengers and no functional IL11 locus. A mutation marks IL11+ producers; this is a teaching assumption, not a calibrated mechanism of IL11 activation. Genotype groups may include multiple independent lineages, so “IL11+ clone” here means the producer population rather than a reconstructed ancestry.
+
+At each generation, producer fraction `f` sets a shared absolute death-probability reduction `b = il11_max_death_reduction * f / (il11_half_fraction + f)`. Defaults are 0.06 maximum and 0.02 half-saturation. All cells, including IL11-negative cells, receive the same reduction before therapy; death probability is floored at zero. New producers affect the next transition. This assumes uniform mixing, no secretion cost, and no spatial effects or cytokine persistence. Without producers or with the switch OFF, the benefit is zero.
+
+![IL11 shared fitness comparison](outputs/04_il11_shared_fitness.png)
+
+Every normal run generates an ON/OFF comparison without therapy over 18 generations (12 trials by default). Panels show whole-tumor growth, producer fraction, shared death reduction, and expected offspring of a mutation-free nonproducer under the current environment. The last quantity is a reference fitness calculation, not observed average growth. Matching seed numbers aid reproducibility but do not imply cell-by-cell pairing after trajectories diverge. Raw data and endpoint medians are saved to `il11_comparison.csv` and `il11_comparison_summary.csv`; figures are PNG/SVG. Other mutation and growth parameters remain identical, and trial variation is retained.
+
 ### Customize and reuse
 
 Edit parameters in `Config`, or call the model from another Python program:
@@ -140,6 +156,22 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 ![One-hit 與 two-hit 比較](outputs/03_one_hit_vs_two_hit.png)
 
 專屬比較圖重用生長試驗每種情境的同一批 12 次試驗，不施加治療。A 面板以線性座標顯示細胞數，B 面板顯示各情境達到 TSG 失活門檻的細胞百分比（symlog，0.01% 以下為線性），C 面板顯示第 18 代每次試驗的負荷與中位數橫線。兩情境的門檻定義不同，B 比較的是功能表型，而非完全相同的突變狀態。陰影表示試驗間變異，不是信賴區間；保留重疊與隨機反轉，不挑選有利種子。
+
+### IL11+ 族群與共享生長優勢
+
+用 `Config(il11_enabled=True)` 或以下指令開啟 IL11 功能：
+
+```bash
+.venv/bin/python modeling_cancer.py --il11
+```
+
+預設為關閉。開啟時將 passenger 索引 6（Gene 7）改為 IL11；關閉時保留為中性 passenger，維持 20 個位點與相同突變機會。因此開啟時為 13 個 passengers 加 IL11，關閉時為 14 個 passengers 且沒有功能性 IL11 位點。突變後標記為 IL11+ 生產者；這是教學假設，並非經校準的 IL11 活化機制。同基因型可能來自不同祖先，因此這裡的「IL11+ clone」指生產者族群，不是重建出的家系。
+
+每代以生產者比例 `f` 計算共享死亡率降低量：`b = il11_max_death_reduction * f / (il11_half_fraction + f)`。預設最大降低量為 0.06、半飽和比例為 0.02。所有細胞（包含 IL11 陰性細胞）都在治療前獲得同樣降低量，死亡率最低為零；新生產者從下一次轉移開始提供效果。假設環境均勻混合、沒有分泌成本、空間效應或細胞因子殘留。無生產者或開關關閉時，效果為零。
+
+![IL11 共享生長優勢比較](outputs/04_il11_shared_fitness.png)
+
+每次正常執行都會生成不施加治療、觀察 18 代的 ON／OFF 比較，預設每組 12 次試驗。四面板顯示整體生長、生產者比例、共享死亡率降低量，以及未突變非生產者在當前環境中的預期子代數；最後一項是參考 fitness 計算，不是觀察到的平均增長。相同 seed 方便重現，但族群分歧後不代表逐細胞配對。逐代資料與終點中位數存於 `il11_comparison.csv`、`il11_comparison_summary.csv`，圖表輸出 PNG／SVG。其餘突變與生長參數保持一致，並保留試驗間變異。
 
 ### 修改與重用
 

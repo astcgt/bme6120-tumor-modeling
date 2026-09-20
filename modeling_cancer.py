@@ -40,6 +40,11 @@ class Config:
     suppressor_hits: int = 2  # 同一抑癌基因需要失活的等位基因數
     suppressor_death_reduction: float = 0.08
     suppressor_triple_bonus: float = 0.12
+    # IL11 開關：啟用時將第 7 個基因座由 passenger 改為 IL11；關閉時保留中性位點。
+    il11_enabled: bool = False
+    il11_gene: int = 6
+    il11_max_death_reduction: float = 0.06
+    il11_half_fraction: float = 0.02  # IL11+ 占 2% 時達最大共享效果的一半
     # 突變與生長設定：driver 達標後同時影響自然死亡率和三子細胞機率。
     mutation_rate: float = 0.001  # 每個子細胞、每個未突變位元、每代；TSG 為每等位基因
     death_rate: float = 0.30
@@ -65,10 +70,17 @@ class Config:
             raise ValueError("driver_hits 超出可用 driver 數目")
         if not self.suppressor_genes or self.suppressor_hits not in (1, 2):
             raise ValueError("需要至少一個抑癌基因，suppressor_hits 必須為 1 或 2")
+        # 保留 20 個基因座及相同突變機會，避免有無 IL11 比較混入基因組大小差異。
+        if not isinstance(self.il11_enabled, bool):
+            raise ValueError("il11_enabled 必須為 bool")
+        if self.il11_gene in genes or not 0 <= self.il11_gene < self.n_genes:
+            raise ValueError("IL11 必須是獨立且有效的基因座")
+        if not 0 < self.il11_half_fraction <= 1:
+            raise ValueError("il11_half_fraction 必須介於 0（不含）與 1")
         # 逐一檢查機率參數，避免傳入二項分布時出現無效機率。
         for name in ("mutation_rate", "death_rate", "driver_death_reduction",
                      "triple_probability", "driver_triple_bonus",
-                     "suppressor_death_reduction", "suppressor_triple_bonus",
+                     "suppressor_death_reduction", "suppressor_triple_bonus", "il11_max_death_reduction",
                      "sensitive_therapy_kill", "resistant_therapy_kill"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} 必須介於 0–1")
@@ -108,16 +120,28 @@ def suppressor_loss(genotype: int, config: Config) -> bool:
                for gene in config.suppressor_genes)
 
 
-def growth_probabilities(genotype: int, config: Config) -> tuple[float, float]:
+def growth_probabilities(genotype: int, config: Config, shared_benefit: float = 0.0) -> tuple[float, float]:
     """分開計算 oncogene 活化及抑癌功能喪失的生長優勢，可相加。"""
     oncogene = driver_count(genotype, config) >= config.driver_hits
     suppressor = suppressor_loss(genotype, config)
     # 每一類優勢最多給一次；多個抑癌基因達標不再重複累加。
     death = max(0, config.death_rate - config.driver_death_reduction * oncogene
-                - config.suppressor_death_reduction * suppressor)
+                - config.suppressor_death_reduction * suppressor - shared_benefit)
     triple = (config.triple_probability + config.driver_triple_bonus * oncogene
               + config.suppressor_triple_bonus * suppressor)
     return death, triple
+
+
+def il11_environment(population: dict[int, int], config: Config) -> tuple[float, float]:
+    """由當前 IL11+ 細胞比例計算下一次轉移的共享死亡率降低量。"""
+    # 關閉時此位點只是 passenger，不產生 IL11，也不提供共享優勢。
+    total = sum(population.values())
+    if not config.il11_enabled or total == 0:
+        return 0.0, 0.0
+    fraction = sum(n for g, n in population.items() if g & (1 << config.il11_gene)) / total
+    # 飽和函數是教學假設；均勻混合環境中所有細胞（含非生產者）皆受益。
+    benefit = config.il11_max_death_reduction * fraction / (config.il11_half_fraction + fraction)
+    return fraction, benefit
 
 
 def mutate_offspring(population: dict[int, int], config: Config,
@@ -151,10 +175,12 @@ def summarize(population: dict[int, int], generation: int, config: Config) -> di
     fractions = np.array(list(population.values()), dtype=float) / max(total, 1)
     # 抗藥基因位元決定敏感／抗藥分類，與是否已達 driver 門檻分開判斷。
     resistant = sum(n for g, n in population.items() if g & (1 << config.resistance_gene))
+    il11_fraction, shared_benefit = il11_environment(population, config)
     # 彙整多樣性：richness 是基因型數；Shannon 用自然對數；Simpson 為 1−Σp²。
     # driver_fraction 只計 oncogene 達標；suppressor_fraction 計 TSG 達標。
     # suppressor_biallelic_fraction 計至少一個 TSG 雙等位基因失活；滅絕時皆為零。
     return dict(generation=generation, total=total, resistant=resistant,
+                il11_fraction=il11_fraction, il11_shared_benefit=shared_benefit,
                 sensitive=total - resistant, richness=len(population),
                 shannon=float(-np.sum(fractions * np.log(fractions))),
                 simpson=float(1 - np.sum(fractions ** 2)) if total else 0.0,
@@ -205,10 +231,12 @@ def simulate(config: Config = Config(), seed: int = 42, therapy: bool = True,
         if therapy and therapy_generation is None and row["total"] >= config.therapy_start_size:
             therapy_generation = generation
         # 依基因型批次處理所有父細胞；新世代完全由 offspring 取代。
+        # 每代只計算一次共享環境；本代新突變會從下一次轉移開始提供 IL11。
+        _, shared_benefit = il11_environment(population, config)
         offspring = {}
         for genotype, count in population.items():
             # 將 oncogene 與抑癌基因的效果合併，再套用治療殺傷。
-            death, triple = growth_probabilities(genotype, config)
+            death, triple = growth_probabilities(genotype, config, shared_benefit)
             # 治療殺傷作用於自然存活者，因此用兩個存活機率相乘計算總死亡率。
             if therapy_generation is not None:
                 resistant = bool(genotype & (1 << config.resistance_gene))
@@ -332,7 +360,8 @@ def plot_dashboard(result: Result, output: Path):
     # 顯示時將零起算索引改成 Gene 1 起算，並標出 driver 與 resistance。
     labels = [f"Gene {g + 1}" + (" · driver" if g in result.config.driver_genes else
                                   " · resistance" if g == result.config.resistance_gene else
-                                  " · TSG (any hit)" if g in result.config.suppressor_genes else "")
+                                  " · TSG (any hit)" if g in result.config.suppressor_genes else
+                                  " · IL11" if result.config.il11_enabled and g == result.config.il11_gene else "")
               for g in range(result.config.n_genes)]
     ax.set(yticks=range(result.config.n_genes), yticklabels=labels, title="D  Mutation frequencies")
     ax.tick_params(axis="y", labelsize=8)
@@ -502,6 +531,62 @@ def plot_hit_comparison(rows: list[dict], config: Config, output: Path):
     write_csv(output / "one_hit_vs_two_hit_summary.csv", summaries)
 
 
+def run_il11_comparison(config: Config, repeats: int, seed: int, output: Path, horizon: int = 18):
+    """比較相同 20 個基因座下，IL11 功能有無對整體與非生產者的影響。"""
+    if repeats < 1 or horizon < 1:
+        raise ValueError("repeats 與 horizon 必須為正")
+    set_plot_style()
+    fig, axes = plt.subplots(2, 2, figsize=(14, 9), layout="constrained")
+    fig.suptitle("IL11+ populations | shared fitness advantage", fontsize=21, fontweight="bold")
+    fig.supxlabel(f"No therapy · {repeats} trials/condition · median and 10–90% interval (not CI)\n"
+                  "OFF: neutral passenger at the same locus. ON: IL11 mutation creates producers; all cells benefit.", fontsize=10)
+    rows, summaries = [], []
+    for enabled, label, color in ((False, "IL11 OFF", COLORS[0]), (True, "IL11 ON", COLORS[1])):
+        # 固定時間窗與其餘參數；同一 replicate 用同一 seed，但分歧後不視為逐細胞配對。
+        cfg = replace(config, il11_enabled=enabled, generations=horizon, max_cells=10**12)
+        trials = []
+        for rep in range(repeats):
+            run_seed = seed + 300000 + rep
+            result = simulate(cfg, seed=run_seed, therapy=False)
+            if result.stop_reason == "cell_limit":
+                raise RuntimeError("IL11 comparison hit safety limit; shorten horizon")
+            trial = []
+            for generation in range(horizon + 1):
+                state = result.history[min(generation, len(result.history) - 1)]
+                # 非生產者本身沒有 IL11 突變；其 fitness 為基因型 0 的期望子代數。
+                benefit = state["il11_shared_benefit"]
+                death, triple = growth_probabilities(0, cfg, benefit)
+                row = dict(condition=label, replicate=rep, seed=run_seed, generation=generation,
+                           total=state["total"], il11_percent=100 * state["il11_fraction"],
+                           shared_death_reduction=benefit,
+                           nonproducer_expected_offspring=(1 - death) * (2 + triple))
+                rows.append(row)
+                trial.append(row)
+            trials.append(trial)
+        # 群體生長、生產者比例、共享死亡率降低量及未突變非生產者的 fitness。
+        keys = ("total", "il11_percent", "shared_death_reduction", "nonproducer_expected_offspring")
+        for ax, key in zip(axes.flat, keys):
+            values = np.array([[r[key] for r in trial] for trial in trials])
+            low, med, high = np.percentile(values, [10, 50, 90], axis=0)
+            ax.plot(range(horizon + 1), med, label=label, color=color)
+            ax.fill_between(range(horizon + 1), low, high, color=color, alpha=0.15)
+        summaries.append(dict(condition=label, generation=horizon, replicates=repeats,
+                              **{f"median_{key}": float(np.median([t[-1][key] for t in trials])) for key in keys}))
+    # D 顯示受共享環境影響的參考基因型，並非觀察到的平均增長或因果效應估計。
+    for ax, title, ylabel in zip(axes.flat,
+            ("A  Whole-tumor growth", "B  IL11+ producer cells", "C  Benefit shared by all cells",
+             "D  Fitness of a mutation-free nonproducer"),
+            ("Total cells", "IL11+ cells (%)", "Absolute reduction in death probability", "Expected offspring per parent")):
+        ax.set(title=title, xlabel="Generation", ylabel=ylabel)
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.legend(frameon=False)
+    output = Path(output)
+    save_figure(fig, output, "04_il11_shared_fitness")
+    write_csv(output / "il11_comparison.csv", rows)
+    write_csv(output / "il11_comparison_summary.csv", summaries)
+    return rows
+
+
 def write_csv(path: Path, rows: list[dict]):
     # 以第一筆資料的鍵建立欄名；UTF-8 支援中文，newline 避免 CSV 多餘空行。
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -515,6 +600,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suppressor-hits", type=int, choices=(1, 2), default=2,
                         help="TSG allele-loss threshold for the main treatment scenario")
+    parser.add_argument("--il11", action="store_true", help="Enable IL11-mediated shared fitness advantage")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--replicates", type=int, default=12)
     parser.add_argument("--output", type=Path, default=Path("outputs"))
@@ -524,11 +610,12 @@ def main():
         parser.error("--replicates must be >= 1")
     args.output.mkdir(parents=True, exist_ok=True)
     # 執行預設治療案例，輸出四面板圖與逐代統計，再執行情境比較。
-    config = Config(suppressor_hits=args.suppressor_hits)
+    config = Config(suppressor_hits=args.suppressor_hits, il11_enabled=args.il11)
     result = simulate(config, args.seed)
     plot_dashboard(result, args.output)
     write_csv(args.output / "trajectory.csv", result.history)
     run_comparisons(config, args.replicates, args.seed, args.output)
+    run_il11_comparison(config, args.replicates, args.seed, args.output)
     # 抗藥性為隨機事件，額外報告重複試驗結果，避免只展示成功復發案例。
     outcomes = []
     for rep in range(args.replicates):
