@@ -373,6 +373,8 @@ def run_comparisons(config: Config, repeats: int, seed: int, output: Path) -> li
     rows = []
     # 生長比較固定觀察 18 代，固定 oncogene 設定，比較無 TSG 優勢、TSG 一擊與兩擊條件。
     growth_horizon = 18
+    # 保留同批試驗的逐代資料，供 one-hit／two-hit 專屬比較圖重用。
+    hit_rows = []
     for condition, label in enumerate(("No TSG advantage", "TSG one-hit", "TSG two-hit")):
         # 用 replace 建立新設定而不修改原始 Config；控制組只取消 TSG 優勢；所有情境保留相同 oncogene 效果與突變率。
         cfg = replace(config, generations=growth_horizon, max_cells=10**12, suppressor_hits=1 if condition == 1 else 2)
@@ -383,6 +385,13 @@ def run_comparisons(config: Config, repeats: int, seed: int, output: Path) -> li
         for rep in range(repeats):
             run_seed = seed + condition * 10000 + rep
             result = simulate(cfg, seed=run_seed, therapy=False)
+            # 提早滅絕後補零；未滅絕的截短試驗仍由下方安全上限檢查拒絕。
+            if condition in (1, 2):
+                for generation in range(growth_horizon + 1):
+                    row = result.history[min(generation, len(result.history) - 1)]
+                    hit_rows.append(dict(scenario=label, replicate=rep, seed=run_seed,
+                                         generation=generation, total=row["total"],
+                                         suppressor_fraction=row["suppressor_fraction"]))
             values = [r["total"] for r in result.history]
             # 若碰到安全上限就停止比較並報錯，以免把截短的曲線當成完整資料。
             if result.stop_reason == "cell_limit":
@@ -435,7 +444,62 @@ def run_comparisons(config: Config, repeats: int, seed: int, output: Path) -> li
     axes[1].margins(y=0.25, x=0.20)
     save_figure(fig, output, "02_scenario_comparisons")
     write_csv(output / "comparisons.csv", rows)
+    plot_hit_comparison(hit_rows, config, output)
     return rows
+
+
+def plot_hit_comparison(rows: list[dict], config: Config, output: Path):
+    """用同批重複試驗直接比較生長、TSG 達標比例及固定世代的負荷。"""
+    # 圖 A 採線性尺度凸顯絕對數量差異；圖 B 顯示機制差異；圖 C 保留個別試驗。
+    set_plot_style()
+    output = Path(output)
+    fig, axes = plt.subplots(1, 3, figsize=(17, 5.8), layout="constrained")
+    last = max(r["generation"] for r in rows)
+    repeats = len({r["replicate"] for r in rows})
+    fig.suptitle("One-hit vs two-hit | tumor suppressor loss", fontsize=21, fontweight="bold")
+    fig.supxlabel(f"{config.n_genes} genes · no therapy · identical oncogene effects & mutation rates · "
+                  f"{repeats} trials/scenario\n"
+                  "Lines: median; bands: 10–90% of trials (not confidence intervals). "
+                  "One-hit: either allele; two-hit: both alleles of the same TSG.", fontsize=10)
+    summaries = []
+    for index, (label, color) in enumerate((("TSG one-hit", COLORS[1]), ("TSG two-hit", COLORS[2]))):
+        # 依試驗與世代建立矩陣，兩組均使用相同時間範圍及完整重複試驗。
+        subset = [r for r in rows if r["scenario"] == label]
+        series = [[r for r in subset if r["replicate"] == rep] for rep in range(repeats)]
+        total = np.array([[r["total"] for r in trial] for trial in series])
+        fraction = 100 * np.array([[r["suppressor_fraction"] for r in trial] for trial in series])
+        for ax, values in zip(axes[:2], (total, fraction)):
+            low, median, high = np.percentile(values, [10, 50, 90], axis=0)
+            ax.plot(range(last + 1), median, color=color, label=label,
+                    ls="-" if index == 0 else "--")
+            ax.fill_between(range(last + 1), low, high, color=color, alpha=0.15)
+        # 固定終點比較避免拿不同世代的負荷相比；散點左右位移僅為減少遮蔽。
+        endpoint = total[:, -1]
+        jitter = np.random.default_rng(900 + index).uniform(-0.10, 0.10, repeats)
+        axes[2].scatter(index + jitter, endpoint, color=color, alpha=0.7, s=40)
+        median = float(np.median(endpoint))
+        axes[2].plot([index - 0.2, index + 0.2], [median] * 2, color=color, lw=3)
+        axes[2].text(index, 0.98, f"Median: {median:,.0f} cells", ha="center", va="top",
+                     transform=axes[2].get_xaxis_transform(), fontsize=10)
+        summaries.append(dict(scenario=label, generation=last, replicates=repeats,
+                              median_cells=median,
+                              median_tsg_percent=float(np.median(fraction[:, -1]))))
+    # TSG 比例差距可能跨數量級；symlog 可同時保留零值和低頻 two-hit 細胞。
+    axes[0].set(title="A  Tumor growth (linear scale)", xlabel="Generation", ylabel="Total cells")
+    axes[1].set(title="B  Cells meeting the TSG threshold", xlabel="Generation", ylabel="Cells with TSG loss (%)")
+    axes[1].set_yscale("symlog", linthresh=0.01)
+    axes[1].text(0.03, 0.97, "Symlog; linear below 0.01%", transform=axes[1].transAxes,
+                 va="top", fontsize=9)
+    axes[2].set(title=f"C  Tumor burden at generation {last}", ylabel="Total cells",
+                xticks=[0, 1], xticklabels=["One-hit", "Two-hit"], xlim=(-0.5, 1.5))
+    axes[2].margins(y=0.25)
+    for ax in axes[:2]:
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.legend(frameon=False, loc="lower right", fontsize=9)
+    save_figure(fig, output, "03_one_hit_vs_two_hit")
+    # 匯出逐代及終點摘要，圖中的差異可直接追溯到原始重複試驗。
+    write_csv(output / "one_hit_vs_two_hit.csv", rows)
+    write_csv(output / "one_hit_vs_two_hit_summary.csv", summaries)
 
 
 def write_csv(path: Path, rows: list[dict]):

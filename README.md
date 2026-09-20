@@ -45,6 +45,8 @@ The `outputs/` directory contains:
 | --- | --- |
 | `01_tumor_dashboard.png / .svg` | Cell counts, sensitive/resistant populations, genotype composition, diversity, and mutation frequencies |
 | `02_scenario_comparisons.png / .svg` | Growth with no TSG advantage, TSG one-hit, or TSG two-hit; heterogeneity at different death rates |
+| `03_one_hit_vs_two_hit.png / .svg` | Direct comparison: linear growth, TSG-loss fraction, and individual trial burdens at generation 18 |
+| `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | Per-generation comparison data and endpoint medians |
 | `trajectory.csv` | Generation-by-generation statistics for one treatment simulation |
 | `comparisons.csv` | Replicate data, including trials that fail to reach the target size |
 | `therapy_replicates.csv` | Minimum burden, relapse generation, and stopping reason across treatment trials |
@@ -53,6 +55,12 @@ The `outputs/` directory contains:
 PNG figures use 240 dpi; SVG figures scale without loss of quality. Growth curves use symlog to display zero, with an approximately logarithmic scale above 1. In the composition plot, Gxxx is the hexadecimal genotype bitmask, and R indicates a resistance mutation. Major genotypes are selected by their summed proportions across generations. TSG heatmap rows show cells with **any** allele hit, not necessarily functional loss. `suppressor_fraction` records cells meeting the selected TSG threshold; `suppressor_biallelic_fraction` records cells with both alleles lost at at least one TSG. `driver_fraction` continues to refer only to the oncogene threshold.
 
 Growth comparisons keep oncogene effects, mutation rates, and loci identical, varying only the TSG advantage: disabled, one-hit, or two-hit. By default, growth comparisons show the median and 10th–90th percentile interval across 12 trials. This describes variation across trials, not a confidence interval. Death-rate comparisons sample 5,000 cells without replacement from the first generation to cross 5,000 cells and calculate Shannon H; horizontal bars show medians. These are equal-sized **samples**, conditional on reaching the threshold, rather than whole tumors at an exactly matched size. Trials that do not reach the threshold are excluded from H but retained in the CSV; the plot reports how many trials reached it.
+
+### Direct one-hit versus two-hit comparison
+
+![One-hit versus two-hit comparison](outputs/03_one_hit_vs_two_hit.png)
+
+The dedicated figure reuses the same 12 trials per scenario from the growth experiment; no therapy is applied. Panel A uses a linear cell-count axis, panel B shows the percentage meeting each scenario's TSG-loss threshold (symlog, linear below 0.01%), and panel C shows every trial at generation 18 with median bars. The threshold differs by definition; panel B measures the resulting phenotype, not an identical mutation state in both groups. Bands show trial variation, not confidence intervals. Overlap and stochastic reversals are retained rather than selecting favorable seeds.
 
 ### Customize and reuse
 
@@ -116,6 +124,8 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 | --- | --- |
 | `01_tumor_dashboard.png / .svg` | 細胞數、敏感／抗藥族群、基因型組成、多樣性、基因突變頻率 |
 | `02_scenario_comparisons.png / .svg` | 無 TSG 優勢／TSG one-hit／TSG two-hit 的生長，以及不同死亡率下的異質性 |
+| `03_one_hit_vs_two_hit.png / .svg` | 直接比較線性生長、TSG 達標比例，以及第 18 代各次試驗的負荷 |
+| `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | 逐代比較資料與終點中位數 |
 | `trajectory.csv` | 單次治療模擬逐代統計 |
 | `comparisons.csv` | 重複試驗數據，包含未達到指定大小的試驗 |
 | `therapy_replicates.csv` | 多次治療試驗的最低負荷、復發代數、停止原因 |
@@ -124,6 +134,12 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示，1 以上近似對數尺度。組成圖中的 Gxxx 是基因型 bitmask 的十六進位表示，R 表示含抗藥突變；主要基因型依跨世代累積比例選出。TSG 熱圖列顯示**任一等位基因有突變**的細胞比例，不一定代表功能喪失。`suppressor_fraction` 記錄符合所選 TSG 門檻的細胞比例；`suppressor_biallelic_fraction` 記錄至少一個 TSG 雙等位基因失活的細胞比例。`driver_fraction` 仍只表示達到 oncogene 門檻的比例。
 
 生長比較固定 oncogene 效果、突變率與基因座，只改變 TSG 優勢條件：取消優勢、一擊或兩擊。預設展示 12 次試驗的中位數及 10–90 百分位區間，這是試驗間變異，並不是信賴區間。死亡率比較使用各試驗首次跨過 5,000 細胞的世代，無放回取樣 5,000 細胞計算 Shannon H；圖上的橫線是中位數。此結果是在達門檻條件下的等大小**樣本**比較，並非精確命中該大小的完整腫瘤。未達門檻者不納入 H，但會保留於 CSV 並顯示成功試驗數。
+
+### One-hit 與 two-hit 直接比較
+
+![One-hit 與 two-hit 比較](outputs/03_one_hit_vs_two_hit.png)
+
+專屬比較圖重用生長試驗每種情境的同一批 12 次試驗，不施加治療。A 面板以線性座標顯示細胞數，B 面板顯示各情境達到 TSG 失活門檻的細胞百分比（symlog，0.01% 以下為線性），C 面板顯示第 18 代每次試驗的負荷與中位數橫線。兩情境的門檻定義不同，B 比較的是功能表型，而非完全相同的突變狀態。陰影表示試驗間變異，不是信賴區間；保留重疊與隨機反轉，不挑選有利種子。
 
 ### 修改與重用
 
