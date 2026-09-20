@@ -78,6 +78,10 @@ At each generation, producer fraction `f` sets a shared absolute death-probabili
 
 Every normal run generates an ON/OFF comparison without therapy over 18 generations (12 trials by default). Panels show whole-tumor growth, producer fraction, shared death reduction, and expected offspring of a mutation-free nonproducer under the current environment. The last quantity is a reference fitness calculation, not observed average growth. Matching seed numbers aid reproducibility but do not imply cell-by-cell pairing after trajectories diverge. Raw data and endpoint medians are saved to `il11_comparison.csv` and `il11_comparison_summary.csv`; figures are PNG/SVG. Other mutation and growth parameters remain identical, and trial variation is retained.
 
+The mechanism curve below plots the exact model formula, with a full-range view and a low-producer zoom. At 2% IL11+ cells, the shared reduction is 3 **percentage points** (half of the 6-point asymptotic cap): baseline death changes from 30% to 27%. This is an absolute reduction, not a 3% relative reduction. The finite 0–100% producer range approaches but never reaches the asymptotic cap. It is a teaching assumption, not fitted experimental data. `05_il11_benefit_curve.png/.svg` and `il11_benefit_curve.csv` are generated automatically, even when the main simulation has IL11 disabled, to explain both switch states.
+
+![IL11 benefit mechanism](outputs/05_il11_benefit_curve.png)
+
 ### Customize and reuse
 
 Edit parameters in `Config`, or call the model from another Python program:
@@ -172,6 +176,10 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 ![IL11 共享生長優勢比較](outputs/04_il11_shared_fitness.png)
 
 每次正常執行都會生成不施加治療、觀察 18 代的 ON／OFF 比較，預設每組 12 次試驗。四面板顯示整體生長、生產者比例、共享死亡率降低量，以及未突變非生產者在當前環境中的預期子代數；最後一項是參考 fitness 計算，不是觀察到的平均增長。相同 seed 方便重現，但族群分歧後不代表逐細胞配對。逐代資料與終點中位數存於 `il11_comparison.csv`、`il11_comparison_summary.csv`，圖表輸出 PNG／SVG。其餘突變與生長參數保持一致，並保留試驗間變異。
+
+下圖直接畫出模型公式，包含全範圍與低生產者比例放大圖。IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上限 6 個百分點的一半：基準死亡率從 30% 降至 27%。這是絕對降低量，不是相對降低 3%。生產者比例在 0–100% 的有限範圍內會接近、但不會精確達到漸近上限。曲線是教學假設，不是實驗擬合。每次執行會自動生成 `05_il11_benefit_curve.png/.svg` 與 `il11_benefit_curve.csv`；即使主模擬關閉 IL11，也會畫出兩種開關狀態的機制供理解。
+
+![IL11 共享優勢的機制曲線](outputs/05_il11_benefit_curve.png)
 
 ### 修改與重用
 

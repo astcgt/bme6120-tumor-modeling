@@ -531,6 +531,47 @@ def plot_hit_comparison(rows: list[dict], config: Config, output: Path):
     write_csv(output / "one_hit_vs_two_hit_summary.csv", summaries)
 
 
+def plot_il11_benefit_curve(config: Config, output: Path):
+    """直接展示模型的飽和公式；不是隨機模擬結果或實驗擬合。"""
+    config.validate()
+    set_plot_style()
+    # 全範圍與低比例放大圖共用相同公式，百分比與百分點分開標示。
+    fraction = np.linspace(0, 1, 1001)
+    maximum, half = config.il11_max_death_reduction, config.il11_half_fraction
+    benefit = maximum * fraction / (half + fraction)
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6), layout="constrained")
+    fig.suptitle("How IL11+ cells help the whole tumor", fontsize=21, fontweight="bold")
+    zoom = min(1.0, max(0.10, 3 * half))
+    for ax, limit, title in zip(axes, (1.0, zoom),
+                               ("A  Full range", "B  Low-producer fraction: enlarged view")):
+        ax.plot(100 * fraction, 100 * benefit, color=COLORS[1], label="IL11 ON: shared benefit")
+        ax.axhline(0, color=COLORS[0], lw=2, label="IL11 OFF: no benefit")
+        # 最大效果是公式的漸近上限；f 至多為 1，因此有限範圍不會精確達到上限。
+        ax.axhline(100 * maximum, color="#64748B", ls="--", label=f"Asymptotic cap: {100 * maximum:g} pp")
+        ax.plot([100 * half, 100 * half, 0], [0, 50 * maximum, 50 * maximum],
+                color=COLORS[2], ls=":", lw=1.5)
+        ax.scatter([100 * half], [50 * maximum], color=COLORS[2], s=65, zorder=5)
+        ax.set(xlim=(0, 100 * limit), ylim=(-0.2, max(1, 115 * maximum)),
+               title=title, xlabel="IL11+ cells (% of tumor)",
+               ylabel="Shared reduction in death probability (percentage points)")
+    # 放大圖標示半飽和，並用未突變細胞示範絕對死亡率變化。
+    axes[1].annotate(f"Half-saturation\n{100 * half:g}% producers → {50 * maximum:g} pp benefit",
+                     xy=(100 * half, 50 * maximum), xytext=(0.43, 0.35),
+                     textcoords="axes fraction", arrowprops=dict(arrowstyle="->", color=COLORS[2]), fontsize=11)
+    axes[0].legend(frameon=False, loc="lower right", fontsize=9)
+    death_before = config.death_rate
+    death_after = max(0, death_before - maximum / 2)
+    fig.supxlabel(f"b(f) = Bmax × f / (K + f)     |     Bmax = {maximum:g}, K = {half:g}\n"
+                  f"At {100 * half:g}% producers: mutation-free cell death {100 * death_before:g}% → {100 * death_after:g}% per generation. "
+                  "Benefit reaches producers AND nonproducers.\n"
+                  "Teaching assumption, not fitted data. Death is floored at zero; genotype advantages and therapy are applied separately.", fontsize=10)
+    save_figure(fig, output, "05_il11_benefit_curve")
+    # 保存曲線資料，方便自行重畫或核對圖中數值。
+    write_csv(Path(output) / "il11_benefit_curve.csv",
+              [dict(il11_percent=100 * f, benefit_percentage_points=100 * b)
+               for f, b in zip(fraction, benefit)])
+
+
 def run_il11_comparison(config: Config, repeats: int, seed: int, output: Path, horizon: int = 18):
     """比較相同 20 個基因座下，IL11 功能有無對整體與非生產者的影響。"""
     if repeats < 1 or horizon < 1:
@@ -616,6 +657,7 @@ def main():
     write_csv(args.output / "trajectory.csv", result.history)
     run_comparisons(config, args.replicates, args.seed, args.output)
     run_il11_comparison(config, args.replicates, args.seed, args.output)
+    plot_il11_benefit_curve(config, args.output)
     # 抗藥性為隨機事件，額外報告重複試驗結果，避免只展示成功復發案例。
     outcomes = []
     for rep in range(args.replicates):
