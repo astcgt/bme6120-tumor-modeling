@@ -1,3 +1,3 @@
 scenario,generation,replicates,median_cells,median_tsg_percent
-TSG one-hit,18,12,85060.5,27.884107347478242
-TSG two-hit,18,12,80718.0,0.061833497000671166
+TSG one-hit,18,30,94617.5,27.884107347478242
+TSG two-hit,18,30,73879.0,0.07072877227815683

@@ -26,6 +26,29 @@ class SuppressorTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 invalid.validate()
 
+    def test_ensemble_censoring_and_extinction(self):
+        import csv
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        import matplotlib.pyplot as plt
+        from modeling_cancer import Result, summarize, plot_therapy_ensemble
+        c = Config()
+        # 上限後缺失、滅絕後零值、仍觀察中的正常族群應分開處理。
+        def make(pops, reason):
+            return Result(c, 1, [summarize(p, g, c) for g, p in enumerate(pops)], pops, None, reason)
+        trials = [make([{0:100}], 'cell_limit'), make([{0:100}, {}], 'extinction'),
+                  make([{0:100}, {0:150}, {0:200}], 'generation_limit')]
+        with tempfile.TemporaryDirectory() as directory:
+            with patch('modeling_cancer.save_figure', side_effect=lambda fig, *args: plt.close(fig)):
+                plot_therapy_ensemble(trials, Path(directory))
+            with (Path(directory)/'trajectory.csv').open() as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertEqual(int(rows[2]['total_n']), 2)
+            self.assertEqual(float(rows[2]['total_mean']), 100)
+            self.assertEqual(int(rows[2]['resistant_percent_n']), 1)
+            self.assertTrue(np.isnan(float(rows[2]['resistant_percent_sd'])))
+
     def test_same_gene_two_hits(self):
         c = Config()
         first = 1 << c.suppressor_genes[0]

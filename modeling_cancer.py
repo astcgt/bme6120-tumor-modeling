@@ -636,6 +636,90 @@ def write_csv(path: Path, rows: list[dict]):
         writer.writerows(rows)
 
 
+def plot_therapy_ensemble(trials: list[Result], output: Path):
+    """依絕對世代彙整治療試驗；滅絕延續零值，計算上限後視為缺失。"""
+    config = trials[0].config
+    # 不把因計算上限停止的族群當成滅絕，也不以最後數量冒充後續觀察。
+    length = max(len(t.history) for t in trials)
+    keys = ("total", "sensitive", "resistant", "effective_genotypes", "resistant_percent")
+    data = {k: np.full((len(trials), length), np.nan) for k in keys}
+    frequencies = np.full((len(trials), config.n_genes, length), np.nan)
+    raw = []
+    for rep, trial in enumerate(trials):
+        for generation in range(length):
+            if generation >= len(trial.history) and trial.stop_reason != "extinction":
+                continue
+            row = trial.history[min(generation, len(trial.history) - 1)]
+            pop = trial.populations[min(generation, len(trial.populations) - 1)]
+            total = row["total"]
+            values = dict(total=total, sensitive=row["sensitive"], resistant=row["resistant"],
+                          effective_genotypes=np.exp(row["shannon"]) if total else 0,
+                          resistant_percent=100 * row["resistant"] / total if total else np.nan)
+            raw.append(dict(replicate=rep, seed=trial.seed, generation=generation,
+                            extended_extinction=generation >= len(trial.history), **values))
+            for key, value in values.items():
+                data[key][rep, generation] = value
+            # 空腫瘤沒有基因頻率，因此熱圖只對存活且仍觀察中的試驗取平均。
+            if total:
+                for gene in range(config.n_genes):
+                    frequencies[rep, gene, generation] = sum(n for g, n in pop.items()
+                        if (suppressor_alleles(g, gene, config) > 0 if gene in config.suppressor_genes
+                            else bool(g & (1 << gene)))) / total
+    # 每代輸出平均、樣本標準差、中位數、百分位與有效 n；n=1 時 SD 不定義。
+    summary = []
+    for generation in range(length):
+        record = dict(generation=generation)
+        for key, matrix in data.items():
+            v = matrix[:, generation]; v = v[np.isfinite(v)]
+            record.update({f"{key}_n": len(v), f"{key}_mean": float(v.mean()) if len(v) else np.nan,
+                           f"{key}_sd": float(v.std(ddof=1)) if len(v)>1 else np.nan})
+            for name, q in (("p10", 10), ("median", 50), ("p90", 90)):
+                record[f"{key}_{name}"] = float(np.percentile(v, q)) if len(v) else np.nan
+        summary.append(record)
+    set_plot_style()
+    fig, axes = plt.subplots(2, 3, figsize=(17, 10), layout="constrained")
+    fig.suptitle(f"Tumor evolution | {len(trials)} stochastic trials", fontsize=22, fontweight="bold")
+    x = np.arange(length)
+    for key, color in zip(keys[:3], ("#172B42", COLORS[0], COLORS[1])):
+        axes[0, 0].plot(x, [r[f"{key}_median"] for r in summary], label=key.title(), color=color)
+        axes[0, 0].fill_between(x, [r[f"{key}_p10"] for r in summary],
+                               [r[f"{key}_p90"] for r in summary], color=color, alpha=0.12)
+    axes[0, 0].set(title="A  Population response", ylabel="Cells (symlog)")
+    axes[0, 0].set_yscale("symlog", linthresh=1)
+    axes[0, 0].legend(frameon=False, fontsize=9)
+    for ax, key, title, ylabel in ((axes[0, 1], "effective_genotypes", "B  Genetic heterogeneity", "Effective genotypes"),
+                                  (axes[1, 0], "resistant_percent", "D  Resistance in surviving tumors", "Resistant cells (%)")):
+        ax.plot(x, [r[f"{key}_median"] for r in summary], color=COLORS[2])
+        ax.fill_between(x, [r[f"{key}_p10"] for r in summary], [r[f"{key}_p90"] for r in summary], color=COLORS[2], alpha=0.18)
+        ax.set(title=title, ylabel=ylabel)
+    # 顯示可用試驗數與治療啟動累計數，避免後期截尾被誤解為穩定母群體。
+    axes[0, 2].plot(x, [r['total_n'] for r in summary], label="Observed / extinct")
+    axes[0, 2].plot(x, [r['resistant_percent_n'] for r in summary], label="Observed, alive")
+    axes[0, 2].plot(x, [sum(t.therapy_generation is not None and t.therapy_generation <= g for t in trials) for g in x],
+                    ls="--", label="Ever started therapy")
+    axes[0, 2].set(title="C  Trial availability & treatment", ylabel="Number of trials", ylim=(0, len(trials)+1))
+    axes[0, 2].legend(frameon=False, fontsize=9)
+    # 基因熱圖分成跨試驗平均與 SD；不混合不同試驗的基因型家系。
+    count = np.sum(np.isfinite(frequencies), axis=0)
+    mean = np.divide(np.nansum(frequencies, axis=0), count, out=np.full(count.shape, np.nan), where=count>0)
+    squared = np.nansum((frequencies-mean)**2, axis=0)
+    sd = np.sqrt(np.divide(squared, count-1, out=np.full(count.shape, np.nan), where=count>1))
+    for ax, matrix, title in ((axes[1, 1], mean, "E  Mean mutation frequency (alive)"),
+                              (axes[1, 2], sd, "F  Mutation frequency SD (alive)")):
+        mesh=ax.pcolormesh(np.arange(length+1)-0.5, np.arange(config.n_genes+1)-0.5,
+                           matrix, cmap="YlGnBu", vmin=0, vmax=1, shading="flat")
+        ax.set(title=title, yticks=range(config.n_genes), yticklabels=[f"G{g+1}" for g in range(config.n_genes)])
+        ax.tick_params(axis="y", labelsize=8); ax.grid(False)
+        fig.colorbar(mesh, ax=ax, shrink=0.8)
+    for ax in axes.flat:
+        ax.set_xlabel("Generation"); ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    fig.supxlabel("Lines: median; bands: 10–90% of trials, not confidence intervals. Independent trials; absolute generation alignment.\n"
+                  "After cell limit: missing. Extinction: zero counts. Frequencies: observed living tumors only; TSG = any allele hit. Blank = insufficient data.", fontsize=10)
+    save_figure(fig, output, "01_tumor_dashboard")
+    write_csv(output / "trajectory.csv", summary)
+    write_csv(output / "therapy_trajectories.csv", raw)
+
+
 def main():
     # 命令列入口：允許指定亂數種子、重複次數及輸出資料夾。
     parser = argparse.ArgumentParser(description=__doc__)
@@ -643,7 +727,7 @@ def main():
                         help="TSG allele-loss threshold for the main treatment scenario")
     parser.add_argument("--il11", action="store_true", help="Enable IL11-mediated shared fitness advantage")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--replicates", type=int, default=12)
+    parser.add_argument("--replicates", type=int, default=30)
     parser.add_argument("--output", type=Path, default=Path("outputs"))
     # 解析並檢查命令列輸入，建立後續輸出的資料夾。
     args = parser.parse_args()
@@ -652,24 +736,25 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     # 執行預設治療案例，輸出四面板圖與逐代統計，再執行情境比較。
     config = Config(suppressor_hits=args.suppressor_hits, il11_enabled=args.il11)
-    result = simulate(config, args.seed)
-    plot_dashboard(result, args.output)
-    write_csv(args.output / "trajectory.csv", result.history)
+    trials = [simulate(config, args.seed + 100000 + rep) for rep in range(args.replicates)]
+    plot_therapy_ensemble(trials, args.output)
     run_comparisons(config, args.replicates, args.seed, args.output)
     run_il11_comparison(config, args.replicates, args.seed, args.output)
     plot_il11_benefit_curve(config, args.output)
     # 抗藥性為隨機事件，額外報告重複試驗結果，避免只展示成功復發案例。
     outcomes = []
-    for rep in range(args.replicates):
-        trial = simulate(config, args.seed + 100000 + rep)
+    for rep, trial in enumerate(trials):
         outcomes.append(dict(replicate=rep, seed=trial.seed,
                              therapy_generation=trial.therapy_generation,
                              stop_reason=trial.stop_reason, **therapy_outcome(trial)))
     write_csv(args.output / "therapy_replicates.csv", outcomes)
     # 保存完整參數、種子、套件版本與主要結果，方便追溯及重現本次執行。
     metadata = dict(config=asdict(config), seed=args.seed, replicates=args.replicates,
-                    stop_reason=result.stop_reason, therapy_generation=result.therapy_generation,
-                    outcome=therapy_outcome(result), numpy_version=np.__version__,
+                    therapy_seeds=[t.seed for t in trials],
+                    therapy_outcome_counts={status: sum(o["status"] == status for o in outcomes)
+                                           for status in sorted({o["status"] for o in outcomes})},
+                    interval="median and 10–90% trial percentiles; not confidence intervals",
+                    numpy_version=np.__version__,
                     matplotlib_version=matplotlib.__version__)
     (args.output / "run_metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     # 在終端顯示結果摘要和輸出位置，方便找到生成的圖表與資料。

@@ -32,14 +32,43 @@
     "max_cells": 1000000
   },
   "seed": 42,
-  "replicates": 12,
-  "stop_reason": "cell_limit",
-  "therapy_generation": 16,
-  "outcome": {
-    "status": "relapse",
-    "nadir": 1595,
-    "relapse_generation": 27
+  "replicates": 30,
+  "therapy_seeds": [
+    100042,
+    100043,
+    100044,
+    100045,
+    100046,
+    100047,
+    100048,
+    100049,
+    100050,
+    100051,
+    100052,
+    100053,
+    100054,
+    100055,
+    100056,
+    100057,
+    100058,
+    100059,
+    100060,
+    100061,
+    100062,
+    100063,
+    100064,
+    100065,
+    100066,
+    100067,
+    100068,
+    100069,
+    100070,
+    100071
+  ],
+  "therapy_outcome_counts": {
+    "relapse": 30
   },
+  "interval": "median and 10\u201390% trial percentiles; not confidence intervals",
   "numpy_version": "2.0.2",
   "matplotlib_version": "3.9.4"
 }
