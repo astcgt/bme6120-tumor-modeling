@@ -91,6 +91,10 @@ Trials are aligned by absolute generation; treatment starts separately at each t
 
 Growth and IL11 comparisons show medians and 10–90% trial intervals; endpoint and diversity scatter plots show individual trials and medians. More replicates stabilize summaries but do not remove biological stochasticity; percentile bands describe trial variability, **not confidence intervals or standard errors**. The IL11 mechanism curve is deterministic and has no sampling variance, so it has no uncertainty band.
 
+### Mathematical diagrams
+
+Run `.venv/bin/python plot_markov_model.py` to regenerate the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`. Figure 6 defines the full genotype-count Markov kernel using probability-generating functions, then gives an exact five-state numerical example. That example disables mutations and therapy and stops at first entry into four or more cells; its overflow state is imposed bookkeeping absorption, not biological saturation. Figure 7 shows the execution state machine, a reduced sensitive/resistant mutation matrix Q, expected-offspring matrices M, and default-parameter fitness values. P and Q are row-stochastic; M contains offspring means and is not a probability transition matrix. Rows are current/parent states and columns are next/offspring states. CSV matrices and a JSON assumptions record are exported alongside the figures; analytic checks run during generation.
+
 ### Customize and reuse
 
 Edit parameters in `Config`, or call the model from another Python program:
@@ -198,6 +202,10 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 試驗依絕對世代對齊，治療各自在達到大小門檻後開始，因此主圖不設定共同治療起點線。`therapy_replicates.csv` 保留每次起點與結果。`trajectory.csv` 現為多次試驗摘要，`therapy_trajectories.csv` 保留各次軌跡。熱圖原始值可用記錄的治療種子及設定重新生成。仍可自行呼叫 `plot_dashboard(result, ...)` 查看明確指定的單次案例。
 
 生長與 IL11 比較顯示中位數及 10–90% 試驗區間；終點負荷與多樣性散點保留個別試驗及中位數。增加次數能穩定摘要估計，但不會消除生物隨機性；百分位帶代表試驗間變異，**不是信賴區間或標準誤**。IL11 機制公式是確定性曲線，沒有抽樣變異，因此不加誤差帶。
+
+### 數學模型圖
+
+執行 `.venv/bin/python plot_markov_model.py`，可在 `outputs/mathematical_model/` 重新生成論文風格的 300 dpi PNG 與向量 SVG。圖 6 用機率生成函數定義完整基因型計數的 Markov 轉移核，再給出精確的五狀態數值範例。此範例停用突變與治療，首次達到至少四個細胞時停止；溢出狀態是人為設定的記帳吸收狀態，不是生物飽和。圖 7 呈現程式狀態機、簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M，以及預設參數的繁殖能力數值。P 與 Q 每列加總為 1；M 記錄期望子代數，不是機率轉移矩陣。列代表當前／父代，欄代表下一步／子代。圖旁另存 CSV 矩陣及 JSON 假設紀錄，生成時會執行解析數值檢查。
 
 ### 修改與重用
 
