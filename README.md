@@ -95,6 +95,18 @@ Growth and IL11 comparisons show medians and 10–90% trial intervals; endpoint 
 
 Run `.venv/bin/python plot_markov_model.py` to regenerate the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`. Figure 6 defines the full genotype-count Markov kernel using probability-generating functions, then gives an exact five-state numerical example. That example disables mutations and therapy and stops at first entry into four or more cells; its overflow state is imposed bookkeeping absorption, not biological saturation. Figure 7 shows the execution state machine, a reduced sensitive/resistant mutation matrix Q, expected-offspring matrices M, and default-parameter fitness values. P and Q are row-stochastic; M contains offspring means and is not a probability transition matrix. Rows are current/parent states and columns are next/offspring states. CSV matrices and a JSON assumptions record are exported alongside the figures; analytic checks run during generation.
 
+### Teaching presentation
+
+`outputs/presentations/tumor_markov_results_zh_tw_v3.pptx` is a 33-slide Traditional Chinese teaching deck with speaker notes, editable state diagrams and matrices, and six editable simulation-result figures. It explains P, Q, M, row-vector multiplication, conditional sampling, treatment control, and the exact generating-function kernel. Each result figure states its experiment, trial count, uncertainty and interpretation; follow-up experiments distinguish observed behavior from proposed mechanisms. The final four slides contain mathematical appendices.
+
+The result data were verified by rerunning all stochastic groups with 30 trials and the recorded seeds. To refresh the presentation snapshot from `outputs/`, run `.venv/bin/python presentations/prepare_results.py`. Rebuild with the installed bundled runtime, choosing a new filename to preserve previous decks:
+
+```bash
+PRESENTATION_FILENAME=tumor_markov_results_v4.pptx "$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node" presentations/build_tumor_markov.mjs
+```
+
+The builder uses the bundled Artifact Tool and Python validators. It does not install packages or change conda. Private candidates, renders and validation records stay in the ignored `.presentation-build/` directory.
+
 ### Customize and reuse
 
 Edit parameters in `Config`, or call the model from another Python program:
@@ -206,6 +218,18 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 ### 數學模型圖
 
 執行 `.venv/bin/python plot_markov_model.py`，可在 `outputs/mathematical_model/` 重新生成論文風格的 300 dpi PNG 與向量 SVG。圖 6 用機率生成函數定義完整基因型計數的 Markov 轉移核，再給出精確的五狀態數值範例。此範例停用突變與治療，首次達到至少四個細胞時停止；溢出狀態是人為設定的記帳吸收狀態，不是生物飽和。圖 7 呈現程式狀態機、簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M，以及預設參數的繁殖能力數值。P 與 Q 每列加總為 1；M 記錄期望子代數，不是機率轉移矩陣。列代表當前／父代，欄代表下一步／子代。圖旁另存 CSV 矩陣及 JSON 假設紀錄，生成時會執行解析數值檢查。
+
+### 教學簡報
+
+`outputs/presentations/tumor_markov_results_zh_tw_v3.pptx` 是 33 張繁體中文教學投影片，包含講者備註、可編輯的狀態圖與矩陣，以及六張可編輯的模擬結果圖。內容涵蓋 P、Q、M、橫向機率向量的乘法、條件抽樣、治療控制與精確生成函數轉移核。各結果圖說明實驗條件、試驗數、不確定性與解讀，後續實驗方向區分觀察結果與待驗證機制。最後四張為數學附錄。
+
+簡報數據已用記錄的種子重新執行所有隨機組，每組 30 次試驗，並核對一致。執行 `.venv/bin/python presentations/prepare_results.py` 可由 `outputs/` 更新簡報資料快照。使用已安裝的 bundled runtime 重建時，請指定新檔名以保留舊版：
+
+```bash
+PRESENTATION_FILENAME=tumor_markov_results_v4.pptx "$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node" presentations/build_tumor_markov.mjs
+```
+
+繪製程式使用 bundled Artifact Tool 與 Python 檢查工具，不安裝套件，也不修改 conda。候選檔、預覽與檢查紀錄放在 Git 忽略的 `.presentation-build/`。
 
 ### 修改與重用
 

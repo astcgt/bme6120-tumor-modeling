@@ -1,6 +1,7 @@
 .venv/
 .mplconfig/
 __pycache__/
+.presentation-build/
 .DS_Store
 .env
 .env.*
