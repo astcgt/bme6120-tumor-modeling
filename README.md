@@ -100,6 +100,13 @@ Run `.venv/bin/python plot_phase_portraits.py` after generating the simulation o
 
 Both plots label `log10(count+1)` explicitly to retain zeros. Extinct tumors have no defined resistant fraction; trajectories stop at the last observation. These are projections of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver, TSG or IL11 composition and different future transitions. Computational endpoints are not equilibria or attractors. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `--replicate 0 --output outputs/phase_rep0` to examine another actual trial. Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths.
 
+For arrows at every grid point, run `.venv/bin/python plot_phase_field.py`. It adds two PNG/SVG vector-field figures, separately fixing treatment off and ongoing treatment:
+
+- `03_phase_vector_field`: a 19×19 grid per panel on equal linear cell-count axes. Arrow direction is the one-generation expected increment, `E[(S_next,R_next) | state,alpha] - (S,R)`. Length is proportional to its Euclidean magnitude; both panels share one scale and color range, with a 10,000 cells/generation arrow key. Arrows are not individually normalized.
+- `04_phase_vector_field_log`: a 21×21 grid per panel in `log10(count+1)` coordinates. Length and color encode the displacement after transforming the raw-count mean; they do not encode absolute-cell increments or the expectation of log-transformed counts.
+
+Each grid point specifies a full parent population with genotype 0 for S and only the resistance bit for R. This fixes the hidden genotype composition; the one-step projected mean is checked against the full model at all 1,604 points. Other offspring mutations remain enabled and can move subsequent states off this slice, so repeated integration of this field does not reproduce the full evolving tumor. Treatment is fixed within each panel rather than switched at the size threshold. The origin has zero increment and is marked with a dot. The plotted ranges remain below the computation limit. `phase_vector_grid.csv` records every vector and common display scale; `phase_vector_assumptions.json` records the matrices, state slice and validation.
+
 ### Mathematical diagrams
 
 Run `.venv/bin/python plot_markov_model.py` to regenerate the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`. Figure 6 defines the full genotype-count Markov kernel using probability-generating functions, then gives an exact five-state numerical example. That example disables mutations and therapy and stops at first entry into four or more cells; its overflow state is imposed bookkeeping absorption, not biological saturation. Figure 7 shows the execution state machine, a reduced sensitive/resistant mutation matrix Q, expected-offspring matrices M, and default-parameter fitness values. P and Q are row-stochastic; M contains offspring means and is not a probability transition matrix. Rows are current/parent states and columns are next/offspring states. CSV matrices and a JSON assumptions record are exported alongside the figures; analytic checks run during generation.
@@ -238,6 +245,13 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 - `02_conditional_phase_directions`：以突出案例的完整基因型快照計算下一代條件期望，包含敏感細胞突變成抗藥細胞的精確貢獻。重現案例會逐代核對記錄的 CSV 計數。箭頭端點是原始計數期望的對數轉換，並非對數計數的期望。
 
 兩圖均明確標示 `log10(count+1)`，以保留零細胞。滅絕族群不定義抗藥比例；軌跡停在最後觀察點。這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver、TSG 或 IL11 組成，從而有不同轉移。計算終點不是平衡點或吸引子。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可加上 `--replicate 0 --output outputs/phase_rep0` 查看另一條實際試驗。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。
+
+若要每個網格點都有箭頭，執行 `.venv/bin/python plot_phase_field.py`，即可另存兩張 PNG／SVG 向量場圖，各自固定治療關閉與持續治療：
+
+- `03_phase_vector_field`：每面板為 19×19 網格，使用比例一致的線性細胞數座標。方向表示每代期望增量 `E[(S_next,R_next) | state,alpha] - (S,R)`；長度正比於增量的歐氏大小。兩面板共用倍率及色階，附 10,000 細胞／代的箭頭標尺，不逐支正規化。
+- `04_phase_vector_field_log`：每面板為 21×21 網格，使用 `log10(count+1)` 座標。長度及顏色表示原始計數期望轉換後的座標位移，不表示絕對細胞數增量，也不是對數計數的期望。
+
+每個網格點都指定完整父代族群：S 的基因型為 0，R 只有抗藥位元為 1，藉此固定隱藏基因組成。全部 1,604 點的一步投影期望均與完整模型核對。子代仍可發生其他突變，後續狀態可能離開此截面，因此反覆積分這張向量場不能重現完整腫瘤演化。治療在每面板固定，不依大小門檻切換。原點增量為零，以圓點標示；繪圖範圍均低於計算上限。`phase_vector_grid.csv` 保留每個向量及共用顯示倍率；`phase_vector_assumptions.json` 記錄矩陣、狀態截面及驗證。
 
 ### 數學模型圖
 
