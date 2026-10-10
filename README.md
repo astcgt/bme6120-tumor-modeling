@@ -4,7 +4,7 @@
 
 ## English
 
-A stochastic discrete branching model for classroom discussion. Parameters are teaching assumptions, not calibrated clinical estimates. Code documentation and comments are in Chinese; figure labels are in English for presentations without requiring Chinese fonts.
+A stochastic discrete branching model for classroom discussion. Parameters are teaching assumptions, not calibrated clinical estimates. Code documentation and comments are in Chinese. Core simulation figures use English labels; the standalone teaching diagrams and phase portraits use Traditional Chinese labels.
 
 ### Run without modifying conda
 
@@ -91,6 +91,15 @@ Trials are aligned by absolute generation; treatment starts separately at each t
 
 Growth and IL11 comparisons show medians and 10–90% trial intervals; endpoint and diversity scatter plots show individual trials and medians. More replicates stabilize summaries but do not remove biological stochasticity; percentile bands describe trial variability, **not confidence intervals or standard errors**. The IL11 mechanism curve is deterministic and has no sampling variance, so it has no uncertainty band.
 
+### Phase portraits
+
+Run `.venv/bin/python plot_phase_portraits.py` after generating the simulation outputs. It creates two standalone 300 dpi PNG/vector SVG figures in `outputs/phase_plots/`, without modifying the presentation:
+
+- `01_phase_trajectories`: sensitive vs resistant counts and total burden vs resistant fraction. Gray curves retain every observed trial; one actual trial is highlighted, selected first by proximity to the median relapse generation, then to the median nadir. Treatment onset, minimum burden and relapse are marked. Arrows follow time; independently computed median coordinates are not connected into an artificial trajectory.
+- `02_conditional_phase_directions`: one-generation conditional means calculated from the highlighted trial's full genotype snapshots, with the exact S-to-R mutation contribution. The reproduced trial is checked against its recorded CSV counts. Arrows end at the log-transformed raw-count expectation, which differs from the expectation of log-transformed counts.
+
+Both plots label `log10(count+1)` explicitly to retain zeros. Extinct tumors have no defined resistant fraction; trajectories stop at the last observation. These are projections of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver, TSG or IL11 composition and different future transitions. Computational endpoints are not equilibria or attractors. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `--replicate 0 --output outputs/phase_rep0` to examine another actual trial. Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths.
+
 ### Mathematical diagrams
 
 Run `.venv/bin/python plot_markov_model.py` to regenerate the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`. Figure 6 defines the full genotype-count Markov kernel using probability-generating functions, then gives an exact five-state numerical example. That example disables mutations and therapy and stops at first entry into four or more cells; its overflow state is imposed bookkeeping absorption, not biological saturation. Figure 7 shows the execution state machine, a reduced sensitive/resistant mutation matrix Q, expected-offspring matrices M, and default-parameter fitness values. P and Q are row-stochastic; M contains offspring means and is not a probability transition matrix. Rows are current/parent states and columns are next/offspring states. CSV matrices and a JSON assumptions record are exported alongside the figures; analytic checks run during generation.
@@ -134,7 +143,7 @@ Discussion topics include how drivers change expected offspring per generation; 
 
 ## 繁體中文
 
-這是一個用於課堂討論的隨機離散分枝模型。參數是教學假設，未用臨床資料校準。程式及註解以中文說明，圖表使用英文標籤，方便簡報且不依賴中文字型。
+這是一個用於課堂討論的隨機離散分枝模型。參數是教學假設，未用臨床資料校準。程式及註解以中文說明；核心模擬圖表使用英文標籤，獨立教學圖及相圖使用繁體中文標籤。
 
 ### 執行（不修改 conda 環境）
 
@@ -220,6 +229,15 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 試驗依絕對世代對齊，治療各自在達到大小門檻後開始，因此主圖不設定共同治療起點線。`therapy_replicates.csv` 保留每次起點與結果。`trajectory.csv` 現為多次試驗摘要，`therapy_trajectories.csv` 保留各次軌跡。熱圖原始值可用記錄的治療種子及設定重新生成。仍可自行呼叫 `plot_dashboard(result, ...)` 查看明確指定的單次案例。
 
 生長與 IL11 比較顯示中位數及 10–90% 試驗區間；終點負荷與多樣性散點保留個別試驗及中位數。增加次數能穩定摘要估計，但不會消除生物隨機性；百分位帶代表試驗間變異，**不是信賴區間或標準誤**。IL11 機制公式是確定性曲線，沒有抽樣變異，因此不加誤差帶。
+
+### 相平面圖
+
+生成模擬輸出後，執行 `.venv/bin/python plot_phase_portraits.py`，即可在 `outputs/phase_plots/` 生成兩張獨立的 300 dpi PNG／向量 SVG，不修改簡報：
+
+- `01_phase_trajectories`：敏感／抗藥細胞數，以及總負荷／抗藥比例。灰線保留所有實際觀察軌跡；突出一條實際試驗，先選最接近復發中位代數，再選谷底最接近中位數的案例。標示治療啟動、最低負荷與復發。箭頭表示時間前進，不把各座標分別取中位後連成虛構軌跡。
+- `02_conditional_phase_directions`：以突出案例的完整基因型快照計算下一代條件期望，包含敏感細胞突變成抗藥細胞的精確貢獻。重現案例會逐代核對記錄的 CSV 計數。箭頭端點是原始計數期望的對數轉換，並非對數計數的期望。
+
+兩圖均明確標示 `log10(count+1)`，以保留零細胞。滅絕族群不定義抗藥比例；軌跡停在最後觀察點。這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver、TSG 或 IL11 組成，從而有不同轉移。計算終點不是平衡點或吸引子。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可加上 `--replicate 0 --output outputs/phase_rep0` 查看另一條實際試驗。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。
 
 ### 數學模型圖
 

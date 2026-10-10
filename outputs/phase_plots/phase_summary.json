@@ -1,0 +1,83 @@
+{
+  "source": "/Users/yiliu/Desktop/Cornell/BME 6120 Genome/project 1/outputs",
+  "trial_count": 30,
+  "observed_rows": 1119,
+  "highlight_replicate": 4,
+  "highlight_seed": 100046,
+  "selection": "nearest median relapse generation; then nearest median nadir on log scale; replicate breaks ties",
+  "stop_reason": "cell_limit",
+  "events": {
+    "初始": {
+      "generation": 0,
+      "total": 100,
+      "resistant": 0,
+      "il11_fraction": 0.0,
+      "il11_shared_benefit": 0.0,
+      "sensitive": 100,
+      "richness": 1,
+      "shannon": -0.0,
+      "simpson": 0.0,
+      "driver_fraction": 0.0,
+      "suppressor_fraction": 0.0,
+      "suppressor_biallelic_fraction": 0.0,
+      "resistant_percent": 0.0
+    },
+    "治療啟動": {
+      "generation": 15,
+      "total": 21660,
+      "resistant": 272,
+      "il11_fraction": 0.0,
+      "il11_shared_benefit": 0.0,
+      "sensitive": 21388,
+      "richness": 187,
+      "shannon": 1.7189321583041492,
+      "simpson": 0.550832244142455,
+      "driver_fraction": 0.16717451523545707,
+      "suppressor_fraction": 0.0,
+      "suppressor_biallelic_fraction": 0.0,
+      "resistant_percent": 1.2557710064635272
+    },
+    "負荷谷底": {
+      "generation": 18,
+      "total": 801,
+      "resistant": 740,
+      "il11_fraction": 0.0,
+      "il11_shared_benefit": 0.0,
+      "sensitive": 61,
+      "richness": 36,
+      "shannon": 1.9927105585698135,
+      "simpson": 0.6827233748077075,
+      "driver_fraction": 0.13358302122347065,
+      "suppressor_fraction": 0.0,
+      "suppressor_biallelic_fraction": 0.0,
+      "resistant_percent": 92.38451935081149
+    },
+    "首次復發": {
+      "generation": 28,
+      "total": 29208,
+      "resistant": 29208,
+      "il11_fraction": 0.0,
+      "il11_shared_benefit": 0.0,
+      "sensitive": 0,
+      "richness": 316,
+      "shannon": 2.89868941080103,
+      "simpson": 0.8653881184160214,
+      "driver_fraction": 0.49798000547795124,
+      "suppressor_fraction": 0.0032182963571624214,
+      "suppressor_biallelic_fraction": 0.0032182963571624214,
+      "resistant_percent": 100.0
+    }
+  },
+  "coordinates": {
+    "A": "(log10(S+1), log10(R+1))",
+    "B": "(log10(T+1), 100 R/T), missing at T=0"
+  },
+  "conditional_arrows": "raw-count conditional mean from full genotype state, transformed afterward; not E[log(count+1)]",
+  "limitations": [
+    "2D projection is not generally a closed Markov state",
+    "no interpolated autonomous vector field",
+    "finite observed trajectories do not establish attractors or stable equilibria",
+    "cell_limit is a computational stop, not carrying capacity"
+  ],
+  "verification": "highlight reproduced against every observed CSV count; event timing and expectation conservation verified"
+}
