@@ -1,4 +1,4 @@
-"""Extend presentation data with omitted panels; verify regenerated trials.
+"""Extend presentation data with control, gene-frequency and therapy-analysis panels; verify regenerated trials.
 
 Run once after prepare_results.py. Seed/config come from recorded metadata.
 Core simulation is imported unchanged; saved CSV totals must match every trial.
@@ -10,7 +10,7 @@ from pathlib import Path
 import sys
 import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from modeling_cancer import Config, simulate, suppressor_alleles
+from modeling_cancer import Config, simulate
 
 
 def read(name):
@@ -29,31 +29,11 @@ def main():
     trials = [simulate(config, seed) for seed in meta['therapy_seeds']]
     raw = read('therapy_trajectories.csv')
     reference = {(int(r['replicate']), int(r['generation'])): r for r in raw}
-    length = max(len(t.history) for t in trials)
-    frequencies = np.full((len(trials), config.n_genes, length), np.nan)
     for rep, trial in enumerate(trials):
-        for generation, (row, pop) in enumerate(zip(trial.history, trial.populations)):
+        for generation, row in enumerate(trial.history):
             assert int(reference[rep, generation]['total']) == row['total']
             assert int(reference[rep, generation]['resistant']) == row['resistant']
-            if row['total']:
-                for gene in range(config.n_genes):
-                    frequencies[rep, gene, generation] = sum(n for g, n in pop.items()
-                        if (suppressor_alleles(g, gene, config) > 0 if gene in config.suppressor_genes
-                            else bool(g & (1 << gene)))) / row['total']
-    # Keep the shared complete-observation window for interpretable heatmaps.
-    freq = frequencies[:, :, :31]
-    assert np.isfinite(freq).all()
-    data['gene_heatmaps'] = {'generation': list(range(31)), 'mean': freq.mean(axis=0).tolist(),
-                             'sd': freq.std(axis=0, ddof=1).tolist(),
-                             'gene_labels': ['G'+str(g+1)+(' driver' if g in config.driver_genes else
-                               ' resistance' if g == config.resistance_gene else ' TSG any hit' if g in config.suppressor_genes else '')
-                               for g in range(config.n_genes)]}
     trajectory = read('trajectory.csv')
-    data['availability'] = {'generation': [int(r['generation']) for r in trajectory],
-                            'observed_n': [int(r['total_n']) for r in trajectory],
-                            'alive_n': [int(r['resistant_percent_n']) for r in trajectory],
-                            'therapy_started': [sum(t.therapy_generation is not None and t.therapy_generation <= g
-                                                  for t in trials) for g in range(length)]}
     for key in ('p10','median','p90'):
         data['therapy']['effective_genotypes_'+key] = [float(r['effective_genotypes_'+key]) for r in trajectory[:31]]
     hits, il11 = read('one_hit_vs_two_hit.csv'), read('il11_comparison.csv')
@@ -75,8 +55,29 @@ def main():
     data['il11_curve'] = {'fraction_percent': [i/10 for i in range(101)],
                           'benefit_percentage_points': [100*config.il11_max_death_reduction*(i/1000)/(config.il11_half_fraction+i/1000)
                                                         for i in range(101)]}
+    # 取代原本的熱圖：以治療開始對齊的基因頻率中位數（plot_genotype_evolution.py 的輸出）。
+    freq_rows = read('genotype_evolution/gene_frequency_summary.csv')
+    series = {'ONC1': '0', 'ONC2': '1', 'ONC3': '2', 'RES': '3', 'TSG1 any hit': '4_any', 'passenger mean': 'passenger_mean'}
+    data['gene_frequency'] = {'relative_generation': sorted({int(r['relative_generation']) for r in freq_rows}),
+                              **{name: [100 * float(r['median']) for r in sorted((r for r in freq_rows if r['series'] == key),
+                                                                               key=lambda r: int(r['relative_generation']))]
+                                 for name, key in series.items()}}
+    # 治療延伸分析（analyze_therapy.py）：只讀取已核對的輸出，不重跑。
+    therapy = json.loads(Path('outputs/therapy_analysis/therapy_analysis_summary.json').read_text())
+    data['therapy_analysis'] = {
+        'goldie_coldman': [{k: r[k] for k in ('threshold', 'n', 'cures', 'p_cure', 'ci_low', 'ci_high', 'theory_p_cure', 'R0_mean', 'R0_median')}
+                           for r in therapy['08_goldie_coldman']['summary']],
+        'half_cure_size': therapy['08_goldie_coldman']['theory_half_cure_size'],
+        'relapse': therapy['09_relapse_time'],
+        'relapse_rows': [{k: float(r[k]) for k in ('resistant_at_start', 'oncogene_fraction_of_resistant', 'observed_relapse_delay',
+                                                   'predicted_delay_baseline', 'predicted_delay_genotype')}
+                         for r in read('therapy_analysis/relapse_time_prediction.csv')],
+        'sensitivity': therapy['10_parameter_sensitivity'],
+        'adaptive': therapy['11_adaptive_therapy']['summary']}
+    data.pop('gene_heatmaps', None)
+    data.pop('availability', None)
     data['verification'] = {'therapy_trials_reproduced': len(trials), 'therapy_csv_rows_verified': len(reference),
-                            'control_trials_reproduced':len(control), 'heatmap_window':'0-30; all 30 alive and observed'}
+                            'control_trials_reproduced':len(control)}
     destination.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(data['verification'],indent=2))
 

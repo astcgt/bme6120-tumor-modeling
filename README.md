@@ -139,21 +139,21 @@ P and Q are row-stochastic; M contains offspring means and is not a probability 
 
 ### Teaching presentation
 
-`outputs/presentations/tumor_markov_code_results_zh_tw_v9.pptx` is a 53-slide Traditional Chinese teaching deck. It opens with treatment response, explains the implementation and its mathematics, then examines population composition, diversity, control experiments and future tests. Mathematical derivations appear in the relevant content pages, with no appendices.
+`outputs/presentations/tumor_markov_code_results_zh_tw_v10.pptx` is a 54-slide Traditional Chinese teaching deck. It opens with treatment response, explains the implementation and its mathematics, then examines population composition, diversity, therapy analyses, control experiments and future tests. Mathematical derivations appear in the relevant content pages, with no appendices.
 
-The code lessons use excerpts from `modeling_cancer.py`, with variable meanings, numerical examples and detailed speaker notes. They cover Config, sparse genotype counts, bitmasks, TSG alleles, IL11, update timing, Binomial reproduction, mutation conservation, P/Q/M, relapse identification, ensemble statistics, sampling and tests. Equations use LaTeX math syntax rendered with Computer Modern fonts at high resolution. Their exact source is preserved in the notes and build source; they are image objects rather than native PowerPoint equation objects. Text, matrices, diagrams, 16 charts and two heatmaps remain editable.
+The code lessons use excerpts from `modeling_cancer.py`, with variable meanings, numerical examples and detailed speaker notes. They cover Config, sparse genotype counts, bitmasks, TSG alleles, IL11, update timing, Binomial reproduction, mutation conservation, P/Q/M, relapse identification, ensemble statistics, sampling and tests. Excerpts are selected by line number; when `modeling_cancer.py` changes, the ranges in `presentations/teach_model.mjs` must be re-checked (v10 re-mapped every range to the current source). Equations use LaTeX math syntax rendered with Computer Modern fonts at high resolution; they are image objects rather than native PowerPoint equation objects. Text, matrices, diagrams, tables and charts remain editable.
 
-The figure sequence covers every panel type in the five original figure groups: treatment response, effective genotype diversity, trial availability, resistance, mean/SD mutation frequencies, the no-TSG-advantage control, one-hit/two-hit growth and TSG fractions, endpoint distributions, IL11 growth/producer fractions/endpoints, full/zoomed IL11 response curves, and equal-size diversity comparisons. A relapse-time histogram completes the treatment story. Shared treatment curves and heatmaps show generations 0–30, where all 30 trials are observed and alive; the availability plot retains the complete 0–40 window. Log transformations are labeled explicitly.
+v10 follows the same merge rules as the figures: the trial-availability chart became a footnote, the two gene-frequency heatmaps became one aligned gene-frequency chart with a passenger control, the full-range IL11 curve was dropped, and the TSG fraction and endpoint slides include the no-TSG-advantage control. Four slides summarize the therapy analyses (Goldie–Coldman cure curve, relapse-time prediction, the k_R × μ cure table, and adaptive versus continuous therapy). Shared treatment curves show generations 0–30, where all 30 trials are observed and alive. Log transformations are labeled explicitly.
 
-The original 30-trial groups were reproduced and verified in the earlier deck. The expanded data preparation additionally reproduces the treatment populations and no-TSG-advantage control, checks recorded CSV counts, and computes the omitted heatmap panels. Rebuild the data and deck with:
+The data preparation reproduces the treatment populations and the no-TSG-advantage control, checks recorded CSV counts, and reads the verified outputs of `plot_genotype_evolution.py` and `analyze_therapy.py`. Rebuild the data and deck with:
 
 ```bash
 .venv/bin/python presentations/prepare_results.py
 .venv/bin/python presentations/prepare_extended_results.py
-PRESENTATION_FILENAME=tumor_markov_code_results_v10.pptx "$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node" presentations/build_tumor_markov.mjs
+PRESENTATION_BUILD_DIR=.presentation-build/code-v11 PRESENTATION_FILENAME=tumor_markov_code_results_zh_tw_v11.pptx "$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node" presentations/build_tumor_markov.mjs
 ```
 
-The builder uses the installed bundled Artifact Tool and validators. Equation rendering uses the project-local Python without an external TeX installation. Private candidates, equation assets, renders and validation records stay in the ignored `.presentation-build/` directory. No conda environment is changed. The previous v3 deck is retained separately.
+The builder uses the installed bundled Artifact Tool and validators. Equation rendering uses the project-local Python without an external TeX installation. Private candidates, equation assets, renders and validation records stay in the ignored `.presentation-build/` directory. No conda environment is changed. The previous v3 and v9 decks are retained separately.
 
 ### Customize and reuse
 
@@ -311,21 +311,21 @@ P 與 Q 每列加總為 1；M 記錄期望子代數，不是機率轉移矩陣�
 
 ### 教學簡報
 
-`outputs/presentations/tumor_markov_code_results_zh_tw_v9.pptx` 是 53 張繁體中文教學投影片。以治療反應開場，講解程式與數學，再依序檢查族群組成、多樣性、控制實驗與後續驗證方向。數學推導整合於相應主內容頁，沒有附錄。
+`outputs/presentations/tumor_markov_code_results_zh_tw_v10.pptx` 是 54 張繁體中文教學投影片。以治療反應開場，講解程式與數學，再依序檢查族群組成、多樣性、治療延伸分析、控制實驗與後續驗證方向。數學推導整合於相應主內容頁，沒有附錄。
 
-程式教學採用 `modeling_cancer.py` 的節錄，搭配變數意義、數值例子及詳細講者備註，涵蓋 Config、稀疏基因型計數、bitmask、TSG 等位基因、IL11、更新時序、二項繁殖抽樣、突變守恆、P／Q／M、復發判讀、多次試驗統計、取樣及測試。公式以 LaTeX 數學語法及 Computer Modern 字型高解析度排版，原始碼保留於備註與繪製來源；公式是圖片物件，並非 PowerPoint 原生公式物件。文字、矩陣、狀態圖、16 張圖表與兩張熱圖均可編輯。
+程式教學採用 `modeling_cancer.py` 的節錄，搭配變數意義、數值例子及詳細講者備註，涵蓋 Config、稀疏基因型計數、bitmask、TSG 等位基因、IL11、更新時序、二項繁殖抽樣、突變守恆、P／Q／M、復發判讀、多次試驗統計、取樣及測試。節錄依行號選取；`modeling_cancer.py` 改動後必須重新檢查 `presentations/teach_model.mjs` 的行號範圍（v10 已全部對應到目前的原始碼）。公式以 LaTeX 數學語法及 Computer Modern 字型高解析度排版，是圖片物件，並非 PowerPoint 原生公式物件。文字、矩陣、狀態圖、表格與圖表均可編輯。
 
-圖組涵蓋原先五組輸出圖的所有面板類型：治療反應、有效基因型多樣性、有效試驗數、抗藥比例、突變頻率平均／SD、無 TSG 優勢控制組、one-hit／two-hit 生長與 TSG 達標比例、終點分布、IL11 生長／生產者比例／終點、全範圍與低比例放大效益曲線，以及等大小樣本多樣性。另以復發時間直方圖完成治療故事。主要治療曲線與熱圖顯示 0–30 代的共同完整窗口，每代皆有 30 次存活且觀察中的試驗；有效試驗數圖保留完整 0–40 代。所有對數轉換均明確標示。
+v10 依照與圖表相同的合併原則：可用試驗數圖改為註腳，兩張基因頻率熱圖改為一張以治療開始對齊、含 passenger 對照的基因頻率圖，刪除 IL11 全範圍曲線，TSG 達標比例與終點投影片加入無 TSG 優勢對照組。另有四張治療延伸分析投影片（Goldie–Coldman 治癒曲線、復發時間預測、k_R × μ 治癒表、適應性與持續治療比較）。主要治療曲線顯示 0–30 代的共同完整窗口，每代皆有 30 次存活且觀察中的試驗。所有對數轉換均明確標示。
 
-原有每組 30 次試驗已於前版重現並核對。擴充資料準備另重現治療族群與無 TSG 優勢控制組，核對 CSV 計數，並計算原先未加入的熱圖面板。重建資料與簡報：
+資料準備會重現治療族群與無 TSG 優勢對照組，核對 CSV 計數，並讀取 `plot_genotype_evolution.py` 與 `analyze_therapy.py` 已核對的輸出。重建資料與簡報：
 
 ```bash
 .venv/bin/python presentations/prepare_results.py
 .venv/bin/python presentations/prepare_extended_results.py
-PRESENTATION_FILENAME=tumor_markov_code_results_v10.pptx "$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node" presentations/build_tumor_markov.mjs
+PRESENTATION_BUILD_DIR=.presentation-build/code-v11 PRESENTATION_FILENAME=tumor_markov_code_results_zh_tw_v11.pptx "$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node" presentations/build_tumor_markov.mjs
 ```
 
-繪製程式使用已安裝的 bundled Artifact Tool 與檢查工具。公式使用專案 Python 排版，不需外部 TeX 安裝。候選檔、公式素材、預覽與檢查紀錄放在 Git 忽略的 `.presentation-build/`，不修改 conda。前版 v3 簡報另行保留。
+繪製程式使用已安裝的 bundled Artifact Tool 與檢查工具。公式使用專案 Python 排版，不需外部 TeX 安裝。候選檔、公式素材、預覽與檢查紀錄放在 Git 忽略的 `.presentation-build/`，不修改 conda。前版 v3 與 v9 簡報另行保留。
 
 ### 修改與重用
 
