@@ -1,0 +1,20 @@
+{
+  "representative_replicate": 4,
+  "seed": 100046,
+  "top_k": 10,
+  "shown_genotypes": [
+    "WT",
+    "ONC1",
+    "RES",
+    "ONC1+RES",
+    "ONC2+RES",
+    "ONC3+RES",
+    "RES+TSG1a",
+    "RES+P18",
+    "RES+P19",
+    "ONC2+ONC3+RES"
+  ],
+  "csv_note": "muller_representative.csv stores each shown genotype's own fraction after merging unshown cells into their nearest shown ancestor",
+  "nesting": "genotype containment (bit subset), not reconstructed lineage",
+  "base_model_only": true
+}

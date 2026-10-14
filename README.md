@@ -107,6 +107,28 @@ For arrows at every grid point, run `.venv/bin/python plot_phase_field.py`. It a
 
 Each grid point specifies a full parent population with genotype 0 for S and only the resistance bit for R. This fixes the hidden genotype composition; the one-step projected mean is checked against the full model at all 1,604 points. Other offspring mutations remain enabled and can move subsequent states off this slice, so repeated integration of this field does not reproduce the full evolving tumor. Treatment is fixed within each panel rather than switched at the size threshold. The origin has zero increment and is marked with a dot. The plotted ranges remain below the computation limit. `phase_vector_grid.csv` records every vector and common display scale; `phase_vector_assumptions.json` records the matrices, state slice and validation.
 
+### Choosing phase coordinates
+
+Run `.venv/bin/python analyze_phase_coordinates.py` to rerun the recorded therapy trials, verify every generation against `therapy_trajectories.csv`, and compute 20 candidate state variables from the full genotype snapshots: burden, sensitive/resistant counts, resistant fraction and its logit, oncogene and TSG fractions, passenger burden, diversity, mean fitness with and without therapy, fitness variance and therapy timing. Only the base model is analyzed (driver, TSG, resistance, therapy); IL11 must be off. Output goes to `outputs/phase_coordinates/`: `phase_features.csv` (one row per trial and generation), `pca_summary.json`, and `05_phase_coordinate_pca_{zh,en}` (PNG/SVG).
+
+PCA on standardized features is reported for all states, pre-therapy and on-therapy. Because PCA ranks variance rather than dynamical relevance, each set of components is also scored by how well it linearly predicts the next-generation log growth rate. PC1 (about 57–70% of variance) mostly collects quantities that rise with time and barely predicts growth. On therapy, two dimensions suffice: (log N, logit ρ) gives R² ≈ 0.92. Before therapy no combination exceeds about 0.1, because growth is dominated by demographic noise. Features with |r| ≥ 0.95 are listed as redundant groups, for example oncogene fraction, mean driver count and no-therapy mean fitness.
+
+Run `.venv/bin/python plot_phase_comparison.py` for two coordinate pairs, each shown as theory versus empirical drift with therapy off and on:
+
+- `05_phase_field_burden_logit_{zh,en}`: x = log10(N+1), y = resistant fraction on an empirical-logit axis, log10((R+½)/(S+½)), labeled in percent. It stays finite when ρ is 0 or 1, and the dashed and dotted lines mark S = 0 and R = 0.
+- `06_phase_field_fitness_logit_{zh,en}`: x = mean no-therapy fitness w̄_off, y = the same logit axis. It separates evolution (oncogene accumulation) from selection (resistance).
+
+Theory arrows use a fixed hidden-genotype slice: sensitive cells are genotype 0 and resistant cells carry only the resistance bit. For the fitness plane, the oncogene fraction is derived from w̄, independent of resistance, at N equal to the therapy threshold. Arrows end at the transformed one-step raw-count expectation, which is checked against `projected_offspring_mean`. Empirical arrows average the observed one-step displacement of all transitions starting in a cell, drawn only when a cell has ≥5 transitions from ≥2 trials; color shows the transition count. Within each therapy column, theory and empirical arrows share one length scale with separate x and y keys. Under therapy, theoretical logit ρ rises about 0.98 decades per generation: ρ → 1 is a stable compositional direction, but log N has no fixed point. Differences between rows show the effect of projected-out degrees of freedom and stochasticity. `phase_field_comparison.csv/.json` record every arrow, bin edge and assumption.
+
+### Genotype distribution over time
+
+Run `.venv/bin/python plot_genotype_evolution.py` to write to `outputs/genotype_evolution/`:
+
+- `01_muller_top_genotypes_{zh,en}`: a Muller plot of the representative trial (selected by the same rule as the phase portraits) beneath its burden curve, plus six other trials spanning early to late relapse. For each trial, the 10 genotypes with the highest peak frequency are shown. Each sits inside the largest shown genotype whose mutations are a subset of its own, and unshown cells merge into their nearest shown ancestor, so fractions always sum to 1. This is genotype containment, not a reconstructed lineage. Hue encodes functional class and lightness separates genotypes within a class. The main panel lists every genotype by name.
+- `02_gene_mutation_frequencies_{zh,en}`: mutant-cell fractions per gene across all 30 trials, aligned at therapy start, as median and 10th–90th percentile bands. Panels cover oncogenes, TSGs (any allele and biallelic loss), resistance, and the passenger mean as a neutral control. Only relative generations observed in every trial are shown, on a symlog y-axis.
+
+`muller_representative.csv`, `gene_frequency_summary.csv` and `genotype_evolution.json` hold the plotted values.
+
 ### Mathematical diagrams
 
 Run `.venv/bin/python plot_markov_model.py` to regenerate the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`. Figure 6 defines the full genotype-count Markov kernel using probability-generating functions, then gives an exact five-state numerical example. That example disables mutations and therapy and stops at first entry into four or more cells; its overflow state is imposed bookkeeping absorption, not biological saturation. Figure 7 shows the execution state machine, a reduced sensitive/resistant mutation matrix Q, expected-offspring matrices M, and default-parameter fitness values. P and Q are row-stochastic; M contains offspring means and is not a probability transition matrix. Rows are current/parent states and columns are next/offspring states. CSV matrices and a JSON assumptions record are exported alongside the figures; analytic checks run during generation.
@@ -252,6 +274,28 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 - `04_phase_vector_field_log`：每面板為 21×21 網格，使用 `log10(count+1)` 座標。長度及顏色表示原始計數期望轉換後的座標位移，不表示絕對細胞數增量，也不是對數計數的期望。
 
 每個網格點都指定完整父代族群：S 的基因型為 0，R 只有抗藥位元為 1，藉此固定隱藏基因組成。全部 1,604 點的一步投影期望均與完整模型核對。子代仍可發生其他突變，後續狀態可能離開此截面，因此反覆積分這張向量場不能重現完整腫瘤演化。治療在每面板固定，不依大小門檻切換。原點增量為零，以圓點標示；繪圖範圍均低於計算上限。`phase_vector_grid.csv` 保留每個向量及共用顯示倍率；`phase_vector_assumptions.json` 記錄矩陣、狀態截面及驗證。
+
+### 挑選相座標
+
+執行 `.venv/bin/python analyze_phase_coordinates.py` 會重跑記錄的治療試驗，逐代比對 `therapy_trajectories.csv`，並從完整基因型快照計算 20 個候選狀態量：負荷、敏感／抗藥細胞數、抗藥比例與其 logit、oncogene 與 TSG 比例、passenger 負荷、多樣性、有無治療下的平均適應度、適應度變異數，以及治療時間。只分析基礎模型（driver、TSG、抗藥、治療），IL11 必須關閉。輸出位於 `outputs/phase_coordinates/`：`phase_features.csv`（每個試驗×世代一列）、`pca_summary.json`，以及 `05_phase_coordinate_pca_{zh,en}`（PNG/SVG）。
+
+標準化後的 PCA 分別針對全部狀態、治療前與治療中計算。PCA 依變異排序，而不是依動力學重要性，因此另以線性預測下一代 log 成長率的 R² 評估各組成分。PC1（約 57–70% 變異）主要是隨時間上升的量，幾乎無法預測成長率。治療中兩個維度就足夠：(log N, logit ρ) 的 R² 約 0.92。治療前沒有任何組合超過約 0.1，因為成長主要由人口學隨機性決定。|r| ≥ 0.95 的特徵列為冗餘組，例如 oncogene 比例、平均 driver 數與無治療平均適應度。
+
+執行 `.venv/bin/python plot_phase_comparison.py` 可得兩組座標，每組皆以「理論 vs 經驗」漂移場呈現，並分開治療關閉與持續治療：
+
+- `05_phase_field_burden_logit_{zh,en}`：x = log10(N+1)，y = 以經驗 logit log10((R+½)/(S+½)) 呈現的抗藥比例，刻度標為百分比。ρ 為 0 或 1 時仍有限值，虛線與點線分別標示 S = 0 與 R = 0。
+- `06_phase_field_fitness_logit_{zh,en}`：x = 無治療平均適應度 w̄_off，y 軸同上。這張圖把演化（oncogene 累積）和選擇（抗藥）分開。
+
+理論箭頭使用固定的隱藏基因型截面：敏感細胞為基因型 0，抗藥細胞只帶抗藥位元。適應度平面中，oncogene 比例由 w̄ 換算，與抗藥獨立，N 取治療門檻。箭頭端點是一步原始計數期望經座標轉換後的位置，並與 `projected_offspring_mean` 核對。經驗箭頭是起點落在同一格的所有一步轉移之平均位移，僅在該格有 ≥5 次轉移且來自 ≥2 次試驗時繪製；顏色表示轉移數。同一治療欄中，理論與經驗箭頭共用長度比例，x、y 各有比例鍵。治療中理論 logit ρ 每代約上升 0.98 個 10 倍：ρ → 1 是組成上的穩定方向，但 log N 沒有不動點。上下排的差異反映被投影掉的自由度與隨機性。`phase_field_comparison.csv/.json` 記錄每支箭頭、分格邊界與假設。
+
+### 基因型分布的演變
+
+執行 `.venv/bin/python plot_genotype_evolution.py`，輸出至 `outputs/genotype_evolution/`：
+
+- `01_muller_top_genotypes_{zh,en}`：代表試驗（與相平面圖相同的選取規則）的 Muller 圖，上方附負荷曲線；另有 6 個由早到晚復發的其他試驗。每個試驗呈現峰值頻率最高的 10 個基因型。每個基因型位於「已呈現且突變為其子集的最大基因型」內，未呈現的細胞併入最接近的已呈現祖先，因此比例總和恆為 1。這是基因型包含關係，不是重建的譜系。色相表示功能類別，同類別內以明度區分基因型；主圖逐一列出基因型名稱。
+- `02_gene_mutation_frequencies_{zh,en}`：30 次試驗每個基因的突變細胞比例，以治療開始對齊，呈現中位數與 10–90 百分位帶。面板涵蓋 oncogene、TSG（任一等位基因與雙等位基因失活）、抗藥基因，以及作為中性對照的 passenger 平均。只呈現所有試驗都有觀察的相對世代，縱軸為 symlog。
+
+`muller_representative.csv`、`gene_frequency_summary.csv` 與 `genotype_evolution.json` 保存繪圖數值。
 
 ### 數學模型圖
 
