@@ -507,7 +507,7 @@ def plot_death_rate(shannon: dict, generations: dict, config: Config, repeats: i
             ax.scatter(index + jitter, data, color=COLORS[index], s=34, alpha=0.7)
             median = float(np.median(data))
             ax.plot([index - 0.18, index + 0.18], [median] * 2, color="#172B42", lw=3)
-            ax.annotate(f"{median:.2f}" if key == "shannon" else f"{median:.0f} gen", (index + 0.22, median),
+            ax.annotate(f"{median:.2f}" if key == "shannon" else f"{median:g} gen", (index + 0.22, median),
                         va="center", fontsize=10.5, color="#172B42")
             # 標示達到目標的試驗數，提醒統計是以達標為條件。
             ax.text(index, 0.98, f"{len(data)}/{repeats} reached", ha="center", va="top",
