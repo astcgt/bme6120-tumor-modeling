@@ -43,9 +43,10 @@ The `outputs/` directory contains:
 
 | File | Purpose |
 | --- | --- |
-| `01_tumor_dashboard.png / .svg` | Ensemble cell counts, diversity, trial availability, resistant fraction, and mutation-frequency mean/SD |
-| `02_scenario_comparisons.png / .svg` | Growth with no TSG advantage, TSG one-hit, or TSG two-hit; heterogeneity at different death rates |
-| `03_one_hit_vs_two_hit.png / .svg` | Direct comparison: linear growth, TSG-loss fraction, and individual trial burdens at generation 18 |
+| `01_tumor_dashboard.png / .svg` | Ensemble burden, effective genotypes and resistant fraction under therapy; resistance present at therapy start is annotated |
+| `02_death_rate_heterogeneity.png / .svg` | Shannon diversity of 5,000-cell samples and generations needed to reach 5,000 cells at three death rates |
+| `03_one_hit_vs_two_hit.png / .svg` | No-TSG-advantage control, one-hit and two-hit: linear growth, TSG-loss fraction, and trial burdens at generation 18 |
+| `04_il11_shared_fitness.png / .svg` | IL11 ON/OFF growth, producer fraction, and the benefit curve with the observed producer range |
 | `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | Per-generation comparison data and endpoint medians |
 | `trajectory.csv` | Ensemble statistics per generation: n, mean, sample SD, median, p10, p90 |
 | `therapy_trajectories.csv` | Individual treatment trajectories used in the ensemble |
@@ -53,15 +54,15 @@ The `outputs/` directory contains:
 | `therapy_replicates.csv` | Minimum burden, relapse generation, and stopping reason across treatment trials |
 | `run_metadata.json` | Parameters, random seed, and package versions |
 
-PNG figures use 240 dpi; SVG figures scale without loss of quality. Growth curves use symlog to display zero, with an approximately logarithmic scale above 1. TSG heatmap rows show cells with **any** allele hit, not necessarily functional loss. `suppressor_fraction` records cells meeting the selected TSG threshold; `suppressor_biallelic_fraction` records cells with both alleles lost at at least one TSG. `driver_fraction` continues to refer only to the oncogene threshold.
+PNG figures use 240 dpi; SVG figures scale without loss of quality. Growth curves use symlog to display zero, with an approximately logarithmic scale above 1. `suppressor_fraction` records cells meeting the selected TSG threshold; `suppressor_biallelic_fraction` records cells with both alleles lost at at least one TSG. `driver_fraction` continues to refer only to the oncogene threshold.
 
-Growth comparisons keep oncogene effects, mutation rates, and loci identical, varying only the TSG advantage: disabled, one-hit, or two-hit. By default, growth comparisons show the median and 10th–90th percentile interval across 30 trials. This describes variation across trials, not a confidence interval. Death-rate comparisons sample 5,000 cells without replacement from the first generation to cross 5,000 cells and calculate Shannon H; horizontal bars show medians. These are equal-sized **samples**, conditional on reaching the threshold, rather than whole tumors at an exactly matched size. Trials that do not reach the threshold are excluded from H but retained in the CSV; the plot reports how many trials reached it.
+Growth comparisons keep oncogene effects, mutation rates, and loci identical, varying only the TSG advantage: disabled (control), one-hit, or two-hit; all three appear in figure 03. By default, growth comparisons show the median and 10th–90th percentile interval across 30 trials. This describes variation across trials, not a confidence interval. Death-rate comparisons sample 5,000 cells without replacement from the first generation to cross 5,000 cells and calculate Shannon H; horizontal bars show medians. These are equal-sized **samples**, conditional on reaching the threshold, rather than whole tumors at an exactly matched size. Figure 02 panel B plots the generation at which each trial first reached 5,000 cells (medians 8 / 14 / 26 at death 0.20 / 0.35 / 0.45): more generations mean more divisions and more accumulated mutations at the same size. Trials that do not reach the threshold are excluded but retained in the CSV; the plot reports how many trials reached it.
 
 ### Direct one-hit versus two-hit comparison
 
 ![One-hit versus two-hit comparison](outputs/03_one_hit_vs_two_hit.png)
 
-The dedicated figure reuses the same 30 trials per scenario from the growth experiment; no therapy is applied. Panel A uses a linear cell-count axis, panel B shows the percentage meeting each scenario's TSG-loss threshold (symlog, linear below 0.01%), and panel C shows every trial at generation 18 with median bars. The threshold differs by definition; panel B measures the resulting phenotype, not an identical mutation state in both groups. Bands show trial variation, not confidence intervals. Overlap and stochastic reversals are retained rather than selecting favorable seeds.
+The figure shows the same 30 trials per scenario from the growth experiment, including the no-TSG-advantage control (dotted gray; TSG loss is counted with the two-hit rule but gives no advantage); no therapy is applied. At generation 18 the median burdens are 76,446 (control), 94,618 (one-hit) and 73,879 (two-hit), and 0.05% / 27.9% / 0.07% of cells meet the TSG threshold. Panel A uses a linear cell-count axis, panel B shows the percentage meeting each scenario's TSG-loss threshold (symlog, linear below 0.01%), and panel C shows every trial at generation 18 with median bars. The threshold differs by definition; panel B measures the resulting phenotype, not an identical mutation state in both groups. Bands show trial variation, not confidence intervals. Overlap and stochastic reversals are retained rather than selecting favorable seeds.
 
 ### IL11+ populations and shared fitness
 
@@ -77,41 +78,33 @@ At each generation, producer fraction `f` sets a shared absolute death-probabili
 
 ![IL11 shared fitness comparison](outputs/04_il11_shared_fitness.png)
 
-Every normal run generates an ON/OFF comparison without therapy over 18 generations (30 trials by default). Panels show whole-tumor growth, producer fraction, shared death reduction, and expected offspring of a mutation-free nonproducer under the current environment. The last quantity is a reference fitness calculation, not observed average growth. Matching seed numbers aid reproducibility but do not imply cell-by-cell pairing after trajectories diverge. Raw data and endpoint medians are saved to `il11_comparison.csv` and `il11_comparison_summary.csv`; figures are PNG/SVG. Other mutation and growth parameters remain identical, and trial variation is retained.
+Every normal run generates an ON/OFF comparison without therapy over 18 generations (30 trials by default). Panel A shows whole-tumor growth, panel B the producer fraction, and panel C the exact benefit formula (0–10% zoom) with the 10th–90th percentile range of producer fractions observed in ON trials and the generation-18 median marked. The shared death reduction and the expected offspring of a mutation-free nonproducer are deterministic transformations of the producer fraction, so they are reported in the footnote and the CSV rather than as separate panels. At generation 18, 1.6% producers lower every cell's death probability by 2.7 percentage points (nonproducer offspring 1.428 → 1.482) and the median tumor is 52% larger. Matching seed numbers aid reproducibility but do not imply cell-by-cell pairing after trajectories diverge. Raw data and endpoint medians are saved to `il11_comparison.csv` and `il11_comparison_summary.csv`; `il11_benefit_curve.csv` stores the curve.
 
-The mechanism curve below plots the exact model formula, with a full-range view and a low-producer zoom. At 2% IL11+ cells, the shared reduction is 3 **percentage points** (half of the 6-point asymptotic cap): baseline death changes from 30% to 27%. This is an absolute reduction, not a 3% relative reduction. The finite 0–100% producer range approaches but never reaches the asymptotic cap. It is a teaching assumption, not fitted experimental data. `05_il11_benefit_curve.png/.svg` and `il11_benefit_curve.csv` are generated automatically, even when the main simulation has IL11 disabled, to explain both switch states.
-
-![IL11 benefit mechanism](outputs/05_il11_benefit_curve.png)
+At 2% IL11+ cells, the shared reduction is 3 **percentage points** (half of the 6-point asymptotic cap): baseline death changes from 30% to 27%. This is an absolute reduction, not a 3% relative reduction. The curve is a teaching assumption, not fitted experimental data.
 
 ### Replication and uncertainty
 
-`--replicates` controls **all stochastic experiment groups**, including the main treatment dashboard; default 30. For example, `.venv/bin/python modeling_cancer.py --replicates 100`. The main dashboard now uses ensemble statistics instead of one trajectory. Population counts and diversity include extinct trials as zero; after a computational cell limit, later values are missing, never padded with the last population. Panel C reports available trials. Resistant proportions and gene-frequency heatmaps condition on observed living tumors; empty populations have no defined frequencies. Heatmaps show mean and sample SD separately (SD undefined for n < 2). TSG frequency means any allele hit.
+`--replicates` controls **all stochastic experiment groups**, including the main treatment dashboard; default 30. For example, `.venv/bin/python modeling_cancer.py --replicates 100`. The main dashboard now uses ensemble statistics instead of one trajectory. Population counts and diversity include extinct trials as zero; after a computational cell limit, later values are missing, never padded with the last population. The footnote states the last generation at which every trial is observed (generation 31 by default). Resistant proportions condition on observed living tumors; empty populations have no defined fraction. Per-gene frequencies are shown in `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`.
 
-Trials are aligned by absolute generation; treatment starts separately at each trial's size threshold, so the dashboard does not impose a shared treatment-start line. `therapy_replicates.csv` retains each start time and outcome. `trajectory.csv` is now an ensemble summary; `therapy_trajectories.csv` stores individual trajectories. Raw heatmap values can be regenerated from the recorded treatment seeds and configuration. The standalone `plot_dashboard(result, ...)` remains available for explicitly requested single-trial exploration.
+Trials are aligned by absolute generation; treatment starts separately at each trial's size threshold, so the dashboard shades the range of start generations instead of a single line, and panel C annotates the median resistant fraction at each trial's own therapy start. `therapy_replicates.csv` retains each start time and outcome. `trajectory.csv` is now an ensemble summary; `therapy_trajectories.csv` stores individual trajectories. The standalone `plot_dashboard(result, ...)` remains available for explicitly requested single-trial exploration.
 
-Growth and IL11 comparisons show medians and 10–90% trial intervals; endpoint and diversity scatter plots show individual trials and medians. More replicates stabilize summaries but do not remove biological stochasticity; percentile bands describe trial variability, **not confidence intervals or standard errors**. The IL11 mechanism curve is deterministic and has no sampling variance, so it has no uncertainty band.
+Growth and IL11 comparisons show medians and 10–90% trial intervals; endpoint and diversity scatter plots show individual trials and medians. More replicates stabilize summaries but do not remove biological stochasticity; percentile bands describe trial variability, **not confidence intervals or standard errors**. The IL11 benefit curve is deterministic and has no sampling variance, so it has no uncertainty band.
 
 ### Phase portraits
 
-Run `.venv/bin/python plot_phase_portraits.py` after generating the simulation outputs. It creates two standalone 300 dpi PNG/vector SVG figures in `outputs/phase_plots/`, without modifying the presentation:
+Run `.venv/bin/python plot_phase_portraits.py` after generating the simulation outputs. It creates one 300 dpi PNG/vector SVG figure, `outputs/phase_plots/01_phase_portrait`, without modifying the presentation. It shows sensitive vs resistant counts in `log10(count+1)` coordinates. Gray curves retain every observed trial; one actual trial is highlighted, selected first by proximity to the median relapse generation, then to the median nadir, and colored by pre-therapy, therapy-to-relapse and post-relapse. Treatment onset, minimum burden and relapse are marked. Black arrows end at the one-generation conditional mean calculated from the highlighted trial's full genotype snapshot, including the exact S-to-R mutation contribution; the distance from each arrowhead to the next observed point is that generation's stochastic deviation. A side column lists expected and observed next states at therapy start and at the nadir. The reproduced trial is checked against its recorded CSV counts. Arrows end at the log-transformed raw-count expectation, which differs from the expectation of log-transformed counts; the formulas are in figure 07.
 
-- `01_phase_trajectories`: sensitive vs resistant counts and total burden vs resistant fraction. Gray curves retain every observed trial; one actual trial is highlighted, selected first by proximity to the median relapse generation, then to the median nadir. Treatment onset, minimum burden and relapse are marked. Arrows follow time; independently computed median coordinates are not connected into an artificial trajectory.
-- `02_conditional_phase_directions`: one-generation conditional means calculated from the highlighted trial's full genotype snapshots, with the exact S-to-R mutation contribution. The reproduced trial is checked against its recorded CSV counts. Arrows end at the log-transformed raw-count expectation, which differs from the expectation of log-transformed counts.
+This is a projection of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver, TSG or IL11 composition. Computational endpoints are not equilibria. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `--replicate 0 --output outputs/phase_rep0` to examine another actual trial. Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths. The burden × resistant-fraction view is in `05_phase_field_burden_logit` below, which uses a logit axis instead of a linear percentage.
 
-Both plots label `log10(count+1)` explicitly to retain zeros. Extinct tumors have no defined resistant fraction; trajectories stop at the last observation. These are projections of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver, TSG or IL11 composition and different future transitions. Computational endpoints are not equilibria or attractors. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `--replicate 0 --output outputs/phase_rep0` to examine another actual trial. Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths.
-
-For arrows at every grid point, run `.venv/bin/python plot_phase_field.py`. It adds two PNG/SVG vector-field figures, separately fixing treatment off and ongoing treatment:
-
-- `03_phase_vector_field`: a 19×19 grid per panel on equal linear cell-count axes. Arrow direction is the one-generation expected increment, `E[(S_next,R_next) | state,alpha] - (S,R)`. Length is proportional to its Euclidean magnitude; both panels share one scale and color range, with a 10,000 cells/generation arrow key. Arrows are not individually normalized.
-- `04_phase_vector_field_log`: a 21×21 grid per panel in `log10(count+1)` coordinates. Length and color encode the displacement after transforming the raw-count mean; they do not encode absolute-cell increments or the expectation of log-transformed counts.
-
-Each grid point specifies a full parent population with genotype 0 for S and only the resistance bit for R. This fixes the hidden genotype composition; the one-step projected mean is checked against the full model at all 1,604 points. Other offspring mutations remain enabled and can move subsequent states off this slice, so repeated integration of this field does not reproduce the full evolving tumor. Treatment is fixed within each panel rather than switched at the size threshold. The origin has zero increment and is marked with a dot. The plotted ranges remain below the computation limit. `phase_vector_grid.csv` records every vector and common display scale; `phase_vector_assumptions.json` records the matrices, state slice and validation.
+`.venv/bin/python plot_phase_field.py` computes the grid vector-field data used by figure 07: `phase_vector_grid.csv` and `phase_vector_assumptions.json`. Each grid point specifies a full parent population with genotype 0 for S and only the resistance bit for R, and the one-step projected mean is checked against the full model at all 1,604 points (linear and log grids). Other offspring mutations remain enabled and can move later states off this slice. Treatment is fixed within each panel rather than switched at the size threshold. The former standalone linear and log vector-field figures were merged into figure 07 or removed.
 
 ### Choosing phase coordinates
 
-Run `.venv/bin/python analyze_phase_coordinates.py` to rerun the recorded therapy trials, verify every generation against `therapy_trajectories.csv`, and compute 20 candidate state variables from the full genotype snapshots: burden, sensitive/resistant counts, resistant fraction and its logit, oncogene and TSG fractions, passenger burden, diversity, mean fitness with and without therapy, fitness variance and therapy timing. Only the base model is analyzed (driver, TSG, resistance, therapy); IL11 must be off. Output goes to `outputs/phase_coordinates/`: `phase_features.csv` (one row per trial and generation), `pca_summary.json`, and `05_phase_coordinate_pca_{zh,en}` (PNG/SVG).
+Run `.venv/bin/python analyze_phase_coordinates.py` to rerun the recorded therapy trials, verify every generation against `therapy_trajectories.csv`, and ask which factor decides where the tumor goes next. Only the base model is analyzed (driver, TSG, resistance, therapy); IL11 must be off. Output goes to `outputs/phase_coordinates/`: `phase_features.csv` (one row per trial and generation), `pca_summary.json`, and `05_phase_coordinate_pca_{zh,en}` (PNG/SVG).
 
-PCA on standardized features is reported for all states, pre-therapy and on-therapy. Because PCA ranks variance rather than dynamical relevance, each set of components is also scored by how well it linearly predicts the next-generation log growth rate. PC1 (about 57–70% of variance) mostly collects quantities that rise with time and barely predicts growth. On therapy, two dimensions suffice: (log N, logit ρ) gives R² ≈ 0.92. Before therapy no combination exceeds about 0.1, because growth is dominated by demographic noise. Features with |r| ≥ 0.95 are listed as redundant groups, for example oncogene fraction, mean driver count and no-therapy mean fitness.
+PCA uses 15 biological state variables only (burden, sensitive/resistant counts, resistant fraction and its logit, oncogene, TSG, diversity/passenger and time-on-therapy measures), computed separately before and during therapy. Composite fitness summaries are excluded so that each component reads as a combination of factors. Each step is then split into an exact **expected drift**, computed from the full genotype state, and **noise**, along two directions: burden (Δ ln N) and composition (Δ logit ρ, states with S > 0 only). For each factor group, the figure reports how much of the drift it explains alone (linear R²), plus the share of the actual step that the drift explains.
+
+Findings: PC1 collects everything that grows with time (67% of variance before therapy, 59% during). Before therapy it tracks the drift (R² 0.74) only because oncogenes accumulate with time; during therapy PC2 (mostly ρ) is needed. Before therapy the oncogene fraction sets the burden drift exactly (R² 1.00), but the drift varies by only about ±0.009 per generation and small-population noise dominates: the drift explains 10% of the actual step. During therapy the resistant fraction ρ sets growth versus decline (R² 0.97) and the actual step equals the drift (R² 1.00). Expected growth crosses zero at ρ* = (1 − w_S)/(w_R − w_S) ≈ 70% for baseline cells, the nadir; oncogene-carrying states cross slightly earlier, near 65%. Composition moves with ρ itself in both segments: mutation supply before therapy, selection during therapy. R² is correlational; diversity and burden also rise with time, which inflates their values. The script asserts that the expected burden drift equals ln of the current mean fitness.
 
 Run `.venv/bin/python plot_phase_comparison.py` for two coordinate pairs, each shown as theory versus empirical drift with therapy off and on:
 
@@ -131,7 +124,13 @@ Run `.venv/bin/python plot_genotype_evolution.py` to write to `outputs/genotype_
 
 ### Mathematical diagrams
 
-Run `.venv/bin/python plot_markov_model.py` to regenerate the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`. Figure 6 defines the full genotype-count Markov kernel using probability-generating functions, then gives an exact five-state numerical example. That example disables mutations and therapy and stops at first entry into four or more cells; its overflow state is imposed bookkeeping absorption, not biological saturation. Figure 7 shows the execution state machine, a reduced sensitive/resistant mutation matrix Q, expected-offspring matrices M, and default-parameter fitness values. P and Q are row-stochastic; M contains offspring means and is not a probability transition matrix. Rows are current/parent states and columns are next/offspring states. CSV matrices and a JSON assumptions record are exported alongside the figures; analytic checks run during generation.
+Run `.venv/bin/python plot_markov_model.py` to regenerate the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`:
+
+- `06_single_cell_rules`: the offspring distribution of a mutation-free cell, the same rule as an exact five-state matrix (mutations and therapy disabled; the overflow state is imposed bookkeeping absorption, not biological saturation), and a table of d, q, offspring probabilities, mean offspring m with and without therapy, and the probability that one cell's lineage eventually dies out (smallest root of s = f(s)). A baseline resistant lineage survives therapy with probability 0.52; sensitive lineages under therapy always die out.
+- `07_matrices_to_flow`: the reduced sensitive/resistant mutation matrix Q and expected-offspring matrices M, the conditional-mean formulas E[S′ | s] and E[R′ | s], and beside them the linear S–R vector fields with therapy off and on (11×11 grid, shared length scale).
+- `A1_markov_kernel_and_controller` (appendix): the full genotype-count Markov kernel written with probability-generating functions, and the execution state machine.
+
+P and Q are row-stochastic; M contains offspring means and is not a probability transition matrix. Rows are current/parent states and columns are next/offspring states. CSV matrices and a JSON assumptions record are exported alongside the figures; analytic checks run during generation.
 
 ### Teaching presentation
 
@@ -211,9 +210,10 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 
 | 檔案 | 用途 |
 | --- | --- |
-| `01_tumor_dashboard.png / .svg` | 多次試驗細胞數、多樣性、可用試驗數、抗藥比例、突變頻率平均／SD |
-| `02_scenario_comparisons.png / .svg` | 無 TSG 優勢／TSG one-hit／TSG two-hit 的生長，以及不同死亡率下的異質性 |
-| `03_one_hit_vs_two_hit.png / .svg` | 直接比較線性生長、TSG 達標比例，以及第 18 代各次試驗的負荷 |
+| `01_tumor_dashboard.png / .svg` | 治療下多次試驗的負荷、有效基因型數與抗藥比例；標示治療開始時已存在的抗藥細胞 |
+| `02_death_rate_heterogeneity.png / .svg` | 三種死亡率下 5,000 細胞樣本的 Shannon 多樣性，以及長到 5,000 細胞所需代數 |
+| `03_one_hit_vs_two_hit.png / .svg` | 無 TSG 優勢對照組、one-hit、two-hit：線性生長、TSG 達標比例與第 18 代各次試驗負荷 |
+| `04_il11_shared_fitness.png / .svg` | IL11 開／關的生長、生產者比例，以及標出實際生產者範圍的效益曲線 |
 | `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | 逐代比較資料與終點中位數 |
 | `trajectory.csv` | 多次試驗逐代統計：n、平均、樣本 SD、中位數、p10、p90 |
 | `therapy_trajectories.csv` | 彙整圖使用的各次治療試驗逐代資料 |
@@ -221,15 +221,15 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 | `therapy_replicates.csv` | 多次治療試驗的最低負荷、復發代數、停止原因 |
 | `run_metadata.json` | 參數、隨機種子與套件版本 |
 
-PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示，1 以上近似對數尺度。TSG 熱圖列顯示**任一等位基因有突變**的細胞比例，不一定代表功能喪失。`suppressor_fraction` 記錄符合所選 TSG 門檻的細胞比例；`suppressor_biallelic_fraction` 記錄至少一個 TSG 雙等位基因失活的細胞比例。`driver_fraction` 仍只表示達到 oncogene 門檻的比例。
+PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示，1 以上近似對數尺度。`suppressor_fraction` 記錄符合所選 TSG 門檻的細胞比例；`suppressor_biallelic_fraction` 記錄至少一個 TSG 雙等位基因失活的細胞比例。`driver_fraction` 仍只表示達到 oncogene 門檻的比例。
 
-生長比較固定 oncogene 效果、突變率與基因座，只改變 TSG 優勢條件：取消優勢、一擊或兩擊。預設展示 30 次試驗的中位數及 10–90 百分位區間，這是試驗間變異，並不是信賴區間。死亡率比較使用各試驗首次跨過 5,000 細胞的世代，無放回取樣 5,000 細胞計算 Shannon H；圖上的橫線是中位數。此結果是在達門檻條件下的等大小**樣本**比較，並非精確命中該大小的完整腫瘤。未達門檻者不納入 H，但會保留於 CSV 並顯示成功試驗數。
+生長比較固定 oncogene 效果、突變率與基因座，只改變 TSG 優勢條件：取消優勢（對照組）、一擊或兩擊，三者都畫在圖 03。預設展示 30 次試驗的中位數及 10–90 百分位區間，這是試驗間變異，並不是信賴區間。死亡率比較使用各試驗首次跨過 5,000 細胞的世代，無放回取樣 5,000 細胞計算 Shannon H；圖上的橫線是中位數。此結果是在達門檻條件下的等大小**樣本**比較，並非精確命中該大小的完整腫瘤。圖 02 的 B 面板畫出每次試驗首次達到 5,000 細胞的世代（死亡率 0.20／0.35／0.45 時中位數 8／14／26 代）：代數越多，分裂越多，同樣大小時累積的突變也越多。未達門檻者不納入，但會保留於 CSV 並顯示成功試驗數。
 
 ### One-hit 與 two-hit 直接比較
 
 ![One-hit 與 two-hit 比較](outputs/03_one_hit_vs_two_hit.png)
 
-專屬比較圖重用生長試驗每種情境的同一批 30 次試驗，不施加治療。A 面板以線性座標顯示細胞數，B 面板顯示各情境達到 TSG 失活門檻的細胞百分比（symlog，0.01% 以下為線性），C 面板顯示第 18 代每次試驗的負荷與中位數橫線。兩情境的門檻定義不同，B 比較的是功能表型，而非完全相同的突變狀態。陰影表示試驗間變異，不是信賴區間；保留重疊與隨機反轉，不挑選有利種子。
+此圖呈現生長試驗每種情境的同一批 30 次試驗，並加入無 TSG 優勢的對照組（灰色點線；TSG 失活以 two-hit 規則計數，但沒有生長優勢），不施加治療。第 18 代負荷中位數為 76,446（對照）、94,618（one-hit）、73,879（two-hit），達到 TSG 門檻的細胞分別占 0.05%／27.9%／0.07%。A 面板以線性座標顯示細胞數，B 面板顯示各情境達到 TSG 失活門檻的細胞百分比（symlog，0.01% 以下為線性），C 面板顯示第 18 代每次試驗的負荷與中位數橫線。兩情境的門檻定義不同，B 比較的是功能表型，而非完全相同的突變狀態。陰影表示試驗間變異，不是信賴區間；保留重疊與隨機反轉，不挑選有利種子。
 
 ### IL11+ 族群與共享生長優勢
 
@@ -245,41 +245,33 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 
 ![IL11 共享生長優勢比較](outputs/04_il11_shared_fitness.png)
 
-每次正常執行都會生成不施加治療、觀察 18 代的 ON／OFF 比較，預設每組 30 次試驗。四面板顯示整體生長、生產者比例、共享死亡率降低量，以及未突變非生產者在當前環境中的預期子代數；最後一項是參考 fitness 計算，不是觀察到的平均增長。相同 seed 方便重現，但族群分歧後不代表逐細胞配對。逐代資料與終點中位數存於 `il11_comparison.csv`、`il11_comparison_summary.csv`，圖表輸出 PNG／SVG。其餘突變與生長參數保持一致，並保留試驗間變異。
+每次正常執行都會生成不施加治療、觀察 18 代的 ON／OFF 比較，預設每組 30 次試驗。A 面板為整體生長，B 面板為生產者比例，C 面板為效益公式（0–10% 放大），並標出 ON 試驗實際出現的生產者比例 10–90 百分位範圍與第 18 代中位數。共享死亡率降低量與未突變非生產者的預期子代數都是生產者比例的確定性轉換，因此寫在註腳與 CSV，不另畫面板。第 18 代 1.6% 的生產者讓所有細胞死亡率降低 2.7 個百分點（非生產者子代數 1.428 → 1.482），腫瘤中位數多 52%。相同 seed 方便重現，但族群分歧後不代表逐細胞配對。逐代資料與終點中位數存於 `il11_comparison.csv`、`il11_comparison_summary.csv`；`il11_benefit_curve.csv` 保存曲線。
 
-下圖直接畫出模型公式，包含全範圍與低生產者比例放大圖。IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上限 6 個百分點的一半：基準死亡率從 30% 降至 27%。這是絕對降低量，不是相對降低 3%。生產者比例在 0–100% 的有限範圍內會接近、但不會精確達到漸近上限。曲線是教學假設，不是實驗擬合。每次執行會自動生成 `05_il11_benefit_curve.png/.svg` 與 `il11_benefit_curve.csv`；即使主模擬關閉 IL11，也會畫出兩種開關狀態的機制供理解。
-
-![IL11 共享優勢的機制曲線](outputs/05_il11_benefit_curve.png)
+IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上限 6 個百分點的一半：基準死亡率從 30% 降至 27%。這是絕對降低量，不是相對降低 3%。曲線是教學假設，不是實驗擬合。
 
 ### 重複試驗與不確定性
 
-`--replicates` 統一控制**所有隨機實驗組**，包含主治療圖，預設 30 次。例如：`.venv/bin/python modeling_cancer.py --replicates 100`。主圖改用多次試驗彙整，不再只展示一條軌跡。細胞數與多樣性將滅絕試驗延續為零；達計算上限後的後續值視為缺失，不使用最後數量補值，C 面板會顯示可用試驗數。抗藥比例及基因頻率熱圖只針對仍存活且有觀察值的腫瘤，空族群不定義頻率。熱圖分別顯示平均值與樣本 SD（n 小於 2 時 SD 不定義），TSG 頻率指任一等位基因有突變。
+`--replicates` 統一控制**所有隨機實驗組**，包含主治療圖，預設 30 次。例如：`.venv/bin/python modeling_cancer.py --replicates 100`。主圖改用多次試驗彙整，不再只展示一條軌跡。細胞數與多樣性將滅絕試驗延續為零；達計算上限後的後續值視為缺失，不使用最後數量補值；註腳寫出所有試驗都有觀察的最後世代（預設第 31 代）。抗藥比例只針對仍存活且有觀察值的腫瘤，空族群不定義比例。逐基因突變頻率見 `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`。
 
-試驗依絕對世代對齊，治療各自在達到大小門檻後開始，因此主圖不設定共同治療起點線。`therapy_replicates.csv` 保留每次起點與結果。`trajectory.csv` 現為多次試驗摘要，`therapy_trajectories.csv` 保留各次軌跡。熱圖原始值可用記錄的治療種子及設定重新生成。仍可自行呼叫 `plot_dashboard(result, ...)` 查看明確指定的單次案例。
+試驗依絕對世代對齊，治療各自在達到大小門檻後開始，因此主圖以淡色區間標出治療起點的範圍，而不是單一條線；C 面板標出各試驗在自己治療起點的抗藥比例中位數。`therapy_replicates.csv` 保留每次起點與結果。`trajectory.csv` 現為多次試驗摘要，`therapy_trajectories.csv` 保留各次軌跡。仍可自行呼叫 `plot_dashboard(result, ...)` 查看明確指定的單次案例。
 
-生長與 IL11 比較顯示中位數及 10–90% 試驗區間；終點負荷與多樣性散點保留個別試驗及中位數。增加次數能穩定摘要估計，但不會消除生物隨機性；百分位帶代表試驗間變異，**不是信賴區間或標準誤**。IL11 機制公式是確定性曲線，沒有抽樣變異，因此不加誤差帶。
+生長與 IL11 比較顯示中位數及 10–90% 試驗區間；終點負荷與多樣性散點保留個別試驗及中位數。增加次數能穩定摘要估計，但不會消除生物隨機性；百分位帶代表試驗間變異，**不是信賴區間或標準誤**。IL11 效益公式是確定性曲線，沒有抽樣變異，因此不加誤差帶。
 
 ### 相平面圖
 
-生成模擬輸出後，執行 `.venv/bin/python plot_phase_portraits.py`，即可在 `outputs/phase_plots/` 生成兩張獨立的 300 dpi PNG／向量 SVG，不修改簡報：
+生成模擬輸出後，執行 `.venv/bin/python plot_phase_portraits.py`，即可在 `outputs/phase_plots/` 生成一張 300 dpi PNG／向量 SVG：`01_phase_portrait`，不修改簡報。圖中以 `log10(count+1)` 座標呈現敏感／抗藥細胞數。灰線保留所有實際觀察軌跡；突出一條實際試驗，先選最接近復發中位代數，再選谷底最接近中位數的案例，並依治療前、治療至復發、復發後上色，標示治療啟動、最低負荷與復發。黑色箭頭的端點是由突出案例完整基因型快照算出的下一代條件期望，包含敏感細胞突變成抗藥細胞的精確貢獻；箭頭頭端到下一個實際點的距離就是該代的隨機偏差。右欄列出治療啟動與谷底時的期望與實際下一代。重現案例會逐代核對記錄的 CSV 計數。箭頭端點是原始計數期望的對數轉換，並非對數計數的期望；公式見圖 07。
 
-- `01_phase_trajectories`：敏感／抗藥細胞數，以及總負荷／抗藥比例。灰線保留所有實際觀察軌跡；突出一條實際試驗，先選最接近復發中位代數，再選谷底最接近中位數的案例。標示治療啟動、最低負荷與復發。箭頭表示時間前進，不把各座標分別取中位後連成虛構軌跡。
-- `02_conditional_phase_directions`：以突出案例的完整基因型快照計算下一代條件期望，包含敏感細胞突變成抗藥細胞的精確貢獻。重現案例會逐代核對記錄的 CSV 計數。箭頭端點是原始計數期望的對數轉換，並非對數計數的期望。
+這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver、TSG 或 IL11 組成。計算終點不是平衡點。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可加上 `--replicate 0 --output outputs/phase_rep0` 查看另一條實際試驗。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。負荷 × 抗藥比例的視角改看下方的 `05_phase_field_burden_logit`，它用 logit 軸取代線性百分比。
 
-兩圖均明確標示 `log10(count+1)`，以保留零細胞。滅絕族群不定義抗藥比例；軌跡停在最後觀察點。這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver、TSG 或 IL11 組成，從而有不同轉移。計算終點不是平衡點或吸引子。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可加上 `--replicate 0 --output outputs/phase_rep0` 查看另一條實際試驗。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。
-
-若要每個網格點都有箭頭，執行 `.venv/bin/python plot_phase_field.py`，即可另存兩張 PNG／SVG 向量場圖，各自固定治療關閉與持續治療：
-
-- `03_phase_vector_field`：每面板為 19×19 網格，使用比例一致的線性細胞數座標。方向表示每代期望增量 `E[(S_next,R_next) | state,alpha] - (S,R)`；長度正比於增量的歐氏大小。兩面板共用倍率及色階，附 10,000 細胞／代的箭頭標尺，不逐支正規化。
-- `04_phase_vector_field_log`：每面板為 21×21 網格，使用 `log10(count+1)` 座標。長度及顏色表示原始計數期望轉換後的座標位移，不表示絕對細胞數增量，也不是對數計數的期望。
-
-每個網格點都指定完整父代族群：S 的基因型為 0，R 只有抗藥位元為 1，藉此固定隱藏基因組成。全部 1,604 點的一步投影期望均與完整模型核對。子代仍可發生其他突變，後續狀態可能離開此截面，因此反覆積分這張向量場不能重現完整腫瘤演化。治療在每面板固定，不依大小門檻切換。原點增量為零，以圓點標示；繪圖範圍均低於計算上限。`phase_vector_grid.csv` 保留每個向量及共用顯示倍率；`phase_vector_assumptions.json` 記錄矩陣、狀態截面及驗證。
+`.venv/bin/python plot_phase_field.py` 計算圖 07 使用的網格向量場資料：`phase_vector_grid.csv` 與 `phase_vector_assumptions.json`。每個網格點都指定完整父代族群：S 的基因型為 0，R 只有抗藥位元為 1；全部 1,604 點（線性與對數網格）的一步投影期望均與完整模型核對。子代仍可發生其他突變，後續狀態可能離開此截面。治療在每面板固定，不依大小門檻切換。原本獨立的線性與對數向量場圖已併入圖 07 或刪除。
 
 ### 挑選相座標
 
-執行 `.venv/bin/python analyze_phase_coordinates.py` 會重跑記錄的治療試驗，逐代比對 `therapy_trajectories.csv`，並從完整基因型快照計算 20 個候選狀態量：負荷、敏感／抗藥細胞數、抗藥比例與其 logit、oncogene 與 TSG 比例、passenger 負荷、多樣性、有無治療下的平均適應度、適應度變異數，以及治療時間。只分析基礎模型（driver、TSG、抗藥、治療），IL11 必須關閉。輸出位於 `outputs/phase_coordinates/`：`phase_features.csv`（每個試驗×世代一列）、`pca_summary.json`，以及 `05_phase_coordinate_pca_{zh,en}`（PNG/SVG）。
+執行 `.venv/bin/python analyze_phase_coordinates.py` 會重跑記錄的治療試驗，逐代比對 `therapy_trajectories.csv`，並回答「哪個因子決定腫瘤下一步往哪走」。只分析基礎模型（driver、TSG、抗藥、治療），IL11 必須關閉。輸出位於 `outputs/phase_coordinates/`：`phase_features.csv`（每個試驗×世代一列）、`pca_summary.json`，以及 `05_phase_coordinate_pca_{zh,en}`（PNG/SVG）。
 
-標準化後的 PCA 分別針對全部狀態、治療前與治療中計算。PCA 依變異排序，而不是依動力學重要性，因此另以線性預測下一代 log 成長率的 R² 評估各組成分。PC1（約 57–70% 變異）主要是隨時間上升的量，幾乎無法預測成長率。治療中兩個維度就足夠：(log N, logit ρ) 的 R² 約 0.92。治療前沒有任何組合超過約 0.1，因為成長主要由人口學隨機性決定。|r| ≥ 0.95 的特徵列為冗餘組，例如 oncogene 比例、平均 driver 數與無治療平均適應度。
+PCA 只使用 15 個生物狀態量（負荷、敏感／抗藥細胞數、抗藥比例與其 logit、oncogene、TSG、多樣性／passenger 與治療時間），治療前、治療中分開計算。由因子合成的平均適應度不放進 PCA，讓每個主成分都能讀成因子的組合。接著把每一步拆成由完整基因型精確算出的**期望漂移**與**隨機噪音**，分兩個方向：負荷（Δ ln N）與組成（Δ logit ρ，只用 S > 0 的狀態）。圖中報告每組因子單獨能解釋多少漂移（線性 R²），以及漂移占實際步伐的比例。
+
+結果：PC1 是所有隨時間一起變大的量（治療前占 67% 變異，治療中 59%）。治療前它能預測漂移（R² 0.74），只因 oncogene 也隨時間累積；治療中需要以 ρ 為主的 PC2。治療前 oncogene 比例完全決定負荷漂移（R² 1.00），但漂移每代只差約 ±0.009，小族群噪音更大，實際一步只有 10% 是漂移。治療中抗藥比例 ρ 決定負荷漲跌（R² 0.97），實際一步幾乎等於漂移（R² 1.00）。基準細胞的期望成長率在 ρ* = (1 − w_S)/(w_R − w_S) ≈ 70% 穿過零，也就是谷底；帶 oncogene 的狀態稍早，約在 65% 由負轉正。組成方向兩段都由 ρ 自己決定：治療前是突變供應，治療中是篩選。R² 只代表相關；多樣性與負荷也隨時間上升，所以數值偏高。程式會檢查期望負荷漂移等於當下平均適應度的 ln。
 
 執行 `.venv/bin/python plot_phase_comparison.py` 可得兩組座標，每組皆以「理論 vs 經驗」漂移場呈現，並分開治療關閉與持續治療：
 
@@ -299,7 +291,13 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 
 ### 數學模型圖
 
-執行 `.venv/bin/python plot_markov_model.py`，可在 `outputs/mathematical_model/` 重新生成論文風格的 300 dpi PNG 與向量 SVG。圖 6 用機率生成函數定義完整基因型計數的 Markov 轉移核，再給出精確的五狀態數值範例。此範例停用突變與治療，首次達到至少四個細胞時停止；溢出狀態是人為設定的記帳吸收狀態，不是生物飽和。圖 7 呈現程式狀態機、簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M，以及預設參數的繁殖能力數值。P 與 Q 每列加總為 1；M 記錄期望子代數，不是機率轉移矩陣。列代表當前／父代，欄代表下一步／子代。圖旁另存 CSV 矩陣及 JSON 假設紀錄，生成時會執行解析數值檢查。
+執行 `.venv/bin/python plot_markov_model.py`，可在 `outputs/mathematical_model/` 重新生成論文風格的 300 dpi PNG 與向量 SVG：
+
+- `06_single_cell_rules`：未突變細胞的子代分布、同一規則寫成的精確五狀態矩陣（停用突變與治療；溢出狀態是人為設定的記帳吸收狀態，不是生物飽和），以及 d、q、子代機率、治療前後平均子代數 m 和單一細胞家系最終滅絕機率（s = f(s) 的最小根）的表格。基準抗藥細胞的家系在治療下有 0.52 的機率存活；敏感細胞家系在治療下必定滅絕。
+- `07_matrices_to_flow`：簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M、條件期望公式 E[S′ | s] 與 E[R′ | s]，旁邊是治療關閉與持續治療的線性 S–R 向量場（11×11 網格，共用長度比例）。
+- `A1_markov_kernel_and_controller`（附錄）：以機率生成函數寫出的完整基因型計數 Markov 轉移核，以及程式執行狀態機。
+
+P 與 Q 每列加總為 1；M 記錄期望子代數，不是機率轉移矩陣。列代表當前／父代，欄代表下一步／子代。圖旁另存 CSV 矩陣及 JSON 假設紀錄，生成時會執行解析數值檢查。
 
 ### 教學簡報
 
