@@ -1,5 +1,7 @@
 """Generate publication-style mathematical diagrams using the project's defaults.
 
+Figures: 06 single-cell rules, 07 matrices-to-flow (with linear vector fields), A1 appendix kernel + controller.
+
 Run: .venv/bin/python plot_markov_model.py
 The finite count chain and two-type matrices are explicitly reduced examples.
 """
@@ -9,6 +11,7 @@ import json
 
 from modeling_cancer import Config, growth_probabilities
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 import numpy as np
 
@@ -35,11 +38,11 @@ def finite_count_matrix(death, triple, threshold=4):
     return matrix, offspring
 
 
-def panel(ax, letter, title):
+def panel(ax, letter, title, gap=.055):
     ax.set(xlim=(0, 1), ylim=(0, 1))
     ax.axis("off")
     ax.text(0, 1, letter, fontsize=17, weight="bold", va="top", color=BLUE)
-    ax.text(.055, .995, title, fontsize=13, weight="bold", va="top", color=INK)
+    ax.text(gap, .995, title, fontsize=13, weight="bold", va="top", color=INK)
 
 
 def label(ax, x, y, text, size=12, **kw):
@@ -87,16 +90,148 @@ def matrix_display(ax, values, x, y, width, height, rows=None, cols=None, fmt=".
 
 def save(fig, name):
     for suffix in ("png", "svg"):
-        fig.savefig(OUT / f"{name}.{suffix}", dpi=300, facecolor="white")
+        fig.savefig(OUT / f"{name}.{suffix}", dpi=300, facecolor="white", bbox_inches="tight", pad_inches=.3)
     plt.close(fig)
 
 
-def markov_figure(config, matrix, offspring):
-    fig = plt.figure(figsize=(15, 10.8))
-    fig.text(.04, .965, "Markov formulation of stochastic tumor evolution", fontsize=22, weight="bold", color=INK)
-    fig.text(.04, .93, "Exact population transition kernel and a fully specified finite numerical example", fontsize=12, color=GRAY)
-    ax = fig.add_axes([.04, .52, .92, .36])
-    panel(ax, "A", "Full genotype-count process")
+def lineage_extinction(death, triple):
+    """單一細胞家系最終滅絕機率：f(s)=δ+(1−δ)[(1−q)s²+qs³] 在 [0,1] 的最小不動點。"""
+    s = 0.0
+    for _ in range(100_000):
+        s_next = death + (1-death)*((1-triple)*s**2 + triple*s**3)
+        if abs(s_next - s) < 1e-15:
+            break
+        s = s_next
+    return s_next
+
+
+def single_cell_figure(config, matrix, offspring, phenotypes):
+    """一個細胞一代會怎樣：子代分布、有限計數鏈，以及四種代表性細胞的數字。"""
+    fig = plt.figure(figsize=(15, 11.2))
+    fig.text(.04, .965, "Single-cell rules: what one cell does in one generation", fontsize=22, weight="bold", color=INK)
+    fig.text(.04, .93, "Every simulated outcome is built from these per-cell offspring laws", fontsize=12, color=GRAY)
+
+    ax = fig.add_axes([.04, .52, .40, .36])
+    panel(ax, "A", "Offspring distribution of a mutation-free cell")
+    label(ax, .015, .86, r"$d=0.30,\quad q=0.04,\quad\mathrm{no\ therapy}$", 14)
+    node(ax, (.16, .54), "1 parent", .23, .15)
+    for y, n, p in zip((.73, .50, .27), (0, 2, 3), offspring[[0,2,3]]):
+        node(ax, (.80, y), f"{n} offspring", .29, .14, RED if n == 0 else BLUE)
+        arrow(ax, (.285, .54), (.645, y), f"{p:.3f}", (.48, (y+.54)/2+.035))
+    label(ax, .015, .12, r"$f(z)=0.300+0.672z^2+0.028z^3$", 16)
+    label(ax, .015, -.005, r"$m=f'(1)=1.428,\qquad s=f(s)\Rightarrow s=%.3f$" % lineage_extinction(config.death_rate, config.triple_probability), 15)
+
+    ax = fig.add_axes([.49, .52, .47, .36])
+    panel(ax, "B", "Same rule as a finite Markov matrix")
+    label(ax, .015, .86, r"$P_{ij}=[z^j]f(z)^i;\qquad \boldsymbol{\pi}_{t+1}=\boldsymbol{\pi}_tP$", 15)
+    labels = ["0", "1", "2", "3", r"$\dagger$"]
+    matrix_display(ax, matrix, .12, .65, .83, .47, labels, labels)
+    label(ax, .015, .08, r"$\dagger$: first entry into $N\geq4$; bookkeeping stop, not a carrying capacity.", 11)
+    label(ax, .015, -.005, "Rows: current cells. Columns: next generation. Each row sums to 1; 0 is absorbing.", 11, color=GRAY)
+
+    ax = fig.add_axes([.04, .09, .92, .34])
+    panel(ax, "C", "Numbers that decide the outcome (default parameters)", gap=.025)
+    columns = ["Parent phenotype", "d", "q", "P(0)", "P(2)", "P(3)", "m: OFF", "m: ON",
+               "Extinct: OFF", "Extinct: ON"]
+    table = ax.table(cellText=phenotypes, colLabels=columns,
+                     colWidths=[.20,.06,.06,.075,.075,.075,.09,.09,.135,.135], bbox=[0,.22,1,.66], cellLoc="center")
+    table.auto_set_font_size(False)
+    table.set_fontsize(11)
+    for (r,c), cell in table.get_celld().items():
+        cell.set_edgecolor("#CED5DA")
+        cell.set_linewidth(.5)
+        cell.set_text_props(color=INK)
+        if r == 0:
+            cell.set_facecolor("#E9EFF3")
+            cell.set_text_props(weight="bold")
+        elif c in (6, 7):
+            cell.set_text_props(weight="bold", color=RED if float(cell.get_text().get_text()) < 1 else BLUE)
+    label(ax, .015, .15, "P(0/2/3) are offspring probabilities without therapy. m = expected offspring = (1−d)(1−k)(2+q); "
+          "m > 1 grows, m < 1 shrinks.", 11.5)
+    label(ax, .015, .06, "Therapy (ON) adds extra kill k = 0.90 for sensitive and 0.04 for resistant cells. "
+          "Resistance is neutral without therapy (same m = 1.428).", 11.5)
+    fig.text(.04, .035, "Panels A–B drop mutations, genotype advantages and therapy; the threshold 4 in B is illustrative. "
+             "Extinct = probability that one cell's lineage eventually dies out (smallest root of s = f(s)).\n"
+             "Starting from 100 baseline cells, total extinction without therapy has probability s^100 ≈ "
+             f"{lineage_extinction(config.death_rate, config.triple_probability)**100:.0e}.", fontsize=10, color=GRAY)
+    save(fig, "06_single_cell_rules")
+
+
+def draw_field(ax, field, scale, norm, title, show_ylabel=True):
+    """線性座標的一步期望向量場；兩面板共用倍率與色階，不做單支箭頭正規化。"""
+    quiver = ax.quiver(field["x"], field["y"], field["display_u"], field["display_v"], field["magnitude_cells"],
+                       angles="xy", scale_units="xy", scale=scale, pivot="tail", cmap="viridis", norm=norm,
+                       width=.0045, headwidth=3.4, headlength=4.4, headaxislength=3.8, minlength=0, minshaft=1)
+    ax.scatter(0, 0, s=18, color=INK, zorder=4)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set(xlim=(-.065, 2.70), ylim=(-.065, 2.70))
+    ax.set_xticks(np.arange(0, 2.6, .5)); ax.set_yticks(np.arange(0, 2.6, .5))
+    ax.set_xlabel(r"Sensitive cells $S$ ($\times10^4$)", fontsize=12)
+    if show_ylabel:
+        ax.set_ylabel(r"Resistant cells $R$ ($\times10^4$)", fontsize=12)
+    ax.grid(color="#E1E7EB", lw=.65, alpha=.75); ax.set_axisbelow(True)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.set_title(title, loc="left", fontsize=13, weight="bold", color=INK, pad=10)
+    return quiver
+
+
+def matrices_to_flow_figure(config, qmatrix, before, during, fields):
+    """M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。"""
+    from plot_phase_field import CELL_UNIT
+    scale = 9.0  # 11×11 網格比原本 19×19 稀疏，箭頭可以畫長一點；兩面板共用。
+    fig = plt.figure(figsize=(17, 10.2))
+    fig.text(.035, .965, "From the mean matrix M to the flow of the tumor", fontsize=22, weight="bold", color=INK)
+    fig.text(.035, .93, "Two-type reduction: sensitive (S) and resistant (R). The numbers on the left are the arrows on the right.",
+             fontsize=12, color=GRAY)
+    ax = fig.add_axes([.035, .10, .34, .78])
+    panel(ax, "A", "Mutation and mean-offspring matrices")
+    label(ax, .015, .90, "Reduced slice: resistance bit only; other growth effects and IL11 off.", 10, color=GRAY)
+    label(ax, .015, .80, r"$Q=$", 17)
+    matrix_display(ax, qmatrix, .20, .81, .52, .12, ["S", "R"], ["S", "R"])
+    label(ax, .78, .79, r"$\mu=0.001$", 14)
+    label(ax, .015, .62, r"$M_{gh}=m_gQ_{gh}$", 15)
+    label(ax, .015, .52, r"$M_{\mathrm{off}}=$", 14)
+    matrix_display(ax, before, .25, .52, .70, .085, fmt=".7g")
+    label(ax, .015, .40, r"$M_{\mathrm{on}}=$", 14)
+    matrix_display(ax, during, .25, .40, .70, .085, fmt=".7g")
+    label(ax, .015, .26, r"$\mathrm{E}[S_{t+1}\mid s]=(1-\mu)\,B_S(s)$", 15, color=BLUE)
+    label(ax, .015, .19, r"$\mathrm{E}[R_{t+1}\mid s]=B_R(s)+\mu\,B_S(s)$", 15, color=BLUE)
+    label(ax, .015, .12, r"$B_S=\sum_{g\in\mathcal{S}}n_gm_g,\quad B_R=\sum_{g\in\mathcal{R}}n_gm_g$", 14, color=BLUE)
+    label(ax, .015, .045, "Full model: m_g uses each genotype's own d, q and therapy kill.\n"
+          "M is NOT a probability matrix; row sums are m.", 10.5, color=GRAY)
+
+    axes = [fig.add_axes([.42, .30, .24, .52]), fig.add_axes([.69, .30, .24, .52])]
+    color_ax = fig.add_axes([.945, .35, .009, .42])
+    norm = Normalize(0, max(np.max(f["magnitude_cells"]) for f in fields))
+    quivers = []
+    for i, (axis, field) in enumerate(zip(axes, fields)):
+        m_s, m_r = np.sum(field["matrix"][0]), np.sum(field["matrix"][1])
+        title = ("B  No therapy" if i == 0 else "C  Continuous therapy") + f"\nm_S = {m_s:.4g}, m_R = {m_r:.4g}"
+        quivers.append(draw_field(axis, field, scale, norm, title, show_ylabel=i == 0))
+        a, b, c = field["matrix"][0, 0]-1, field["matrix"][0, 1], field["matrix"][1, 1]-1
+        fig.text(.42 + .27*i, .245, rf"$\Delta S={a:.4g}\,S$" + "\n" + rf"$\Delta R={b:.4g}\,S+{c:.4g}\,R$",
+                 fontsize=13.5, color=BLUE, va="top")
+    bar = fig.colorbar(quivers[0], cax=color_ax)
+    bar.set_label(r"$\|\Delta\|$ (cells / generation)", fontsize=11)
+    bar.ax.ticklabel_format(style="sci", scilimits=(4, 4)); bar.ax.tick_params(labelsize=9)
+    axes[0].quiverkey(quivers[0], X=.43, Y=.135, U=1, label=f"{CELL_UNIT:,} cells / generation", labelpos="E",
+                      coordinates="figure", fontproperties={"size": 11}, color=BLUE)
+    fig.text(.42, .07, "No therapy: arrows radiate from the origin (composition unchanged). Therapy: every arrow turns toward the R axis.\n"
+             "Arrows = one-generation expected change E[(S',R') | s] − (S,R); shared length scale, no per-arrow normalization.",
+             fontsize=10.5, color=GRAY)
+    assert quivers[0].scale == quivers[1].scale
+    save(fig, "07_matrices_to_flow")
+
+
+def appendix_figure(config):
+    """附錄：完整基因型計數過程的 PGF 轉移核，以及程式的執行狀態機。"""
+    fig = plt.figure(figsize=(15, 14))
+    fig.text(.04, .972, "Appendix A1 | Full Markov kernel and execution controller", fontsize=22, weight="bold", color=INK)
+    fig.text(.04, .948, "Exact population transition kernel; the controller decides when to record, stop and start therapy",
+             fontsize=12, color=GRAY)
+    ax = fig.add_axes([.04, .64, .92, .28])
+    panel(ax, "A", "Full genotype-count process", gap=.025)
     label(ax, .015, .84, r"$S_t=(\mathbf{N}_t,A_t),\quad \mathbf{N}_t\in\mathbb{N}_0^{2^{22}},\quad A_t\in\{0,1\}$", 17)
     label(ax, .015, .65, r"$\alpha=A_t\vee\mathbf{1}\{\mathrm{therapy\ enabled},\ \sum_g N_{g,t}\geq20{,}000\}$", 15)
     label(ax, .015, .47, r"$b(\mathbf{N})=0.06\,f/(0.02+f),\qquad f=\sum_{g:\,g_6=1}N_g/\sum_gN_g$", 15)
@@ -107,34 +242,8 @@ def markov_figure(config, matrix, offspring):
     label(ax, .57, .39, r"$Q_{gh}=\mu^{|h|-|g|}(1-\mu)^{22-|h|}\quad\mathrm{if}\ g\subseteq h;\quad 0\ \mathrm{otherwise}$", 14)
     label(ax, .57, .19, "Coefficient extraction gives the exact next-population probability.\nQ is inherited, irreversible, independent-bit mutation; mu = 0.001.", 11)
 
-    ax = fig.add_axes([.04, .11, .40, .36])
-    panel(ax, "B", "Single-parent offspring distribution")
-    label(ax, .015, .86, r"$d=0.30,\quad q=0.04,\quad \mu=0,\quad\mathrm{no\ therapy}$", 14)
-    node(ax, (.16, .54), "1 parent", .23, .15)
-    for y, n, p in zip((.73, .50, .27), (0, 2, 3), offspring[[0,2,3]]):
-        node(ax, (.80, y), f"{n} offspring", .29, .14, RED if n == 0 else BLUE)
-        arrow(ax, (.285, .54), (.645, y), f"{p:.3f}", (.48, (y+.54)/2+.035))
-    label(ax, .015, .12, r"$f(z)=0.300+0.672z^2+0.028z^3$", 16)
-    label(ax, .015, -.005, r"$E[X]=f'(1)=1.428$", 15)
-
-    ax = fig.add_axes([.49, .11, .47, .36])
-    panel(ax, "C", "Exact finite transition matrix")
-    label(ax, .015, .86, r"$P_{ij}=[z^j]f(z)^i;\qquad \boldsymbol{\pi}_{t+1}=\boldsymbol{\pi}_tP$", 15)
-    labels = ["0", "1", "2", "3", r"$\dagger$"]
-    matrix_display(ax, matrix, .12, .65, .83, .47, labels, labels)
-    label(ax, .015, .08, r"$\dagger$: first entry into $N\geq4$; stop and remain in this bookkeeping state.", 11)
-    label(ax, .015, -.005, "Rows: current state. Columns: next state. Each row sums to 1.", 11, color=GRAY)
-    fig.text(.04, .035, "Figure 1 | Panel A describes the full model. Panels B-C remove mutations, genotype advantages and therapy; the threshold 4 is illustrative.\n"
-             "Extinction (0) is biological absorption. Overflow (dagger) is imposed stopping, not a carrying capacity or a valid unrestricted aggregation.", fontsize=10, color=GRAY)
-    save(fig, "06_markov_chain_formulation")
-
-
-def state_figure(config, qmatrix, before, during, fitness):
-    fig = plt.figure(figsize=(15, 10.8))
-    fig.text(.04, .965, "Control states, mutation probabilities and offspring means", fontsize=21, weight="bold", color=INK)
-    fig.text(.04, .93, "The finite execution controller is distinct from the population-state Markov kernel", fontsize=12, color=GRAY)
-    ax = fig.add_axes([.04, .14, .43, .74])
-    panel(ax, "A", "Execution state machine")
+    ax = fig.add_axes([.04, .07, .52, .52])
+    panel(ax, "B", "Execution state machine")
     node(ax, (.50, .87), "Initialize\nN = 100, A = 0", .45, .09)
     node(ax, (.50, .73), "Record current state\nCheck stopping conditions", .62, .10)
     arrow(ax, (.50, .822), (.50, .785))
@@ -151,38 +260,16 @@ def state_figure(config, qmatrix, before, during, fitness):
     arrow(ax, (.814, .73), (.88, .655), rad=-.12, color=RED)
     label(ax, .09, .445, "A = 0: untreated  |  A = 1: persistent therapy", 11,
           bbox=dict(facecolor="white", edgecolor="none", pad=2))
-    label(ax, .02, .035, "Stop priority: extinction > target_size > max_cells > final generation.\nTreatment update shown for therapy=True; otherwise alpha = A.\nN denotes total burden here; transition draws use the full genotype vector.", 10, color=GRAY)
-
-    ax = fig.add_axes([.53, .50, .43, .38])
-    panel(ax, "B", "Two-type matrices: sensitive (S) and resistant (R)")
-    label(ax, .015, .85, "Reduced example: resistance bit only; other growth effects and IL11 off.", 10, color=GRAY)
-    label(ax, .015, .74, r"$Q=$", 17)
-    matrix_display(ax, qmatrix, .14, .74, .40, .19, ["S", "R"], ["S", "R"])
-    label(ax, .61, .70, r"$\mu=0.001$"+"\n"+r"$\sum_hQ_{gh}=1$", 14)
-    label(ax, .015, .48, r"$M_{gh}=m_gQ_{gh},\quad m_g=(1-\delta_g)(2+q_g)$", 15)
-    label(ax, .015, .35, r"$M_{\mathrm{off}}=$", 14)
-    matrix_display(ax, before, .23, .34, .72, .13, fmt=".7g")
-    label(ax, .015, .16, r"$M_{\mathrm{on}}=$", 14)
-    matrix_display(ax, during, .23, .16, .72, .13, fmt=".7g")
-
-    ax = fig.add_axes([.53, .13, .43, .32])
-    panel(ax, "C", "Numerical fitness under default parameters")
-    table = ax.table(cellText=fitness, colLabels=["Parent phenotype", "d", "q", "m: OFF", "m: ON"],
-                     colWidths=[.43,.12,.12,.16,.17], bbox=[0,.20,1,.65], cellLoc="center")
-    table.auto_set_font_size(False)
-    table.set_fontsize(11)
-    for (r,c), cell in table.get_celld().items():
-        cell.set_edgecolor("#CED5DA")
-        cell.set_linewidth(.5)
-        cell.set_text_props(color=INK)
-        if r == 0:
-            cell.set_facecolor("#E9EFF3")
-            cell.set_text_props(weight="bold")
-    label(ax, .015, .13, r"$E[\mathbf{N}_{t+1}\mid\mathbf{N}_t,A_t]=\mathbf{N}_tM(\mathbf{N}_t,\alpha)$", 15)
-    label(ax, .015, .01, "m > 1: expected expansion; m < 1: expected decline.\nM is NOT a transition-probability matrix; its row sums equal m.", 11)
-    fig.text(.04, .035, "Figure 2 | Q and M use row-parent / column-offspring ordering (S, R). Panel C gives conditional offspring means before mutation.\n"
-             "Natural death d excludes therapy; ON uses kS = 0.90, kR = 0.04. IL11 is off. Relapse is a trajectory classification, not a controller state.", fontsize=10, color=GRAY)
-    save(fig, "07_state_machine_and_matrices")
+    ax = fig.add_axes([.62, .07, .34, .52])
+    ax.axis("off")
+    notes = ["Stop priority:\nextinction > target_size > max_cells > final generation.",
+             "Treatment update is shown for therapy=True;\notherwise alpha = A.",
+             "Therapy never switches off once started (A is absorbing).",
+             "N in the controller is total burden; the transition\ndraws use the full genotype vector.",
+             "Relapse is a trajectory classification made after the\nrun, not a controller state."]
+    for i, text in enumerate(notes):
+        label(ax, 0, .86 - i*.16, text, 12)
+    save(fig, "A1_markov_kernel_and_controller")
 
 
 def main():
@@ -202,17 +289,29 @@ def main():
     np.testing.assert_allclose(q.sum(axis=1), 1)
     np.testing.assert_allclose(off.sum(axis=1), [1.428,1.428])
     np.testing.assert_allclose(on.sum(axis=1), [.1428,1.37088])
-    fitness = []
-    phenotypes = [("Baseline sensitive",0,False), ("Oncogene sensitive",1,False),
-                  ("Oncogene + TSG loss",1|(1<<4)|(1<<20),False),
-                  ("Baseline resistant",1<<3,True)]
-    for name, genotype, resistant in phenotypes:
+    phenotypes = []
+    for name, genotype, resistant in (("Baseline sensitive",0,False), ("Oncogene sensitive",1,False),
+                                     ("Oncogene + TSG loss",1|(1<<4)|(1<<20),False),
+                                     ("Baseline resistant",1<<3,True)):
         d, triple = growth_probabilities(genotype,c)
         mean = (1-d)*(2+triple)
         kill = c.resistant_therapy_kill if resistant else c.sensitive_therapy_kill
-        fitness.append([name,f"{d:.2f}",f"{triple:.2f}",f"{mean:.4f}",f"{mean*(1-kill):.5f}"])
-    markov_figure(c,p,law)
-    state_figure(c,q,off,on,fitness)
+        on_death = 1-(1-d)*(1-kill)
+        phenotypes.append([name,f"{d:.2f}",f"{triple:.2f}",f"{d:.3f}",f"{(1-d)*(1-triple):.3f}",f"{(1-d)*triple:.3f}",
+                           f"{mean:.4f}",f"{mean*(1-kill):.4f}",
+                           f"{lineage_extinction(d,triple):.3f}",f"{lineage_extinction(on_death,triple):.3f}"])
+    # 子代平均小於 1 時家系必然滅絕；大於 1 時滅絕機率小於 1。
+    assert phenotypes[0][9] == "1.000" and float(phenotypes[3][9]) < 1
+    extinct = lineage_extinction(c.death_rate, c.triple_probability)
+    np.testing.assert_allclose(extinct, law @ extinct**np.arange(4), rtol=1e-12)  # s = f(s)
+    from plot_phase_field import compute_phase_field, verify_field
+    counts = np.rint(np.linspace(0, 25_000, 11)).astype(np.int64)
+    fields = [compute_phase_field(c, active, counts, "linear") for active in (False, True)]
+    for field in fields:
+        verify_field(field, c)
+    single_cell_figure(c,p,law,phenotypes)
+    matrices_to_flow_figure(c,q,off,on,fields)
+    appendix_figure(c)
     for name, values, names in (("count_transition_P",p,["0","1","2","3","overflow"]),
                                ("mutation_Q",q,["S","R"]), ("offspring_M_off",off,["S","R"]),
                                ("offspring_M_on",on,["S","R"])):

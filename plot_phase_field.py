@@ -1,7 +1,8 @@
-"""規則網格相圖：箭頭方向與長度呈現一步條件期望漂移。
+"""規則網格向量場的資料：每個網格點的一步條件期望漂移。
 
-執行：.venv/bin/python plot_phase_field.py
-固定基準基因型截面，分別固定治療關閉／持續治療；不修改 PPT。
+執行：.venv/bin/python plot_phase_field.py   → phase_vector_grid.csv、phase_vector_assumptions.json
+固定基準基因型截面，分別固定治療關閉／持續治療。圖畫在 plot_markov_model.py 的圖 07
+（M 矩陣旁的線性向量場）；舊的 03 線性、04 對數獨立圖已併入或刪除。
 """
 from __future__ import annotations
 
@@ -12,9 +13,7 @@ import json
 from pathlib import Path
 
 from modeling_cancer import Config
-from plot_phase_portraits import projected_offspring_mean, set_phase_style, save_phase_figure
-import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
+from plot_phase_portraits import projected_offspring_mean
 import numpy as np
 
 
@@ -92,74 +91,6 @@ def verify_field(field, config):
     assert np.all(field["expected_sensitive"][field["sensitive"] == 0] == 0)
 
 
-def drift_formula(matrix):
-    a, b, c = matrix[0, 0]-1, matrix[0, 1], matrix[1, 1]-1
-    return rf"$\Delta S={a:.7g}S,\quad\Delta R={b:.7g}S+{c:.7g}R$"
-
-
-def plot_phase_field(fields, config):
-    """兩面板共用線性箭頭倍率及色階，保留大小差異。"""
-    coordinates = fields[0]["coordinates"]
-    linear = coordinates == "linear"
-    scale = LINEAR_SCALE if linear else LOG_SCALE
-    fig = plt.figure(figsize=(17.2, 10.3))
-    axes = [fig.add_axes((.075, .28, .355, .51)), fig.add_axes((.535, .28, .355, .51))]
-    color_ax = fig.add_axes((.925, .31, .012, .445))
-    fig.text(.055, .966, "每個網格點都有方向，箭頭長短保留變化大小", fontsize=25, weight="bold", va="top")
-    fig.text(.055, .907, "固定基準基因型截面：S 的所有位元為 0；R 僅抗藥位元為 1。治療控制在各面板固定。", fontsize=14, color=GRAY)
-    magnitude_key = "magnitude_cells" if linear else "display_magnitude"
-    norm = Normalize(0, max(np.max(field[magnitude_key]) for field in fields))
-    quivers = []
-    for i, (ax, field) in enumerate(zip(axes, fields)):
-        quiver = ax.quiver(field["x"], field["y"], field["display_u"], field["display_v"], field[magnitude_key],
-                           angles="xy", scale_units="xy", scale=scale, pivot="tail", cmap="viridis", norm=norm,
-                           width=.0031, headwidth=3.4, headlength=4.4, headaxislength=3.8,
-                           minlength=0, minshaft=1)
-        quivers.append(quiver)
-        # 原點的期望漂移為零；以點表示，不能偽造一支有長度的箭頭。
-        ax.scatter(0, 0, s=22, color=INK, zorder=4)
-        ax.set_aspect("equal", adjustable="box")
-        ax.grid(color="#E1E7EB", lw=.65, alpha=.75)
-        ax.set_axisbelow(True)
-        matrix = field["matrix"]
-        m_s, m_r = np.sum(matrix[0]), np.sum(matrix[1])
-        title = (r"A  治療關閉 ($\alpha=0$)" if i == 0 else r"B  持續治療 ($\alpha=1$)")
-        title += f"\n每父細胞期望子代：S={m_s:.5g}，R={m_r:.5g}"
-        ax.set_title(title, loc="left", fontsize=15.5, weight="bold", pad=15)
-        if linear:
-            ax.set(xlim=(-.065, 2.70), ylim=(-.065, 2.70),
-                   xlabel=r"敏感細胞 $S$（$\times10^4$）", ylabel=r"抗藥細胞 $R$（$\times10^4$）")
-            ax.set_xticks(np.arange(0, 2.6, .5)); ax.set_yticks(np.arange(0, 2.6, .5))
-        else:
-            ax.set(xlim=(-.12, 5.74), ylim=(-.12, 5.74),
-                   xlabel=r"敏感細胞 $\log_{10}(S+1)$", ylabel=r"抗藥細胞 $\log_{10}(R+1)$")
-            ax.set_xticks(range(6)); ax.set_yticks(range(6))
-        ax.tick_params(labelsize=12)
-        ax.xaxis.labelpad = 10; ax.yaxis.labelpad = 10
-    bar = fig.colorbar(quivers[0], cax=color_ax)
-    bar.ax.tick_params(labelsize=11)
-    if linear:
-        bar.set_label(r"$\|\Delta\|_2$（細胞／代）", labelpad=12, fontsize=12)
-        bar.ax.ticklabel_format(style="sci", scilimits=(4,4))
-        for x, field in zip((.075, .535), fields):
-            fig.text(x, .207, drift_formula(field["matrix"]), fontsize=16, color=BLUE)
-        axes[0].quiverkey(quivers[0], X=.089, Y=.143, U=1, label="10,000 細胞／代", labelpos="E",
-                          coordinates="figure", fontproperties={"size": 12}, color=BLUE)
-        fig.text(.34, .137, r"箭頭長度 $\propto\sqrt{(\Delta S)^2+(\Delta R)^2}$；兩圖共用倍率，未做單支箭頭正規化。", fontsize=12.5)
-        fig.text(.075, .087, r"$\Delta=\mathrm{E}[(S_{t+1},R_{t+1})\mid s,\alpha]-(S,R)$。離散世代的一步期望變化；原點零變化以圓點標記。", fontsize=12.5, color=GRAY)
-    else:
-        bar.set_label("對數座標位移大小／代", labelpad=12, fontsize=12)
-        fig.text(.075, .207, r"$\mathbf{D}=\phi(\mathrm{E}[(S_{t+1},R_{t+1})\mid s,\alpha])-\phi(S,R),\quad\phi(S,R)=(\log_{10}(S+1),\log_{10}(R+1))$", fontsize=16, color=BLUE)
-        axes[0].quiverkey(quivers[0], X=.089, Y=.143, U=.5, label="0.5 座標單位／代", labelpos="E",
-                          coordinates="figure", fontproperties={"size": 12}, color=BLUE)
-        fig.text(.34, .137, r"長度 $\propto\|\mathbf{D}\|_2$，色階亦表示對數位移；兩圖共用倍率，原點為零變化。", fontsize=12.5)
-        fig.text(.075, .087, "先對原始計數求期望，再取對數；長度代表對數座標的位移，絕對細胞數變化請看線性版。", fontsize=12.5, color=GRAY)
-    fig.text(.075, .04, f"μ={config.mutation_rate:g}；driver／TSG 未達標、IL11 無生產者。子代仍可突變；後續離開此截面時，需回到完整基因型模型。", fontsize=12, color=GRAY)
-    # 不依面板單獨自動縮放，也不將向量除以自己的長度。
-    assert quivers[0].scale == quivers[1].scale == scale
-    return fig
-
-
 def write_grid_csv(fields, destination):
     rows = []
     keys = ("sensitive", "resistant", "expected_sensitive", "expected_resistant",
@@ -215,10 +146,6 @@ def main():
                                  "logarithmic arrow lengths are not absolute-cell increments",
                                  "other mutations can move future full states off this slice"]}
     (args.output / "phase_vector_assumptions.json").write_text(json.dumps(record, ensure_ascii=False, indent=2)+"\n")
-    set_phase_style()
-    for coordinates, name in (("linear", "03_phase_vector_field"), ("log", "04_phase_vector_field_log")):
-        fig = plot_phase_field([f for f in fields if f["coordinates"] == coordinates], config)
-        save_phase_figure(fig, args.output, name)
     print(json.dumps({"verified_grid_points": len(rows), "nonzero_arrows": len(rows)-4,
                       "output": str(args.output)}, ensure_ascii=False))
 

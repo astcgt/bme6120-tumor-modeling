@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1036.8pt" height="969.228812pt" viewBox="0 0 1036.8 969.228812" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-14T17:07:44.042074</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.9.4, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 969.228812 
+L 1036.8 969.228812 
+L 1036.8 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="text_1">
+    <text style="fill: #21658b; font: 700 17px 'DejaVu Sans'; text-anchor: start" x="21.6" y="103.746156" transform="rotate(-0 21.6 103.746156)">A</text>
+   </g>
+   <g id="text_2">
+    <text style="fill: #182634; font: 700 13px 'DejaVu Sans'; text-anchor: start" x="46.44" y="102.117981" transform="rotate(-0 46.44 102.117981)">Full genotype-count process</text>
+   </g>
+   <g id="text_3">
+    <!-- $S_t=(\mathbf{N}_t,A_t),\quad \mathbf{N}_t\in\mathbb{N}_0^{2^{22}},\quad A_t\in\{0,1\}$ -->
+    <g style="fill: #182634" transform="translate(36.504 151.967212)">
+     <text>
+      <tspan style="font: italic 17px 'STIXGeneral'" x="0 58.07323 130.307455 179.188615" y="-0.17265625000000284">SAℕA</tspan>
+      <tspan style="font: italic 11.9px 'STIXGeneral'" x="8.499985 47.310249 68.460223 109.694673 189.575608" y="2.077343749999997">ttttt</tspan>
+      <tspan style="font: 17px 'STIXGeneral'" x="15.012981 29.112767 51.368448 72.518422 78.179417 116.207669 160.209846 196.088604 210.18839 218.348379 226.848363 233.553145 242.05313" y="-0.17265625000000284">=(,),∈,∈{0,1}</tspan>
+      <tspan style="font: 700 17px 'STIXGeneral'" x="34.773763 97.158186" y="-0.17265625000000284">NN</tspan>
+      <tspan style="font: 11.9px 'STIXGeneral'" x="142.666434 144.471121" y="4.327343749999997 -6.172656250000001">02</tspan>
+      <tspan style="font: 8.33px 'STIXGeneral'" x="150.604861 154.769853" y="-10.37265625">22</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_4">
+    <!-- $\alpha=A_t\vee\mathbf{1}\{\mathrm{therapy\ enabled},\ \sum_g N_{g,t}\geq20{,}000\}$ -->
+    <g style="fill: #182634" transform="translate(36.504 201.162812)">
+     <text>
+      <tspan style="font: italic 15px 'STIXGeneral'" x="0 22.886957 180.703272" y="-0.5625">αAN</tspan>
+      <tspan style="font: 15px 'STIXGeneral'" x="10.445981 37.797858 56.763828 63.963809 68.133792 75.633777 82.293765 87.28876 93.948749 101.448734 112.558678 119.218666 126.718651 133.378639 140.878624 145.048607 151.708595 159.20858 168.734522 205.845361 218.286337 225.786321 233.286306 237.036291 244.536276 252.03626 259.536245" y="-0.5625">=∨{therapyenabled,∑≥20,000}</tspan>
+      <tspan style="font: italic 10.5px 'STIXGeneral'" x="32.051935 172.734522 190.708261 200.099438" y="1.4203124999999996 10.767187499999999 1.4203124999999996 1.4203124999999996">tggt</tspan>
+      <tspan style="font: 700 15px 'STIXGeneral'" x="49.263843" y="-0.5625">1</tspan>
+      <tspan style="font: 10.5px 'STIXGeneral'" x="195.95825" y="1.4203124999999996">,</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_5">
+    <!-- $b(\mathbf{N})=0.06\,f/(0.02+f),\qquad f=\sum_{g:\,g_6=1}N_g/\sum_gN_g$ -->
+    <g style="fill: #182634" transform="translate(36.504 251.966012)">
+     <text>
+      <tspan style="font: italic 15px 'STIXGeneral'" x="0 70.981908 125.173781 161.914714 218.019076 250.073726" y="-0.5625">bfffNN</tspan>
+      <tspan style="font: 15px 'STIXGeneral'" x="7.499985 23.324966 30.485959 42.926935 50.42692 54.176904 61.676889 75.151891 79.321873 84.316869 91.816853 95.566838 103.066823 112.732805 129.343764 134.338759 168.250694 193.69167 233.934993 238.104976" y="-0.5625">()=0.06/(0.02+),=∑/∑</tspan>
+      <tspan style="font: 700 15px 'STIXGeneral'" x="12.49498" y="-0.5625">N</tspan>
+      <tspan style="font: italic 10.5px 'STIXGeneral'" x="180.69167 193.156568 228.024066 242.104976 260.078715" y="13.2390625 13.2390625 1.4203124999999996 10.767187499999999 1.4203124999999996">ggggg</tspan>
+      <tspan style="font: 10.5px 'STIXGeneral'" x="187.457858 204.060404 212.769087" y="13.2390625">:=1</tspan>
+      <tspan style="font: 7.35px 'STIXGeneral'" x="198.406557" y="14.627031249999998">6</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_6">
+    <!-- $\delta_g=1-(1-d_g(\mathbf{N}))(1-\alpha k_g),\qquad u_g(\mathbf{z})=\sum_hQ_{gh}z_h$ -->
+    <g style="fill: #182634" transform="translate(36.504 302.769212)">
+     <text>
+      <tspan style="font: italic 15px 'STIXGeneral'" x="0 76.626805 142.954642 151.234625 196.376491 253.013104 275.004007" y="-0.5625">δdαkuQz</tspan>
+      <tspan style="font: italic 10.5px 'STIXGeneral'" x="6.899994 84.12679 157.894614 203.876476 245.044354 263.843091 269.09308 280.838998" y="1.4203124999999996 1.4203124999999996 1.4203124999999996 1.4203124999999996 13.315625 1.4203124999999996 1.4203124999999996 1.4203124999999996">gggghghh</tspan>
+      <tspan style="font: 15px 'STIXGeneral'" x="14.976918 27.417894 37.083876 49.524852 54.519847 64.185829 90.037717 105.862698 110.857693 115.852689 120.847684 130.513666 163.80554 168.800536 209.787402 221.442386 228.603378 241.044354" y="-0.5625">=1−(1−())(1−),()=∑</tspan>
+      <tspan style="font: 700 15px 'STIXGeneral'" x="95.032712 214.782397" y="-0.5625">Nz</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_7">
+    <text style="fill: #66717a; font: 11px 'DejaVu Sans'; text-anchor: start" x="36.504" y="353.203094" transform="rotate(-0 36.504 353.203094)">IL11 OFF: b = 0. Empty population: b = 0. Fixed Config; kernel applies before stopping.</text>
+   </g>
+   <g id="text_8">
+    <!-- $F_g(\mathbf{z}\mid S)=\delta_g+(1-\delta_g)\left[(1-q_g)u_g^2+q_gu_g^3\right]$ -->
+    <g style="fill: #182634" transform="translate(587.952 154.082012)">
+     <text>
+      <tspan style="font: italic 15px 'STIXGeneral'" x="0 35.052873 62.154826 116.674673 167.37542 185.781326 214.724524 228.135435" y="-0.6140624999999993">FSδδququ</tspan>
+      <tspan style="font: italic 10.5px 'STIXGeneral'" x="9.164978 69.05482 123.574667 174.875404 193.281311 222.224508 235.63542" y="1.3687500000000004 1.3687500000000004 1.3687500000000004 1.3687500000000004 3.3515625 1.3687500000000004 3.3515625">ggggggg</tspan>
+      <tspan style="font: 15px 'STIXGeneral'" x="15.075905 28.896886 42.552858 49.71385 77.131744 89.57272 94.567715 104.233698 129.485594 140.273466 145.268462 154.934444 180.786331 202.283548" y="-0.6140624999999993">(∣)=+(1−)(1−)+</tspan>
+      <tspan style="font: 700 15px 'STIXGeneral'" x="20.0709" y="-0.6140624999999993">z</tspan>
+      <tspan style="font: 15.064831px 'STIXSizeOneSym'" x="134.480589 242.471659" y="3.0640624999999986">[]</tspan>
+      <tspan style="font: 10.5px 'STIXGeneral'" x="194.206624 236.560732" y="-5.901562500000001">23</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_9">
+    <!-- $P_{S,S'}=\mathbf{1}\{A'=\alpha\}\,[\mathbf{z}^{\mathbf{N}'}]\prod_gF_g(\mathbf{z}\mid S)^{N_g}$ -->
+    <g style="fill: #182634" transform="translate(587.952 215.942412)">
+     <text>
+      <tspan style="font: italic 16px 'STIXGeneral'" x="0 61.343151 92.392989 154.891445 192.28247" y="-0.08156250000000043">PAαFS</tspan>
+      <tspan style="font: italic 11.2px 'STIXGeneral'" x="9.776001 19.793281 145.56332 164.667446 205.857645" y="2.037187499999998 2.037187499999998 12.002812499999997 2.037187499999998 -5.731562500000001">SSggN</tspan>
+      <tspan style="font: 11.2px 'STIXGeneral'" x="15.376001 72.869152" y="2.037187499999998 -5.731562500000001">,′</tspan>
+      <tspan style="font: 7.84px 'STIXGeneral'" x="26.615984 131.768951" y="-1.9178125000000001 -9.6865625">′′</tspan>
+      <tspan style="font: 16px 'STIXGeneral'" x="32.392766 53.663158 79.122597 101.22499 110.830355 135.235333 140.56332 170.973696 185.716073 200.28247" y="-0.08156250000000043 -0.08156250000000043 -0.08156250000000043 -0.08156250000000043 -0.08156250000000043 -0.08156250000000043 -0.0815625000000022 -0.08156250000000043 -0.08156250000000043 -0.08156250000000043">={=}[]∏(∣)</tspan>
+      <tspan style="font: 700 16px 'STIXGeneral'" x="45.663158 116.158342 176.301684" y="-0.08156250000000043">1zz</tspan>
+      <tspan style="font: 700 11.2px 'STIXGeneral'" x="123.509518" y="-5.731562500000001">N</tspan>
+      <tspan style="font: italic 7.84px 'STIXGeneral'" x="213.328043" y="-4.248437500000001">g</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_10">
+    <!-- $Q_{gh}=\mu^{|h|-|g|}(1-\mu)^{22-|h|}\quad\mathrm{if}\ g\subseteq h;\quad 0\ \mathrm{otherwise}$ -->
+    <g style="fill: #182634" transform="translate(587.952 274.755212)">
+     <text>
+      <tspan style="font: italic 14px 'STIXGeneral'" x="0 34.158365 95.442616 158.496289 179.129479" y="-0.36875000000000036">Qμμgh</tspan>
+      <tspan style="font: italic 9.8px 'STIXGeneral'" x="10.107986 15.007986 44.307042 62.670259 128.987842" y="1.4828124999999996 1.4828124999999996 -5.30625 -5.30625 -5.30625">ghhgh</tspan>
+      <tspan style="font: 14px 'STIXGeneral'" x="22.546771 70.147438 74.809425 83.831022 102.806614 146.573008 150.465006 167.517886 186.129479 202.151061 212.520357 219.520357 223.412355 230.412355 236.628343 241.29033 251.398317 255.290315 260.736314" y="-0.36875000000000036">=(1−)if⊆;0otherwise</tspan>
+      <tspan style="font: 9.8px 'STIXGeneral'" x="42.347051 49.207042 52.582152 60.710267 67.570259 107.684617 112.584617 118.899735 127.027851 133.887842" y="-5.30625">||−||22−||</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_11">
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(587.952 327.801494)">Coefficient extraction gives the exact next-population probability.</text>
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(587.952 340.119087)">Q is inherited, irreversible, independent-bit mutation; mu = 0.001.</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_2">
+    <path d="M 179.9712 519.390092 
+L 424.8288 519.390092 
+Q 433.2528 519.390092 433.2528 511.527692 
+L 433.2528 471.691532 
+Q 433.2528 463.829132 424.8288 463.829132 
+L 179.9712 463.829132 
+Q 171.5472 463.829132 171.5472 471.691532 
+L 171.5472 511.527692 
+Q 171.5472 519.390092 179.9712 519.390092 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 132.2352 595.393292 
+L 472.5648 595.393292 
+Q 480.9888 595.393292 480.9888 587.530892 
+L 480.9888 542.453132 
+Q 480.9888 534.590732 472.5648 534.590732 
+L 132.2352 534.590732 
+Q 123.8112 534.590732 123.8112 542.453132 
+L 123.8112 587.530892 
+Q 123.8112 595.393292 132.2352 595.393292 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 302.4 518.772131 
+Q 302.4 526.46777 302.4 532.821767 
+" clip-path="url(#pf8ec513733)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 304.8 528.021767 
+L 302.4 532.821767 
+L 300 528.021767 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 157.5072 692.362892 
+L 447.2928 692.362892 
+Q 455.7168 692.362892 455.7168 684.500492 
+L 455.7168 644.664332 
+Q 455.7168 636.801932 447.2928 636.801932 
+L 157.5072 636.801932 
+Q 149.0832 636.801932 149.0832 644.664332 
+L 149.0832 684.500492 
+Q 149.0832 692.362892 157.5072 692.362892 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 302.4 595.822884 
+Q 302.4 615.837443 302.4 634.510362 
+" clip-path="url(#pf8ec513733)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 304.8 629.710362 
+L 302.4 634.510362 
+L 300 629.710362 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 115.3872 812.919692 
+L 489.4128 812.919692 
+Q 497.8368 812.919692 497.8368 805.057292 
+L 497.8368 754.737932 
+Q 497.8368 746.875532 489.4128 746.875532 
+L 115.3872 746.875532 
+Q 106.9632 746.875532 106.9632 754.737932 
+L 106.9632 805.057292 
+Q 106.9632 812.919692 115.3872 812.919692 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 302.4 692.26554 
+Q 302.4 719.357192 302.4 745.107203 
+" clip-path="url(#pf8ec513733)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 304.8 740.307203 
+L 302.4 745.107203 
+L 300 740.307203 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 115.3872 905.958092 
+L 489.4128 905.958092 
+Q 497.8368 905.958092 497.8368 898.095692 
+L 497.8368 850.397132 
+Q 497.8368 842.534732 489.4128 842.534732 
+L 115.3872 842.534732 
+Q 106.9632 842.534732 106.9632 850.397132 
+L 106.9632 898.095692 
+Q 106.9632 905.958092 115.3872 905.958092 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 302.4 813.350627 
+Q 302.4 827.858442 302.4 841.024615 
+" clip-path="url(#pf8ec513733)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 304.8 836.224615 
+L 302.4 841.024615 
+L 300 836.224615 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 104.404019 874.246412 
+Q 78.042366 874.246412 53.022354 874.246412 
+" clip-path="url(#pf8ec513733)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 57.822354 876.646412 
+L 53.022354 874.246412 
+L 57.822354 871.846412 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 51.680769 564.992012 
+Q 86.185412 564.992012 119.348414 564.992012 
+" clip-path="url(#pf8ec513733)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 114.548414 562.592012 
+L 119.348414 564.992012 
+L 114.548414 567.392012 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 469.1952 641.257292 
+L 562.4208 641.257292 
+Q 570.8448 641.257292 570.8448 633.394892 
+L 570.8448 611.904332 
+Q 570.8448 604.041932 562.4208 604.041932 
+L 469.1952 604.041932 
+Q 460.7712 604.041932 460.7712 611.904332 
+L 460.7712 633.394892 
+Q 460.7712 641.257292 469.1952 641.257292 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #f3f6f8; stroke: #a54c38; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 480.407479 566.100756 
+Q 501.66474 580.509557 514.113034 601.424091 
+" clip-path="url(#pf8ec513733)" style="fill: none; stroke: #a54c38; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 513.720372 596.071912 
+L 514.113034 601.424091 
+L 509.595694 598.526914 
+z
+" clip-path="url(#pf8ec513733)" style="fill: #a54c38; stroke: #a54c38; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_1">
+    <path d="M 49.68 874.246412 
+L 49.68 564.992012 
+" clip-path="url(#pf8ec513733)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="text_12">
+    <text style="fill: #21658b; font: 700 17px 'DejaVu Sans'; text-anchor: start" x="21.6" y="436.386156" transform="rotate(-0 21.6 436.386156)">B</text>
+   </g>
+   <g id="text_13">
+    <text style="fill: #182634; font: 700 13px 'DejaVu Sans'; text-anchor: start" x="52.488" y="435.967581" transform="rotate(-0 52.488 435.967581)">Execution state machine</text>
+   </g>
+   <g id="text_14">
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(279.3825 488.486128)">Initialize</text>
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(260.82 500.803722)">N = 100, A = 0</text>
+   </g>
+   <g id="text_15">
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(246.129844 561.868528)">Record current state</text>
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(229.814609 574.186122)">Check stopping conditions</text>
+   </g>
+   <g id="text_16">
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(277.668906 661.458928)">Continue</text>
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(237.632344 673.776522)">No stop condition holds</text>
+   </g>
+   <g id="text_17">
+    <g id="patch_15">
+     <path d="M 273.492344 621.041861 
+L 331.307656 621.041861 
+L 331.307656 606.435924 
+L 273.492344 606.435924 
+z
+" style="fill: #ffffff"/>
+    </g>
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'; text-anchor: middle" x="302.4" y="616.774205" transform="rotate(-0 302.4 616.774205)">otherwise</text>
+   </g>
+   <g id="text_18">
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(253.144922 776.774128)">Update treatment</text>
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(223.274766 789.091722)">alpha = A OR (N &gt;= 20,000)</text>
+   </g>
+   <g id="text_19">
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(226.052266 871.122928)">Draw offspring + mutations</text>
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(223.866016 883.440522)">N &lt;- N', A &lt;- alpha; t &lt;- t+1</text>
+   </g>
+   <g id="text_20">
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'; text-anchor: middle" x="515.808" y="625.684925" transform="rotate(-0 515.808 625.684925)">STOP</text>
+   </g>
+   <g id="text_21">
+    <g id="patch_16">
+     <path d="M 70.164 727.357612 
+L 323.244781 727.357612 
+L 323.244781 712.397612 
+L 70.164 712.397612 
+z
+" style="fill: #ffffff"/>
+    </g>
+    <text style="fill: #182634; font: 11px 'DejaVu Sans'; text-anchor: start" x="72.144" y="722.784019" transform="rotate(-0 72.144 722.784019)">A = 0: untreated  |  A = 1: persistent therapy</text>
+   </g>
+  </g>
+  <g id="axes_3">
+   <g id="text_22">
+    <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 505.969337)">Stop priority:</text>
+    <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 519.406712)">extinction &gt; target_size &gt; max_cells &gt; final generation.</text>
+   </g>
+   <g id="text_23">
+    <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 589.834937)">Treatment update is shown for therapy=True;</text>
+    <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 603.272312)">otherwise alpha = A.</text>
+   </g>
+   <g id="text_24">
+    <text style="fill: #182634; font: 12px 'DejaVu Sans'; text-anchor: start" x="648" y="673.700537" transform="rotate(-0 648 673.700537)">Therapy never switches off once started (A is absorbing).</text>
+   </g>
+   <g id="text_25">
+    <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 757.566137)">N in the controller is total burden; the transition</text>
+    <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 771.003512)">draws use the full genotype vector.</text>
+   </g>
+   <g id="text_26">
+    <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 841.431737)">Relapse is a trajectory classification made after the</text>
+    <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 854.869112)">run, not a controller state.</text>
+   </g>
+  </g>
+  <g id="text_27">
+   <text style="fill: #182634; font: 700 22px 'DejaVu Sans'; text-anchor: start" x="21.6" y="38.412812" transform="rotate(-0 21.6 38.412812)">Appendix A1 | Full Markov kernel and execution controller</text>
+  </g>
+  <g id="text_28">
+   <text style="fill: #66717a; font: 12px 'DejaVu Sans'; text-anchor: start" x="21.6" y="62.604812" transform="rotate(-0 21.6 62.604812)">Exact population transition kernel; the controller decides when to record, stop and start therapy</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pf8ec513733">
+   <rect x="21.6" y="423.468812" width="561.6" height="524.16"/>
+  </clipPath>
+ </defs>
+</svg>

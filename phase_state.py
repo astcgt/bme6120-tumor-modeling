@@ -182,7 +182,7 @@ def state_features(population: dict[int, int], config: Config, therapy: bool) ->
 
 
 def trial_feature_rows(config: Config, results: list[Result]) -> list[dict]:
-    """每個 (試驗, 世代) 一列；growth_next 是實際下一代 ln 成長率，作為動力學目標而非座標。"""
+    """每個 (試驗, 世代) 一列；growth/dlogit 的 _next 是實際一步，_expected 是期望漂移，作為動力學目標而非座標。"""
     rows = []
     for replicate, result in enumerate(results):
         start = result.therapy_generation
@@ -194,8 +194,22 @@ def trial_feature_rows(config: Config, results: list[Result]) -> list[dict]:
                    **state_features(population, config, therapy),
                    "gens_since_therapy": float(generation - start) if therapy else 0.0}
             total = sum(population.values())
+            resistance = 1 << config.resistance_gene
+            sensitive = sum(n for g, n in population.items() if not g & resistance)
             following = result.populations[generation + 1] if generation + 1 < len(result.populations) else None
+            # 一步拆成「期望漂移」與「隨機噪音」：期望由完整基因型組成精確計算。
+            # 負荷方向用 ln 成長率；組成方向用相圖的經驗 logit（log10 勝算）。
+            expected = expected_next(population, config, therapy)
+            here = float(logit_rho(total - sensitive, sensitive))
+            row["sensitive"] = sensitive
+            row["growth_expected"] = np.log(expected["N"] / total)
+            row["dlogit_expected"] = float(logit_rho(expected["R"], expected["S"])) - here
             row["growth_next"] = np.log(sum(following.values()) / total) if following else np.nan
+            if following:
+                next_sensitive = sum(n for g, n in following.items() if not g & resistance)
+                row["dlogit_next"] = float(logit_rho(sum(following.values()) - next_sensitive, next_sensitive)) - here
+            else:
+                row["dlogit_next"] = np.nan
             rows.append(row)
     return rows
 

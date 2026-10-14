@@ -1,4 +1,4 @@
-"""獨立相圖：實際軌跡，以及完整基因型狀態的條件期望投影。
+"""相圖 01：實際軌跡疊上由完整基因型狀態算出的條件期望箭頭（單一面板）。
 
 執行：.venv/bin/python plot_phase_portraits.py
 讀取既有 CSV；只重現一條標示路徑以計算期望，不修改模擬或簡報。
@@ -157,65 +157,6 @@ def event_generations(states, event):
     return points
 
 
-def plot_phase_trajectories(trials, events, replicate, config):
-    """兩種座標呈現同一條實際路徑，不對跨試驗的座標取中位後連線。"""
-    fig, axes = plt.subplots(1, 2, figsize=(16.8, 9.5))
-    fig.subplots_adjust(left=.07, right=.975, bottom=.29, top=.76, wspace=.25)
-    fig.text(.055, .965, "相平面揭示：負荷下降不等於抗藥消失", fontsize=25, weight="bold", va="top")
-    event, states = events[replicate], trials[replicate]
-    fig.text(.055, .91, f"{len(trials)} 次試驗的實際軌跡；突出案例為 replicate {replicate}，seed={event['seed']}。箭頭表示世代前進。",
-             fontsize=14, color=GRAY)
-    handles = [Line2D([], [], color="#BCC7CE", lw=1, label=f"全部 {len(trials)} 次試驗"),
-               Line2D([], [], color=BLUE, lw=3, label="治療前"),
-               Line2D([], [], color=ORANGE, lw=3, label="治療啟動至首次復發"),
-               Line2D([], [], color=RED, lw=3, label="復發後：持續治療")]
-    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(.055, .866), frameon=False, ncol=4, fontsize=12)
-    points = event_generations(states, event)
-    start, relapse = event["therapy_generation"], event["relapse_generation"]
-    colors = [BLUE if start is None or g < start else RED if relapse is not None and g >= relapse else ORANGE
-              for g in range(len(states) - 1)]
-    for j, ax in enumerate(axes):
-        composition = j == 1
-        for path in trials.values():
-            xy = phase_coordinates(path, composition)
-            ax.plot(*xy.T, color="#BCC7CE", alpha=.48, lw=.85, zorder=1)
-        xy = phase_coordinates(states, composition)
-        for g, color in enumerate(colors):
-            ax.plot(*xy[g:g+2].T, color=color, lw=2.6, zorder=4)
-        for g in (6, 11, 15, 17, 21, 25, 31, 35):
-            if g < len(colors):
-                arrow(ax, xy[g], xy[g+1], colors[g])
-        decorate_axis(ax, "B  負荷 × 抗藥組成" if composition else "A  敏感 × 抗藥細胞", composition)
-        if composition:
-            ax.set_xlim(1.8, 6.65)
-            ax.axvline(np.log10(config.therapy_start_size + 1), color=GRAY, ls="--", lw=1, alpha=.6)
-            ax.text(4.34, 42, "啟動門檻", rotation=90, va="center", color=GRAY, fontsize=10)
-            positions = {"初始": (2.06, 16), "治療啟動": (4.95, 22),
-                         "負荷谷底": (3.65, 67), "首次復發": (5.04, 87)}
-        else:
-            sensitive = np.r_[0, np.geomspace(1, config.therapy_start_size, 250)]
-            resistant = np.maximum(0, config.therapy_start_size - sensitive)
-            ax.plot(np.log10(sensitive + 1), np.log10(resistant + 1), color=GRAY, ls="--", lw=1, alpha=.7)
-            ax.text(.65, 4.37, rf"$S+R={config.therapy_start_size:,}$", color=GRAY, fontsize=12)
-            positions = {"初始": (2.75, .56), "治療啟動": (3.64, 3.5),
-                         "負荷谷底": (1.05, 2.08), "首次復發": (1.27, 5.15)}
-        for label, g in points.items():
-            marker = {"初始": "o", "治療啟動": "D", "負荷谷底": "v", "首次復發": "s"}[label]
-            ax.scatter(*xy[g], s=62, marker=marker, c=INK, edgecolors="white", linewidth=.9, zorder=7)
-            ax.annotate(f"{label}\n$t={g}$", xy=xy[g], xytext=positions[label], fontsize=11.5, ha="center",
-                        arrowprops={"arrowstyle": "-", "color": GRAY, "lw": .9},
-                        bbox={"facecolor": "white", "edgecolor": "none", "pad": 2}, zorder=8)
-        ax.scatter(*xy[-1], s=50, facecolor="white", edgecolor=RED, linewidth=1.5, zorder=7)
-    if start is not None and "負荷谷底" in points:
-        nadir = states[points["負荷谷底"]]
-        fraction = f"{100*nadir['resistant']/nadir['total']:.1f}%" if nadir['total'] else "比例未定義"
-        fig.text(.07, .178, f"案例讀圖：治療起點 T={states[start]['total']:,}、R={states[start]['resistant']:,}；"
-                 f"谷底 T={nadir['total']:,}、R={nadir['resistant']:,}（{fraction}）。", fontsize=14, color=BLUE)
-    fig.text(.07, .12, "曲線的轉彎表示組成改變：先抑制敏感族群，再由抗藥族群擴張。復發以回到各次治療起始負荷判定。", fontsize=12.5)
-    fig.text(.07, .07, "座標含 +1，因此零細胞可顯示；空心終點為最後觀察，計算上限不是平衡點。二維相圖是完整狀態的投影。", fontsize=11.5, color=GRAY)
-    return fig
-
-
 def conditional_steps(result: Result):
     """每個可推進世代的原始計數期望，以及實際下一代計數。"""
     rows = []
@@ -232,52 +173,82 @@ def conditional_steps(result: Result):
     return rows
 
 
-def plot_conditional_phase(result: Result, steps):
-    """期望箭頭由真實完整狀態計算；不插值成全平面向量場。"""
-    fig = plt.figure(figsize=(16.8, 10))
-    ax = fig.add_axes((.07, .255, .415, .49))
-    math_ax = fig.add_axes((.545, .24, .415, .53))
-    math_ax.axis("off")
-    fig.text(.055, .965, "相圖的方向，能從程式的條件期望推導", fontsize=25, weight="bold", va="top")
-    fig.text(.055, .911, f"完整模型，seed={result.seed}；只在實際到達的基因型狀態計算期望，沒有另外建立兩類近似模型。", fontsize=14, color=GRAY)
-    xy = phase_coordinates(result.history)
-    ax.plot(*xy.T, color="#B8C4CC", lw=1.6, marker="o", markersize=2.3, zorder=2)
-    selected = sorted({0, 5, 10, 14, 15, 16, 17, 18, 19, 20, 24, 28, 32, len(steps)-1})
-    for g in selected:
-        if not 0 <= g < len(steps):
-            continue
-        row = steps[g]
-        endpoint = np.log10([row["expected_sensitive"] + 1, row["expected_resistant"] + 1])
-        color = ORANGE if row["therapy_active"] else BLUE
-        arrow(ax, xy[g], endpoint, color, size=13, linewidth=2.1)
-        if g in (10, 15, 18, 28):
-            offset = {10: (9, -18), 15: (7, 13), 18: (7, -18), 28: (10, -5)}[g]
-            ax.annotate(f"$t={g}$", xy=xy[g], xytext=offset, textcoords="offset points", fontsize=11, color=color)
-    decorate_axis(ax, "A  期望下一代位置的投影")
-    fig.legend(handles=[Line2D([], [], color="#B8C4CC", lw=1.5, label="實際試驗路徑"),
-                        Line2D([], [], color=BLUE, lw=2.4, label="未治療條件期望"),
-                        Line2D([], [], color=ORANGE, lw=2.4, label="治療中條件期望")],
-               loc="upper left", bbox_to_anchor=(.055, .865), ncol=3, frameon=False, fontsize=12)
-    math_ax.text(0, 1, "B  從基因型繁殖到 S/R 期望", fontsize=17, weight="bold", va="top")
-    formulas = [r"$m_g(s)=(1-d_g(s))(1-\alpha(s)k_g)(2+q_g)$",
-                r"$B_S(s)=\sum_{g\in\mathcal{S}}n_gm_g(s),\quad B_R(s)=\sum_{g\in\mathcal{R}}n_gm_g(s)$",
-                r"$\mathrm{E}[S_{t+1}\mid s]=(1-\mu)B_S(s)$",
-                r"$\mathrm{E}[R_{t+1}\mid s]=B_R(s)+\mu B_S(s)$"]
-    for y, formula in zip((.88, .745, .59, .475), formulas):
-        math_ax.text(0, y, formula, fontsize=18, va="top", color=BLUE)
-    math_ax.text(0, .37, r"$\alpha=0$ 未治療；$\alpha=1$ 持續治療；$\mu=0.001$。" + "\n其他位元突變仍保留在完整模擬中。", fontsize=12.5, va="top")
-    start = result.therapy_generation
-    nadir = min(range(start+1, len(result.history)), key=lambda g: result.history[g]["total"]) if start is not None else None
-    for y, g, title in ((.20, start, "治療啟動"), (.015, nadir, "負荷谷底")):
+def plot_phase_portrait(trials, events, replicate, config, result, steps):
+    """單一相平面：30 條實際軌跡、突出案例，以及由完整基因型狀態算出的期望下一代箭頭。
+
+    取代舊的 01（軌跡兩格）與 02（條件期望）：同一試驗、同一座標不再畫兩次。
+    負荷 × 抗藥比例的座標改看相圖 05（logit 軸）；推導公式在圖 07。
+    """
+    fig = plt.figure(figsize=(15.5, 10.2))
+    ax = fig.add_axes((.07, .2, .5, .58))
+    side = fig.add_axes((.62, .2, .35, .58)); side.axis("off")
+    fig.text(.055, .965, "相平面：負荷下降不等於抗藥消失", fontsize=25, weight="bold", va="top")
+    event, states = events[replicate], trials[replicate]
+    fig.text(.055, .912, f"{len(trials)} 次試驗的實際軌跡；突出案例 replicate {replicate}（seed={event['seed']}）。"
+             "黑色箭頭＝由當代完整基因型組成算出的期望下一代位置。", fontsize=13.5, color=GRAY)
+    start, relapse = event["therapy_generation"], event["relapse_generation"]
+    colors = [BLUE if start is None or g < start else RED if relapse is not None and g >= relapse else ORANGE
+              for g in range(len(states) - 1)]
+    for path in trials.values():
+        ax.plot(*phase_coordinates(path).T, color="#BCC7CE", alpha=.48, lw=.85, zorder=1)
+    xy = phase_coordinates(states)
+    for g, color in enumerate(colors):
+        ax.plot(*xy[g:g+2].T, color=color, lw=2.6, zorder=3)
+    ax.scatter(*xy.T, s=9, color=INK, alpha=.55, zorder=4, linewidths=0)
+    # 期望箭頭：先求原始計數期望再取 log；箭頭頭端與下一個實際點的距離就是隨機偏差。
+    for g in sorted({0, 5, 10, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 28, 32, len(steps) - 1}):
+        if 0 <= g < len(steps):
+            row = steps[g]
+            arrow(ax, xy[g], np.log10([row["expected_sensitive"] + 1, row["expected_resistant"] + 1]),
+                  INK, size=11, linewidth=1.5, zorder=6)
+    sensitive = np.r_[0, np.geomspace(1, config.therapy_start_size, 250)]
+    resistant = np.maximum(0, config.therapy_start_size - sensitive)
+    ax.plot(np.log10(sensitive + 1), np.log10(resistant + 1), color=GRAY, ls="--", lw=1, alpha=.7)
+    ax.text(.65, 4.37, rf"$S+R={config.therapy_start_size:,}$（治療門檻）", color=GRAY, fontsize=11.5)
+    positions = {"初始": (2.75, .56), "治療啟動": (3.64, 3.5), "負荷谷底": (1.05, 2.08), "首次復發": (1.27, 5.15)}
+    points = event_generations(states, event)
+    for label, g in points.items():
+        marker = {"初始": "o", "治療啟動": "D", "負荷谷底": "v", "首次復發": "s"}[label]
+        ax.scatter(*xy[g], s=62, marker=marker, c=INK, edgecolors="white", linewidth=.9, zorder=7)
+        ax.annotate(f"{label}\n$t={g}$", xy=xy[g], xytext=positions[label], fontsize=11.5, ha="center",
+                    arrowprops={"arrowstyle": "-", "color": GRAY, "lw": .9},
+                    bbox={"facecolor": "white", "edgecolor": "none", "pad": 2}, zorder=8)
+    ax.scatter(*xy[-1], s=50, facecolor="white", edgecolor=RED, linewidth=1.5, zorder=7)
+    decorate_axis(ax, "敏感 × 抗藥細胞（log 座標）")
+    handles = [Line2D([], [], color="#BCC7CE", lw=1, label=f"全部 {len(trials)} 次試驗"),
+               Line2D([], [], color=BLUE, lw=3, label="治療前"),
+               Line2D([], [], color=ORANGE, lw=3, label="治療至首次復發"),
+               Line2D([], [], color=RED, lw=3, label="復發後"),
+               Line2D([], [], color=INK, lw=1.5, marker=">", markersize=7, label="期望下一代")]
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(.055, .875), frameon=False, ncol=5, fontsize=12)
+    # 右側：案例數字。期望與實際並列，說明大族群幾乎沒有偏差、小族群偏差變大。
+    y = .97
+    side.text(0, y, "讀圖", fontsize=16, weight="bold", va="top"); y -= .08
+    for text in ("治療前：S、R 一起長，路徑往右上。",
+                 "治療後：S 每代少約一個數量級，\n路徑幾乎水平往左。",
+                 "S 歸零後：沿縱軸直直往上，\n純抗藥族群在生長。"):
+        side.text(0, y, text, fontsize=12.5, va="top"); y -= .035 + .05 * (1 + text.count("\n"))
+    y -= .02
+    if start is not None and "負荷谷底" in points:
+        nadir = states[points["負荷谷底"]]
+        side.text(0, y, f"抗藥細胞在治療中從未減少", fontsize=14, weight="bold", va="top", color=RED); y -= .065
+        side.text(0, y, f"治療起點 R = {states[start]['resistant']:,}\n谷底 R = {nadir['resistant']:,}"
+                  f"（占 {100*nadir['resistant']/nadir['total']:.1f}%）", fontsize=12.5, va="top"); y -= .14
+    nadir_g = points.get("負荷谷底")
+    for g, title in ((start, "治療啟動"), (nadir_g, "負荷谷底")):
         if g is not None and g < len(steps):
             row = steps[g]
-            math_ax.text(0, y, f"{title} t={g}：目前 (S,R)=({row['sensitive']:,}, {row['resistant']:,})", fontsize=13, weight="bold", va="top")
-            math_ax.text(0, y-.065, f"期望下一代 ({row['expected_sensitive']:,.1f}, {row['expected_resistant']:,.1f})"
-                         f"\n實際下一代 ({row['observed_next_sensitive']:,}, {row['observed_next_resistant']:,})", fontsize=12, va="top", color=GRAY)
-    fig.text(.07, .142, r"箭頭端點：$\phi(\mathrm{E}[S_{t+1}\mid s],\mathrm{E}[R_{t+1}\mid s])$；"
-             r"$\phi(S,R)=(\log_{10}(S+1),\log_{10}(R+1))$。", fontsize=13)
-    fig.text(.07, .085, "先求原始細胞數期望，再轉換座標；這不等於對數座標的期望。實際下一代仍由隨機抽樣決定。", fontsize=12, color=GRAY)
-    fig.text(.07, .045, "相同 (S,R) 的 driver、TSG 或 IL11 組成可能不同，因此此圖不是可封閉的二維自治向量場。", fontsize=12, color=GRAY)
+            side.text(0, y, f"{title} t={g}：(S, R) = ({row['sensitive']:,}, {row['resistant']:,})",
+                      fontsize=12.5, weight="bold", va="top"); y -= .055
+            side.text(0, y, f"期望下一代 ({row['expected_sensitive']:,.1f}, {row['expected_resistant']:,.1f})\n"
+                      f"實際下一代 ({row['observed_next_sensitive']:,}, {row['observed_next_resistant']:,})",
+                      fontsize=12, va="top", color=GRAY); y -= .12
+    fig.text(.07, .115, r"箭頭端點 $=\phi(\mathrm{E}[S_{t+1}\mid s],\mathrm{E}[R_{t+1}\mid s])$，"
+             r"$\phi(S,R)=(\log_{10}(S+1),\log_{10}(R+1))$；公式推導見圖 07。", fontsize=12.5)
+    fig.text(.07, .07, "族群越小，實際下一步偏離期望越多（人口學隨機性）。座標含 +1，因此零細胞可顯示；空心終點是計算上限，不是平衡點。",
+             fontsize=11.5, color=GRAY)
+    fig.text(.07, .035, "相同 (S, R) 底下的 driver／TSG 組成可能不同，因此這是完整狀態的投影，不是封閉的二維向量場。",
+             fontsize=11.5, color=GRAY)
     return fig
 
 
@@ -327,8 +298,7 @@ def main():
                "verification": "highlight reproduced against every observed CSV count; event timing and expectation conservation verified"}
     (args.output / "phase_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2)+"\n")
     set_phase_style()
-    save_phase_figure(plot_phase_trajectories(trials, events, rep, config), args.output, "01_phase_trajectories")
-    save_phase_figure(plot_conditional_phase(result, steps), args.output, "02_conditional_phase_directions")
+    save_phase_figure(plot_phase_portrait(trials, events, rep, config, result, steps), args.output, "01_phase_portrait")
     print(json.dumps({"replicate": rep, "seed": result.seed, "trial_count": len(trials),
                       "verified_generations": len(result.history), "output": str(args.output)}, ensure_ascii=False))
 

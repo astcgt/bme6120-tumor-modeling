@@ -281,6 +281,9 @@ def therapy_outcome(result: Result) -> dict:
 
 # 集中定義展示圖的配色，讓各情境與面板使用一致的視覺樣式。
 COLORS = ["#167D9A", "#ED7953", "#6C5B9C", "#57A773", "#D6A43B", "#BC5B86"]
+# TSG 比較的三種條件；第一個是對照組（TSG 失活沒有生長優勢）。
+HIT_SCENARIOS = ("No TSG advantage", "TSG one-hit", "TSG two-hit")
+HIT_SHORT = {"No TSG advantage": "Control\n(no TSG advantage)", "TSG one-hit": "One-hit", "TSG two-hit": "Two-hit"}
 
 
 def set_plot_style():
@@ -391,60 +394,41 @@ def sample_at_size(result: Result, size: int, rng: np.random.Generator) -> dict 
 
 
 def run_comparisons(config: Config, repeats: int, seed: int, output: Path) -> list[dict]:
-    """重複模擬：驅動突變對生長，以及死亡率對等大小樣本多樣性的影響。"""
+    """重複模擬：TSG 規則對生長（畫在圖 03），以及死亡率對等大小樣本多樣性的影響（圖 02）。"""
     # 重複次數必須為正，才有可供比較的試驗分布。
     if repeats < 1:
         raise ValueError("repeats 必須至少為 1")
-    # 建立左右兩個比較面板，rows 收集每次試驗的結果供 CSV 匯出。
-    set_plot_style()
-    fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.4), layout="constrained")
-    fig.suptitle("What changes tumor growth and diversity?", fontsize=20, fontweight="bold")
     rows = []
     # 生長比較固定觀察 18 代，固定 oncogene 設定，比較無 TSG 優勢、TSG 一擊與兩擊條件。
     growth_horizon = 18
-    # 保留同批試驗的逐代資料，供 one-hit／two-hit 專屬比較圖重用。
+    # 三種條件的逐代資料都交給圖 03；無 TSG 優勢是對照組。
     hit_rows = []
-    for condition, label in enumerate(("No TSG advantage", "TSG one-hit", "TSG two-hit")):
+    for condition, label in enumerate(HIT_SCENARIOS):
         # 用 replace 建立新設定而不修改原始 Config；控制組只取消 TSG 優勢；所有情境保留相同 oncogene 效果與突變率。
         cfg = replace(config, generations=growth_horizon, max_cells=10**12, suppressor_hits=1 if condition == 1 else 2)
         if condition == 0:
             cfg = replace(cfg, suppressor_death_reduction=0, suppressor_triple_bonus=0)
-        # 收集每次試驗的完整生長曲線；不同條件與重複試驗使用不同種子。
-        trajectories = []
         for rep in range(repeats):
             run_seed = seed + condition * 10000 + rep
             result = simulate(cfg, seed=run_seed, therapy=False)
-            # 提早滅絕後補零；未滅絕的截短試驗仍由下方安全上限檢查拒絕。
-            if condition in (1, 2):
-                for generation in range(growth_horizon + 1):
-                    row = result.history[min(generation, len(result.history) - 1)]
-                    hit_rows.append(dict(scenario=label, replicate=rep, seed=run_seed,
-                                         generation=generation, total=row["total"],
-                                         suppressor_fraction=row["suppressor_fraction"]))
-            values = [r["total"] for r in result.history]
             # 若碰到安全上限就停止比較並報錯，以免把截短的曲線當成完整資料。
             if result.stop_reason == "cell_limit":
                 raise RuntimeError("Growth comparison hit safety limit; shorten growth_horizon")
-            # 提早滅絕的試驗以零補齊剩餘世代，使各次曲線長度一致。
-            values.extend([0] * (growth_horizon + 1 - len(values)))
-            trajectories.append(values)
+            # 提早滅絕的試驗沿用最後一列（零細胞），使各次曲線長度一致。
+            for generation in range(growth_horizon + 1):
+                row = result.history[min(generation, len(result.history) - 1)]
+                hit_rows.append(dict(scenario=label, replicate=rep, seed=run_seed,
+                                     generation=generation, total=row["total"],
+                                     suppressor_fraction=row["suppressor_fraction"]))
             rows.append(dict(experiment="growth", condition=label, replicate=rep,
                              seed=run_seed, reached_target="", generation=result.history[-1]["generation"],
                              total=result.history[-1]["total"], shannon=result.history[-1]["shannon"],
                              suppressor_fraction=result.history[-1]["suppressor_fraction"]))
-        # 逐代計算中位數與 10–90 百分位；陰影是試驗間變異，不是信賴區間。
-        low, median, high = np.percentile(trajectories, [10, 50, 90], axis=0)
-        axes[0].plot(range(growth_horizon + 1), median, color=COLORS[condition], label=label)
-        axes[0].fill_between(range(growth_horizon + 1), low, high, color=COLORS[condition], alpha=0.14)
-    # 完成生長面板的對數尺度與圖例，讓三種情境易於比較。
-    axes[0].set(title="A  Tumor suppressor hit requirement", xlabel="Generation", ylabel="Cells · median & 10–90% interval")
-    axes[0].set_yscale("symlog", linthresh=1)
-    axes[0].legend(frameon=False, fontsize=9)
     # 死亡率比較：首次達標後固定取樣 5,000 個細胞，降低跨門檻大小差異的影響。
-    target = 5000
-    for index, death in enumerate((0.20, 0.35, 0.45)):
-        # 每種死亡率各做多次試驗，只有達標樣本的 Shannon H 會加入散點圖。
-        values = []
+    target, deaths = 5000, (0.20, 0.35, 0.45)
+    shannon, generations = {}, {}
+    for index, death in enumerate(deaths):
+        shannon[death], generations[death] = [], []
         for rep in range(repeats):
             # 使用與生長比較不同的種子區段；取樣也使用獨立的亂數產生器。
             run_seed = seed + 50000 + index * 10000 + rep
@@ -452,33 +436,61 @@ def run_comparisons(config: Config, repeats: int, seed: int, output: Path) -> li
             result = simulate(cfg, seed=run_seed, therapy=False, target_size=target)
             sample = sample_at_size(result, target, np.random.default_rng(run_seed + 1_000_000))
             if sample is not None:
-                values.append(sample["shannon"])
+                shannon[death].append(sample["shannon"])
+                generations[death].append(result.history[-1]["generation"])
             # 未達門檻者仍寫入 CSV，保留達標與否及停止世代，避免隱藏失敗試驗。
             rows.append(dict(experiment="death_rate", condition=death, replicate=rep,
                              seed=run_seed, reached_target=sample is not None,
                              generation=result.history[-1]["generation"],
                              total=result.history[-1]["total"], shannon=sample["shannon"] if sample else "",
                              suppressor_fraction=sample["suppressor_fraction"] if sample else ""))
-        # 散點左右微幅偏移只改善重疊顯示；黑色橫線標示該組中位數。
-        if values:
-            jitter = np.random.default_rng(seed + index).uniform(-0.10, 0.10, len(values))
-            axes[1].scatter(index + jitter, values, color=COLORS[index], s=34, alpha=0.7)
-            axes[1].plot([index - 0.18, index + 0.18], [np.median(values)] * 2, color="#172B42", lw=3)
-        # 標示達到目標的試驗數，提醒多樣性統計是以達標為條件。
-        axes[1].text(index, 0.98, f"{len(values)}/{repeats} reached", ha="center", va="top",
-                     transform=axes[1].get_xaxis_transform(), fontsize=9)
-    # 設定死亡率面板的軸標籤與留白，再儲存圖表及逐次試驗資料。
-    axes[1].set(title=f"B  Diversity in {target:,}-cell samples", xlabel="Natural death probability per generation",
-                ylabel="Shannon diversity (natural log)", xticks=[0, 1, 2], xticklabels=["0.20", "0.35", "0.45"])
-    axes[1].margins(y=0.25, x=0.20)
-    save_figure(fig, output, "02_scenario_comparisons")
+    plot_death_rate(shannon, generations, config, repeats, target, seed, output)
     write_csv(output / "comparisons.csv", rows)
     plot_hit_comparison(hit_rows, config, output)
     return rows
 
 
+def plot_death_rate(shannon: dict, generations: dict, config: Config, repeats: int, target: int,
+                    seed: int, output: Path):
+    """同樣 5,000 個細胞：死亡率越高越異質；B 顯示機制是需要更多代（更多分裂）才長到同樣大小。"""
+    set_plot_style()
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5.8), layout="constrained")
+    fig.suptitle("Higher cell turnover → more heterogeneity at the same tumor size", fontsize=20, fontweight="bold")
+    deaths = list(shannon)
+    for ax, values, key in ((axes[0], shannon, "shannon"), (axes[1], generations, "generations")):
+        for index, death in enumerate(deaths):
+            data = values[death]
+            if not data:
+                continue
+            # 散點左右微幅偏移只改善重疊顯示；黑色橫線標示該組中位數。
+            jitter = np.random.default_rng(seed + index).uniform(-0.10, 0.10, len(data))
+            ax.scatter(index + jitter, data, color=COLORS[index], s=34, alpha=0.7)
+            median = float(np.median(data))
+            ax.plot([index - 0.18, index + 0.18], [median] * 2, color="#172B42", lw=3)
+            ax.annotate(f"{median:.2f}" if key == "shannon" else f"{median:.0f} gen", (index + 0.22, median),
+                        va="center", fontsize=10.5, color="#172B42")
+            # 標示達到目標的試驗數，提醒統計是以達標為條件。
+            ax.text(index, 0.98, f"{len(data)}/{repeats} reached", ha="center", va="top",
+                    transform=ax.get_xaxis_transform(), fontsize=9)
+    # 無突變細胞的每代淨倍增 (1-d)(2+q)：死亡率越高，越接近 1，達標需要越多代。
+    labels = [f"{d:.2f}\n×{(1 - d) * (2 + config.triple_probability):.2f}/gen" for d in deaths]
+    axes[0].set(title=f"A  Diversity in {target:,}-cell samples", ylabel="Shannon diversity (natural log)")
+    axes[1].set(title=f"B  Generations needed to reach {target:,} cells", ylabel="Generation first ≥ target")
+    axes[1].set_ylim(bottom=0)
+    for ax in axes:
+        ax.set(xticks=range(len(deaths)), xticklabels=labels,
+               xlabel="Natural death probability (net growth of a mutation-free cell)")
+        ax.margins(y=0.2, x=0.20)
+        # 留出頂端空間給「達標數」文字，避免壓到散點。
+        low, high = ax.get_ylim(); ax.set_ylim(low, high + 0.12 * (high - low))
+    fig.supxlabel(f"No therapy · {repeats} trials per death rate · each trial sampled once at its first generation ≥ {target:,} cells "
+                  f"(without replacement).\nMore generations → more divisions before reaching the same size → more mutations "
+                  "accumulated → higher diversity.", fontsize=10)
+    save_figure(fig, output, "02_death_rate_heterogeneity")
+
+
 def plot_hit_comparison(rows: list[dict], config: Config, output: Path):
-    """用同批重複試驗直接比較生長、TSG 達標比例及固定世代的負荷。"""
+    """用同批重複試驗直接比較生長、TSG 達標比例及固定世代的負荷；含無 TSG 優勢對照組。"""
     # 圖 A 採線性尺度凸顯絕對數量差異；圖 B 顯示機制差異；圖 C 保留個別試驗。
     set_plot_style()
     output = Path(output)
@@ -489,26 +501,29 @@ def plot_hit_comparison(rows: list[dict], config: Config, output: Path):
     fig.supxlabel(f"{config.n_genes} genes · no therapy · identical oncogene effects & mutation rates · "
                   f"{repeats} trials/scenario\n"
                   "Lines: median; bands: 10–90% of trials (not confidence intervals). "
-                  "One-hit: either allele; two-hit: both alleles of the same TSG.", fontsize=10)
+                  "One-hit: either allele; two-hit: both alleles of the same TSG. "
+                  "Control: TSG loss gives no advantage (two-hit counting).", fontsize=10)
     summaries = []
-    for index, (label, color) in enumerate((("TSG one-hit", COLORS[1]), ("TSG two-hit", COLORS[2]))):
-        # 依試驗與世代建立矩陣，兩組均使用相同時間範圍及完整重複試驗。
+    styles = {HIT_SCENARIOS[0]: ("#64748B", ":"), HIT_SCENARIOS[1]: (COLORS[1], "-"), HIT_SCENARIOS[2]: (COLORS[2], "--")}
+    order = [s for s in HIT_SCENARIOS if any(r["scenario"] == s for r in rows)]
+    for index, label in enumerate(order):
+        color, linestyle = styles[label]
+        # 依試驗與世代建立矩陣，各組均使用相同時間範圍及完整重複試驗。
         subset = [r for r in rows if r["scenario"] == label]
         series = [[r for r in subset if r["replicate"] == rep] for rep in range(repeats)]
         total = np.array([[r["total"] for r in trial] for trial in series])
         fraction = 100 * np.array([[r["suppressor_fraction"] for r in trial] for trial in series])
         for ax, values in zip(axes[:2], (total, fraction)):
             low, median, high = np.percentile(values, [10, 50, 90], axis=0)
-            ax.plot(range(last + 1), median, color=color, label=label,
-                    ls="-" if index == 0 else "--")
-            ax.fill_between(range(last + 1), low, high, color=color, alpha=0.15)
+            ax.plot(range(last + 1), median, color=color, label=label, ls=linestyle)
+            ax.fill_between(range(last + 1), low, high, color=color, alpha=0.10 if index == 0 else 0.15)
         # 固定終點比較避免拿不同世代的負荷相比；散點左右位移僅為減少遮蔽。
         endpoint = total[:, -1]
         jitter = np.random.default_rng(900 + index).uniform(-0.10, 0.10, repeats)
         axes[2].scatter(index + jitter, endpoint, color=color, alpha=0.7, s=40)
         median = float(np.median(endpoint))
         axes[2].plot([index - 0.2, index + 0.2], [median] * 2, color=color, lw=3)
-        axes[2].text(index, 0.98, f"Median: {median:,.0f} cells", ha="center", va="top",
+        axes[2].text(index, 0.98, f"Median\n{median:,.0f}", ha="center", va="top",
                      transform=axes[2].get_xaxis_transform(), fontsize=10)
         summaries.append(dict(scenario=label, generation=last, replicates=repeats,
                               median_cells=median,
@@ -520,7 +535,7 @@ def plot_hit_comparison(rows: list[dict], config: Config, output: Path):
     axes[1].text(0.03, 0.97, "Symlog; linear below 0.01%", transform=axes[1].transAxes,
                  va="top", fontsize=9)
     axes[2].set(title=f"C  Tumor burden at generation {last}", ylabel="Total cells",
-                xticks=[0, 1], xticklabels=["One-hit", "Two-hit"], xlim=(-0.5, 1.5))
+                xticks=range(len(order)), xticklabels=[HIT_SHORT[s] for s in order], xlim=(-0.5, len(order) - 0.5))
     axes[2].margins(y=0.25)
     for ax in axes[:2]:
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -531,57 +546,19 @@ def plot_hit_comparison(rows: list[dict], config: Config, output: Path):
     write_csv(output / "one_hit_vs_two_hit_summary.csv", summaries)
 
 
-def plot_il11_benefit_curve(config: Config, output: Path):
-    """直接展示模型的飽和公式；不是隨機模擬結果或實驗擬合。"""
-    config.validate()
-    set_plot_style()
-    # 全範圍與低比例放大圖共用相同公式，百分比與百分點分開標示。
-    fraction = np.linspace(0, 1, 1001)
-    maximum, half = config.il11_max_death_reduction, config.il11_half_fraction
-    benefit = maximum * fraction / (half + fraction)
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6), layout="constrained")
-    fig.suptitle("How IL11+ cells help the whole tumor", fontsize=21, fontweight="bold")
-    zoom = min(1.0, max(0.10, 3 * half))
-    for ax, limit, title in zip(axes, (1.0, zoom),
-                               ("A  Full range", "B  Low-producer fraction: enlarged view")):
-        ax.plot(100 * fraction, 100 * benefit, color=COLORS[1], label="IL11 ON: shared benefit")
-        ax.axhline(0, color=COLORS[0], lw=2, label="IL11 OFF: no benefit")
-        # 最大效果是公式的漸近上限；f 至多為 1，因此有限範圍不會精確達到上限。
-        ax.axhline(100 * maximum, color="#64748B", ls="--", label=f"Asymptotic cap: {100 * maximum:g} pp")
-        ax.plot([100 * half, 100 * half, 0], [0, 50 * maximum, 50 * maximum],
-                color=COLORS[2], ls=":", lw=1.5)
-        ax.scatter([100 * half], [50 * maximum], color=COLORS[2], s=65, zorder=5)
-        ax.set(xlim=(0, 100 * limit), ylim=(-0.2, max(1, 115 * maximum)),
-               title=title, xlabel="IL11+ cells (% of tumor)",
-               ylabel="Shared reduction in death probability (percentage points)")
-    # 放大圖標示半飽和，並用未突變細胞示範絕對死亡率變化。
-    axes[1].annotate(f"Half-saturation\n{100 * half:g}% producers → {50 * maximum:g} pp benefit",
-                     xy=(100 * half, 50 * maximum), xytext=(0.43, 0.35),
-                     textcoords="axes fraction", arrowprops=dict(arrowstyle="->", color=COLORS[2]), fontsize=11)
-    axes[0].legend(frameon=False, loc="lower right", fontsize=9)
-    death_before = config.death_rate
-    death_after = max(0, death_before - maximum / 2)
-    fig.supxlabel(f"b(f) = Bmax × f / (K + f)     |     Bmax = {maximum:g}, K = {half:g}\n"
-                  f"At {100 * half:g}% producers: mutation-free cell death {100 * death_before:g}% → {100 * death_after:g}% per generation. "
-                  "Benefit reaches producers AND nonproducers.\n"
-                  "Teaching assumption, not fitted data. Death is floored at zero; genotype advantages and therapy are applied separately.", fontsize=10)
-    save_figure(fig, output, "05_il11_benefit_curve")
-    # 保存曲線資料，方便自行重畫或核對圖中數值。
-    write_csv(Path(output) / "il11_benefit_curve.csv",
-              [dict(il11_percent=100 * f, benefit_percentage_points=100 * b)
-               for f, b in zip(fraction, benefit)])
-
-
 def run_il11_comparison(config: Config, repeats: int, seed: int, output: Path, horizon: int = 18):
-    """比較相同 20 個基因座下，IL11 功能有無對整體與非生產者的影響。"""
+    """比較相同 20 個基因座下，IL11 功能有無的生長；並把實際生產者比例標在效益曲線上。
+
+    C 直接畫模型公式 b(f) = Bmax f/(K+f)（教學假設，不是實驗擬合）；共享死亡率降低量與
+    非生產者適應度都是 B 的確定性轉換，所以只寫進 CSV 與註腳，不另畫面板。
+    """
     if repeats < 1 or horizon < 1:
         raise ValueError("repeats 與 horizon 必須為正")
+    config.validate()
     set_plot_style()
-    fig, axes = plt.subplots(2, 2, figsize=(14, 9), layout="constrained")
-    fig.suptitle("IL11+ populations | shared fitness advantage", fontsize=21, fontweight="bold")
-    fig.supxlabel(f"No therapy · {repeats} trials/condition · median and 10–90% interval (not CI)\n"
-                  "OFF: neutral passenger at the same locus. ON: IL11 mutation creates producers; all cells benefit.", fontsize=10)
-    rows, summaries = [], []
+    fig, axes = plt.subplots(1, 3, figsize=(18.5, 6.2), layout="constrained")
+    fig.suptitle("IL11+ producers | a few cells speed up the whole tumor", fontsize=21, fontweight="bold")
+    rows, summaries, producer = [], [], None
     for enabled, label, color in ((False, "IL11 OFF", COLORS[0]), (True, "IL11 ON", COLORS[1])):
         # 固定時間窗與其餘參數；同一 replicate 用同一 seed，但分歧後不視為逐細胞配對。
         cfg = replace(config, il11_enabled=enabled, generations=horizon, max_cells=10**12)
@@ -604,27 +581,59 @@ def run_il11_comparison(config: Config, repeats: int, seed: int, output: Path, h
                 rows.append(row)
                 trial.append(row)
             trials.append(trial)
-        # 群體生長、生產者比例、共享死亡率降低量及未突變非生產者的 fitness。
         keys = ("total", "il11_percent", "shared_death_reduction", "nonproducer_expected_offspring")
-        for ax, key in zip(axes.flat, keys):
+        for ax, key in zip(axes[:2], keys[:2]):
             values = np.array([[r[key] for r in trial] for trial in trials])
             low, med, high = np.percentile(values, [10, 50, 90], axis=0)
             ax.plot(range(horizon + 1), med, label=label, color=color)
             ax.fill_between(range(horizon + 1), low, high, color=color, alpha=0.15)
+        if enabled:
+            producer = np.array([[r["il11_percent"] for r in trial] for trial in trials])
         summaries.append(dict(condition=label, generation=horizon, replicates=repeats,
                               **{f"median_{key}": float(np.median([t[-1][key] for t in trials])) for key in keys}))
-    # D 顯示受共享環境影響的參考基因型，並非觀察到的平均增長或因果效應估計。
-    for ax, title, ylabel in zip(axes.flat,
-            ("A  Whole-tumor growth", "B  IL11+ producer cells", "C  Benefit shared by all cells",
-             "D  Fitness of a mutation-free nonproducer"),
-            ("Total cells", "IL11+ cells (%)", "Absolute reduction in death probability", "Expected offspring per parent")):
+    for ax, title, ylabel in zip(axes[:2], ("A  Whole-tumor growth", "B  IL11+ producer cells"),
+                                 ("Total cells", "IL11+ cells (%)")):
         ax.set(title=title, xlabel="Generation", ylabel=ylabel)
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.legend(frameon=False)
+        ax.legend(frameon=False, loc="upper left")
+    off, on = summaries
+    axes[0].annotate(f"Gen {horizon}: {on['median_total']:,.0f} vs {off['median_total']:,.0f}\n"
+                     f"(+{100 * (on['median_total'] / off['median_total'] - 1):.0f}% with IL11)",
+                     xy=(horizon, on["median_total"]), xytext=(0.30, 0.55), textcoords="axes fraction",
+                     arrowprops=dict(arrowstyle="->", color=COLORS[1]), fontsize=10.5, color=COLORS[1])
+    # C：公式曲線（放大 0–10%），並把 IL11 ON 試驗實際出現的生產者比例範圍疊上去。
+    ax = axes[2]
+    maximum, half = config.il11_max_death_reduction, config.il11_half_fraction
+    fraction = np.linspace(0, 1, 1001)
+    benefit = maximum * fraction / (half + fraction)
+    zoom = min(1.0, max(0.10, 3 * half))
+    lo, hi = np.percentile(producer[:, 1:], [10, 90])
+    ax.axvspan(lo, hi, color=COLORS[1], alpha=0.13, lw=0,
+               label=f"Observed producers, gen 1–{horizon} (10–90%)")
+    ax.plot(100 * fraction, 100 * benefit, color=COLORS[1], label=r"$b(f)=B_{max}\,f/(K+f)$")
+    ax.axhline(100 * maximum, color="#64748B", ls="--", lw=1.4, label=f"Cap {100 * maximum:g} pp")
+    ax.plot([100 * half, 100 * half, 0], [0, 50 * maximum, 50 * maximum], color=COLORS[2], ls=":", lw=1.5)
+    ax.scatter([100 * half], [50 * maximum], color=COLORS[2], s=55, zorder=5)
+    ax.annotate(f"Half-saturation K = {100 * half:g}%", xy=(100 * half, 50 * maximum), xytext=(4.2, 1.6),
+                arrowprops=dict(arrowstyle="->", color=COLORS[2]), fontsize=10.5, color=COLORS[2])
+    end = float(np.median(producer[:, -1]))
+    ax.scatter([end], [100 * maximum * end / 100 / (half + end / 100)], marker="D", color="#172B42", s=45, zorder=6,
+               label=f"Median at gen {horizon}: {end:.1f}%")
+    ax.set(xlim=(0, 100 * zoom), ylim=(-0.2, 115 * maximum), title="C  Where the tumor sits on the benefit curve",
+           xlabel="IL11+ cells (% of tumor)", ylabel="Shared reduction in death probability (pp)")
+    ax.legend(frameon=False, loc="lower right", fontsize=9)
+    fig.supxlabel(f"No therapy · {repeats} trials/condition · median and 10–90% interval (not CI). OFF: neutral passenger at the same locus; "
+                  f"ON: IL11 mutation creates producers and ALL cells benefit.\nAt gen {horizon}: shared death reduction "
+                  f"{100 * on['median_shared_death_reduction']:.1f} pp; a mutation-free nonproducer's expected offspring "
+                  f"{off['median_nonproducer_expected_offspring']:.3f} → {on['median_nonproducer_expected_offspring']:.3f}. "
+                  "Benefit formula is a teaching assumption, not fitted data.", fontsize=10)
     output = Path(output)
     save_figure(fig, output, "04_il11_shared_fitness")
     write_csv(output / "il11_comparison.csv", rows)
     write_csv(output / "il11_comparison_summary.csv", summaries)
+    # 保存曲線資料，方便自行重畫或核對圖中數值。
+    write_csv(output / "il11_benefit_curve.csv",
+              [dict(il11_percent=100 * f, benefit_percentage_points=100 * b) for f, b in zip(fraction, benefit)])
     return rows
 
 
@@ -643,14 +652,12 @@ def plot_therapy_ensemble(trials: list[Result], output: Path):
     length = max(len(t.history) for t in trials)
     keys = ("total", "sensitive", "resistant", "effective_genotypes", "resistant_percent")
     data = {k: np.full((len(trials), length), np.nan) for k in keys}
-    frequencies = np.full((len(trials), config.n_genes, length), np.nan)
     raw = []
     for rep, trial in enumerate(trials):
         for generation in range(length):
             if generation >= len(trial.history) and trial.stop_reason != "extinction":
                 continue
             row = trial.history[min(generation, len(trial.history) - 1)]
-            pop = trial.populations[min(generation, len(trial.populations) - 1)]
             total = row["total"]
             values = dict(total=total, sensitive=row["sensitive"], resistant=row["resistant"],
                           effective_genotypes=np.exp(row["shannon"]) if total else 0,
@@ -659,12 +666,6 @@ def plot_therapy_ensemble(trials: list[Result], output: Path):
                             extended_extinction=generation >= len(trial.history), **values))
             for key, value in values.items():
                 data[key][rep, generation] = value
-            # 空腫瘤沒有基因頻率，因此熱圖只對存活且仍觀察中的試驗取平均。
-            if total:
-                for gene in range(config.n_genes):
-                    frequencies[rep, gene, generation] = sum(n for g, n in pop.items()
-                        if (suppressor_alleles(g, gene, config) > 0 if gene in config.suppressor_genes
-                            else bool(g & (1 << gene)))) / total
     # 每代輸出平均、樣本標準差、中位數、百分位與有效 n；n=1 時 SD 不定義。
     summary = []
     for generation in range(length):
@@ -676,45 +677,46 @@ def plot_therapy_ensemble(trials: list[Result], output: Path):
             for name, q in (("p10", 10), ("median", 50), ("p90", 90)):
                 record[f"{key}_{name}"] = float(np.percentile(v, q)) if len(v) else np.nan
         summary.append(record)
+    # 三格：負荷、異質性、抗藥比例。逐基因頻率改由 plot_genotype_evolution.py 的基因頻率圖呈現；
+    # 可用試驗數只是記帳資訊，改寫進註腳。
     set_plot_style()
-    fig, axes = plt.subplots(2, 3, figsize=(17, 10), layout="constrained")
-    fig.suptitle(f"Tumor evolution | {len(trials)} stochastic trials", fontsize=22, fontweight="bold")
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6.2), layout="constrained")
+    fig.suptitle(f"Tumor evolution under continuous therapy | {len(trials)} stochastic trials",
+                 fontsize=21, fontweight="bold")
     x = np.arange(length)
+    starts = [t.therapy_generation for t in trials if t.therapy_generation is not None]
     for key, color in zip(keys[:3], ("#172B42", COLORS[0], COLORS[1])):
-        axes[0, 0].plot(x, [r[f"{key}_median"] for r in summary], label=key.title(), color=color)
-        axes[0, 0].fill_between(x, [r[f"{key}_p10"] for r in summary],
-                               [r[f"{key}_p90"] for r in summary], color=color, alpha=0.12)
-    axes[0, 0].set(title="A  Population response", ylabel="Cells (symlog)")
-    axes[0, 0].set_yscale("symlog", linthresh=1)
-    axes[0, 0].legend(frameon=False, fontsize=9)
-    for ax, key, title, ylabel in ((axes[0, 1], "effective_genotypes", "B  Genetic heterogeneity", "Effective genotypes"),
-                                  (axes[1, 0], "resistant_percent", "D  Resistance in surviving tumors", "Resistant cells (%)")):
+        axes[0].plot(x, [r[f"{key}_median"] for r in summary], label=key.title(), color=color)
+        axes[0].fill_between(x, [r[f"{key}_p10"] for r in summary],
+                             [r[f"{key}_p90"] for r in summary], color=color, alpha=0.12)
+    axes[0].set(title="A  Population response", ylabel="Cells (symlog)")
+    axes[0].set_yscale("symlog", linthresh=1)
+    for ax, key, title, ylabel in ((axes[1], "effective_genotypes", "B  Genetic heterogeneity", "Effective genotypes: exp(Shannon H)"),
+                                  (axes[2], "resistant_percent", "C  Resistance in surviving tumors", "Resistant cells (%)")):
         ax.plot(x, [r[f"{key}_median"] for r in summary], color=COLORS[2])
         ax.fill_between(x, [r[f"{key}_p10"] for r in summary], [r[f"{key}_p90"] for r in summary], color=COLORS[2], alpha=0.18)
         ax.set(title=title, ylabel=ylabel)
-    # 顯示可用試驗數與治療啟動累計數，避免後期截尾被誤解為穩定母群體。
-    axes[0, 2].plot(x, [r['total_n'] for r in summary], label="Observed / extinct")
-    axes[0, 2].plot(x, [r['resistant_percent_n'] for r in summary], label="Observed, alive")
-    axes[0, 2].plot(x, [sum(t.therapy_generation is not None and t.therapy_generation <= g for t in trials) for g in x],
-                    ls="--", label="Ever started therapy")
-    axes[0, 2].set(title="C  Trial availability & treatment", ylabel="Number of trials", ylim=(0, len(trials)+1))
-    axes[0, 2].legend(frameon=False, fontsize=9)
-    # 基因熱圖分成跨試驗平均與 SD；不混合不同試驗的基因型家系。
-    count = np.sum(np.isfinite(frequencies), axis=0)
-    mean = np.divide(np.nansum(frequencies, axis=0), count, out=np.full(count.shape, np.nan), where=count>0)
-    squared = np.nansum((frequencies-mean)**2, axis=0)
-    sd = np.sqrt(np.divide(squared, count-1, out=np.full(count.shape, np.nan), where=count>1))
-    for ax, matrix, title in ((axes[1, 1], mean, "E  Mean mutation frequency (alive)"),
-                              (axes[1, 2], sd, "F  Mutation frequency SD (alive)")):
-        mesh=ax.pcolormesh(np.arange(length+1)-0.5, np.arange(config.n_genes+1)-0.5,
-                           matrix, cmap="YlGnBu", vmin=0, vmax=1, shading="flat")
-        ax.set(title=title, yticks=range(config.n_genes), yticklabels=[f"G{g+1}" for g in range(config.n_genes)])
-        ax.tick_params(axis="y", labelsize=8); ax.grid(False)
-        fig.colorbar(mesh, ax=ax, shrink=0.8)
-    for ax in axes.flat:
+    # 治療起點因試驗而異，以淡色區間標示最早到最晚的啟動世代。
+    if starts:
+        for ax in axes:
+            ax.axvspan(min(starts), max(starts), color=COLORS[1], alpha=0.10, lw=0,
+                       label=f"Therapy starts (gen {min(starts)}–{max(starts)})")
+        # 治療前已存在的抗藥細胞：在各試驗自己的治療起點取值。
+        at_start = [100 * t.history[t.therapy_generation]["resistant"] / t.history[t.therapy_generation]["total"]
+                    for t in trials if t.therapy_generation is not None]
+        present = sum(t.history[t.therapy_generation]["resistant"] > 0 for t in trials if t.therapy_generation is not None)
+        axes[2].annotate(f"Already present at therapy start:\nmedian {np.median(at_start):.1f}% resistant\n"
+                         f"({present}/{len(at_start)} trials > 0)",
+                         xy=(np.median(starts), np.median(at_start)), xytext=(0.36, 0.42), textcoords="axes fraction",
+                         arrowprops=dict(arrowstyle="->", color=COLORS[1]), fontsize=10.5, color=COLORS[1])
+    axes[0].legend(frameon=False, fontsize=9)
+    for ax in axes:
         ax.set_xlabel("Generation"); ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    fig.supxlabel("Lines: median; bands: 10–90% of trials, not confidence intervals. Independent trials; absolute generation alignment.\n"
-                  "After cell limit: missing. Extinction: zero counts. Frequencies: observed living tumors only; TSG = any allele hit. Blank = insufficient data.", fontsize=10)
+    # 可用試驗數改成文字：全部試驗持續觀察到哪一代，之後因計算上限而截尾。
+    complete = next((g for g, r in enumerate(summary) if r["total_n"] < len(trials)), length)
+    fig.supxlabel("Lines: median; bands: 10–90% of trials, not confidence intervals. Absolute generation alignment.\n"
+                  f"All {len(trials)} trials observed through generation {complete - 1}; later generations include only trials "
+                  f"still below the {config.max_cells:,}-cell computational cap (not tumor death).", fontsize=10)
     save_figure(fig, output, "01_tumor_dashboard")
     write_csv(output / "trajectory.csv", summary)
     write_csv(output / "therapy_trajectories.csv", raw)
@@ -740,7 +742,6 @@ def main():
     plot_therapy_ensemble(trials, args.output)
     run_comparisons(config, args.replicates, args.seed, args.output)
     run_il11_comparison(config, args.replicates, args.seed, args.output)
-    plot_il11_benefit_curve(config, args.output)
     # 抗藥性為隨機事件，額外報告重複試驗結果，避免只展示成功復發案例。
     outcomes = []
     for rep, trial in enumerate(trials):
