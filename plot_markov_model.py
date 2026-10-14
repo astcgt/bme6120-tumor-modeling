@@ -157,6 +157,24 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
     save(fig, "06_single_cell_rules")
 
 
+def draw_paths(ax, trials, events, highlight, therapy_phase):
+    """實際模擬路徑（完整基因型模型）：未治療面板畫治療前那段，治療面板畫治療開始之後那段。"""
+    for rep, states in trials.items():
+        start = events[rep]["therapy_generation"]
+        part = states[:start + 1] if not therapy_phase else states[start:]
+        xy = np.array([[r["sensitive"], r["resistant"]] for r in part]) / 1e4
+        if rep == highlight:
+            continue
+        ax.plot(*xy.T, color="#9AA7B0", lw=.9, alpha=.55, zorder=2)
+    start = events[highlight]["therapy_generation"]
+    states = trials[highlight]
+    part = states[:start + 1] if not therapy_phase else states[start:]
+    xy = np.array([[r["sensitive"], r["resistant"]] for r in part]) / 1e4
+    ax.plot(*xy.T, color="#D9822B", lw=2.4, zorder=5)
+    ax.scatter(*xy.T, s=14, color="#D9822B", edgecolor="white", lw=.5, zorder=6)
+    ax.scatter(*xy[0 if therapy_phase else -1], s=60, marker="D", color=INK, zorder=7)
+
+
 def draw_field(ax, field, scale, norm, title, show_ylabel=True):
     """線性座標的一步期望向量場；兩面板共用倍率與色階，不做單支箭頭正規化。"""
     quiver = ax.quiver(field["x"], field["y"], field["display_u"], field["display_v"], field["magnitude_cells"],
@@ -164,8 +182,8 @@ def draw_field(ax, field, scale, norm, title, show_ylabel=True):
                        width=.0045, headwidth=3.4, headlength=4.4, headaxislength=3.8, minlength=0, minshaft=1)
     ax.scatter(0, 0, s=18, color=INK, zorder=4)
     ax.set_aspect("equal", adjustable="box")
-    ax.set(xlim=(-.065, 2.70), ylim=(-.065, 2.70))
-    ax.set_xticks(np.arange(0, 2.6, .5)); ax.set_yticks(np.arange(0, 2.6, .5))
+    ax.set(xlim=(-.08, 3.2), ylim=(-.08, 3.2))
+    ax.set_xticks(np.arange(0, 3.1, .5)); ax.set_yticks(np.arange(0, 3.1, .5))
     ax.set_xlabel(r"Sensitive cells $S$ ($\times10^4$)", fontsize=12)
     if show_ylabel:
         ax.set_ylabel(r"Resistant cells $R$ ($\times10^4$)", fontsize=12)
@@ -176,7 +194,7 @@ def draw_field(ax, field, scale, norm, title, show_ylabel=True):
     return quiver
 
 
-def matrices_to_flow_figure(config, qmatrix, before, during, fields):
+def matrices_to_flow_figure(config, qmatrix, before, during, fields, trials, events, highlight):
     """M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。"""
     from plot_phase_field import CELL_UNIT
     scale = 9.0  # 11×11 網格比原本 19×19 稀疏，箭頭可以畫長一點；兩面板共用。
@@ -209,6 +227,7 @@ def matrices_to_flow_figure(config, qmatrix, before, during, fields):
         m_s, m_r = np.sum(field["matrix"][0]), np.sum(field["matrix"][1])
         title = ("B  No therapy" if i == 0 else "C  Continuous therapy") + f"\nm_S = {m_s:.4g}, m_R = {m_r:.4g}"
         quivers.append(draw_field(axis, field, scale, norm, title, show_ylabel=i == 0))
+        draw_paths(axis, trials, events, highlight, therapy_phase=i == 1)
         a, b, c = field["matrix"][0, 0]-1, field["matrix"][0, 1], field["matrix"][1, 1]-1
         fig.text(.42 + .27*i, .245, rf"$\Delta S={a:.4g}\,S$" + "\n" + rf"$\Delta R={b:.4g}\,S+{c:.4g}\,R$",
                  fontsize=13.5, color=BLUE, va="top")
@@ -217,8 +236,15 @@ def matrices_to_flow_figure(config, qmatrix, before, during, fields):
     bar.ax.ticklabel_format(style="sci", scilimits=(4, 4)); bar.ax.tick_params(labelsize=9)
     axes[0].quiverkey(quivers[0], X=.43, Y=.135, U=1, label=f"{CELL_UNIT:,} cells / generation", labelpos="E",
                       coordinates="figure", fontproperties={"size": 11}, color=BLUE)
-    fig.text(.42, .07, "No therapy: arrows radiate from the origin (composition unchanged). Therapy: every arrow turns toward the R axis.\n"
-             "Arrows = one-generation expected change E[(S',R') | s] − (S,R); shared length scale, no per-arrow normalization.",
+    from matplotlib.lines import Line2D
+    axes[1].legend(handles=[Line2D([], [], color="#9AA7B0", lw=1.2, label=f"{len(trials)} simulated trials"),
+                            Line2D([], [], color="#D9822B", lw=2.4, marker="o", ms=4, label=f"Trial {highlight} (one dot per generation)"),
+                            Line2D([], [], color=INK, marker="D", lw=0, label="Therapy starts")],
+                   loc="upper left", bbox_to_anchor=(.69, .19), bbox_transform=fig.transFigure, fontsize=10, frameon=False)
+    fig.text(.42, .07, "Arrows = one-generation expected change E[(S',R') | s] − (S,R) on the baseline slice; shared length scale. "
+             "Lines = actual trials of the full model (with oncogenes):\nB shows each trial before therapy, C from therapy start on. "
+             "Trials run along the arrows: rightward before therapy, then left to S = 0 and up the R axis (beyond the plotted range).\n"
+             "On linear axes the paths hug the edges because R stays below a few hundred cells before therapy; phase portrait 01 shows the same paths in log coordinates.",
              fontsize=10.5, color=GRAY)
     assert quivers[0].scale == quivers[1].scale
     save(fig, "07_matrices_to_flow")
@@ -305,12 +331,15 @@ def main():
     extinct = lineage_extinction(c.death_rate, c.triple_probability)
     np.testing.assert_allclose(extinct, law @ extinct**np.arange(4), rtol=1e-12)  # s = f(s)
     from plot_phase_field import compute_phase_field, verify_field
-    counts = np.rint(np.linspace(0, 25_000, 11)).astype(np.int64)
+    counts = np.rint(np.linspace(0, 30_000, 13)).astype(np.int64)
     fields = [compute_phase_field(c, active, counts, "linear") for active in (False, True)]
     for field in fields:
         verify_field(field, c)
     single_cell_figure(c,p,law,phenotypes)
-    matrices_to_flow_figure(c,q,off,on,fields)
+    # 實際路徑：讀取主實驗的 30 次治療試驗，突出與相圖 01 相同的代表試驗。
+    from plot_phase_portraits import choose_exemplar, load_trials
+    _, trials, events = load_trials(OUT.parent)
+    matrices_to_flow_figure(c,q,off,on,fields,trials,events,choose_exemplar(events))
     appendix_figure(c)
     for name, values, names in (("count_transition_P",p,["0","1","2","3","overflow"]),
                                ("mutation_Q",q,["S","R"]), ("offspring_M_off",off,["S","R"]),

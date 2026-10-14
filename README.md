@@ -132,7 +132,7 @@ Run `.venv/bin/python plot_genotype_evolution.py` to write to `outputs/genotype_
 Run `.venv/bin/python plot_markov_model.py` to regenerate the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`:
 
 - `06_single_cell_rules`: the offspring distribution of a mutation-free cell, the same rule as an exact five-state matrix (mutations and therapy disabled; the overflow state is imposed bookkeeping absorption, not biological saturation), and a table of d, q, offspring probabilities, mean offspring m with and without therapy, and the probability that one cell's lineage eventually dies out (smallest root of s = f(s)). A baseline resistant lineage survives therapy with probability 0.52; sensitive lineages under therapy always die out.
-- `07_matrices_to_flow`: the reduced sensitive/resistant mutation matrix Q and expected-offspring matrices M, the conditional-mean formulas E[S′ | s] and E[R′ | s], and beside them the linear S–R vector fields with therapy off and on (11×11 grid, shared length scale).
+- `07_matrices_to_flow`: the reduced sensitive/resistant mutation matrix Q and expected-offspring matrices M, the conditional-mean formulas E[S′ | s] and E[R′ | s], and beside them the linear S–R vector fields with therapy off and on (13×13 grid up to 30,000 cells, shared length scale). The 30 main-experiment trajectories are overlaid: the pre-therapy segment on the untreated panel and the segment from therapy start on the treated panel, with the representative trial highlighted. The actual paths follow the arrows even though the arrows use baseline cells only.
 - `A1_markov_kernel_and_controller` (appendix): the full genotype-count Markov kernel written with probability-generating functions, and the execution state machine.
 
 P and Q are row-stochastic; M contains offspring means and is not a probability transition matrix. Rows are current/parent states and columns are next/offspring states. CSV matrices and a JSON assumptions record are exported alongside the figures; analytic checks run during generation.
@@ -304,7 +304,7 @@ IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上
 執行 `.venv/bin/python plot_markov_model.py`，可在 `outputs/mathematical_model/` 重新生成論文風格的 300 dpi PNG 與向量 SVG：
 
 - `06_single_cell_rules`：未突變細胞的子代分布、同一規則寫成的精確五狀態矩陣（停用突變與治療；溢出狀態是人為設定的記帳吸收狀態，不是生物飽和），以及 d、q、子代機率、治療前後平均子代數 m 和單一細胞家系最終滅絕機率（s = f(s) 的最小根）的表格。基準抗藥細胞的家系在治療下有 0.52 的機率存活；敏感細胞家系在治療下必定滅絕。
-- `07_matrices_to_flow`：簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M、條件期望公式 E[S′ | s] 與 E[R′ | s]，旁邊是治療關閉與持續治療的線性 S–R 向量場（11×11 網格，共用長度比例）。
+- `07_matrices_to_flow`：簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M、條件期望公式 E[S′ | s] 與 E[R′ | s]，旁邊是治療關閉與持續治療的線性 S–R 向量場（13×13 網格至 30,000 細胞，共用長度比例）。疊上主實驗 30 次試驗的實際路徑：未治療面板畫治療前那段，治療面板畫治療開始之後那段，並突出代表試驗。雖然箭頭只用基準細胞計算，實際路徑仍順著箭頭走。
 - `A1_markov_kernel_and_controller`（附錄）：以機率生成函數寫出的完整基因型計數 Markov 轉移核，以及程式執行狀態機。
 
 P 與 Q 每列加總為 1；M 記錄期望子代數，不是機率轉移矩陣。列代表當前／父代，欄代表下一步／子代。圖旁另存 CSV 矩陣及 JSON 假設紀錄，生成時會執行解析數值檢查。
