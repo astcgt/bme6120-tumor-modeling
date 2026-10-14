@@ -1,0 +1,5 @@
+setting,continuous_median_ttp,continuous_progressed,continuous_n,continuous_extinct,continuous_median_therapy_fraction,adaptive_median_ttp,adaptive_progressed,adaptive_n,adaptive_extinct,adaptive_median_therapy_fraction,adaptive_longer_fraction
+No competition,13.0,30,30,0,1.0,11.0,30,30,0,0.4166666666666667,0.0
+No competition + cost,16.5,30,30,0,1.0,15.0,30,30,0,0.3944444444444445,0.0
+"Competition (K = 30,000)",14.0,30,30,0,1.0,16.0,30,30,0,0.4444444444444444,1.0
+Competition + cost,17.5,30,30,0,1.0,20.0,30,30,0,0.5631955484896661,0.9666666666666667

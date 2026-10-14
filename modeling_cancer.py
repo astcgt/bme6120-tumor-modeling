@@ -14,7 +14,7 @@ import argparse
 import csv
 import json
 import os
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 # 圖形快取留在專案中，不寫入 conda 或使用者的 matplotlib 設定目錄。
@@ -58,6 +58,13 @@ class Config:
     sensitive_therapy_kill: float = 0.90  # 自然死亡後的額外殺傷機率
     resistant_therapy_kill: float = 0.04
     max_cells: int = 1_000_000  # 計算停止門檻，不是環境承載量
+    # 延伸分析用（預設關閉，主結果不受影響）：
+    # adaptive：負荷降到首次治療負荷的 adaptive_pause_fraction 以下就暫停，回到治療門檻再恢復。
+    therapy_mode: str = "continuous"
+    adaptive_pause_fraction: float = 0.5
+    resistance_cost: float = 0.0  # 抗藥細胞額外的自然死亡機率（抗藥代價）
+    # 承載量 K：每個細胞額外死亡 c·N/K，c 使無突變細胞在 N=K 時平均子代剛好為 1。None＝無競爭。
+    carrying_capacity: int | None = None
 
     def validate(self):
         # 先檢查基因組大小、基因索引是否有效，以及 driver 門檻是否可達。
@@ -81,7 +88,7 @@ class Config:
         for name in ("mutation_rate", "death_rate", "driver_death_reduction",
                      "triple_probability", "driver_triple_bonus",
                      "suppressor_death_reduction", "suppressor_triple_bonus", "il11_max_death_reduction",
-                     "sensitive_therapy_kill", "resistant_therapy_kill"):
+                     "sensitive_therapy_kill", "resistant_therapy_kill", "resistance_cost"):
             if not 0 <= getattr(self, name) <= 1:
                 raise ValueError(f"{name} 必須介於 0–1")
         # 額外檢查加總後的機率與模擬規模；單個參數有效不代表組合必然有效。
@@ -89,6 +96,12 @@ class Config:
             raise ValueError("產生三個子細胞的總機率不能超過 1")
         if min(self.initial_cells, self.generations, self.therapy_start_size, self.max_cells) <= 0:
             raise ValueError("細胞數、代數與門檻必須為正")
+        if self.therapy_mode not in ("continuous", "adaptive"):
+            raise ValueError("therapy_mode 必須是 continuous 或 adaptive")
+        if not 0 < self.adaptive_pause_fraction < 1:
+            raise ValueError("adaptive_pause_fraction 必須介於 0 與 1 之間")
+        if self.carrying_capacity is not None and self.carrying_capacity <= 0:
+            raise ValueError("carrying_capacity 必須為正或 None")
 
 
 # 封裝一次試驗的設定、逐代統計、完整基因型計數及停止／治療資訊。
@@ -100,6 +113,8 @@ class Result:
     populations: list[dict[int, int]]
     therapy_generation: int | None
     stop_reason: str
+    # 每個已推進世代是否施加治療；continuous 時從 therapy_generation 起全為 True。
+    therapy_active: list[bool] = field(default_factory=list)
 
 
 def driver_count(genotype: int, config: Config) -> int:
@@ -127,6 +142,9 @@ def growth_probabilities(genotype: int, config: Config, shared_benefit: float = 
     # 每一類優勢最多給一次；多個抑癌基因達標不再重複累加。
     death = max(0, config.death_rate - config.driver_death_reduction * oncogene
                 - config.suppressor_death_reduction * suppressor - shared_benefit)
+    # 抗藥代價只在明確設定時加上，預設為 0 時完全不改變計算。
+    if config.resistance_cost and genotype & (1 << config.resistance_gene):
+        death = min(1.0, death + config.resistance_cost)
     triple = (config.triple_probability + config.driver_triple_bonus * oncogene
               + config.suppressor_triple_bonus * suppressor)
     return death, triple
@@ -193,6 +211,14 @@ def summarize(population: dict[int, int], generation: int, config: Config) -> di
                            for gene in config.suppressor_genes)) / max(total, 1))
 
 
+def crowding_death(total: int, config: Config) -> float:
+    """承載量競爭的額外死亡機率；係數讓無突變細胞在 N = K 時期望子代恰為 1。"""
+    if config.carrying_capacity is None:
+        return 0.0
+    coefficient = (1 - config.death_rate) - 1 / (2 + config.triple_probability)
+    return coefficient * total / config.carrying_capacity
+
+
 def simulate(config: Config = Config(), seed: int = 42, therapy: bool = True,
              target_size: int | None = None) -> Result:
     """同步世代分枝過程；治療從首次達門檻後的轉移開始，持續至模擬結束。
@@ -209,6 +235,8 @@ def simulate(config: Config = Config(), seed: int = 42, therapy: bool = True,
     # history 存摘要，populations 存基因型快照；尚未治療時代數記為 None。
     history, populations = [], []
     therapy_generation = None
+    therapy_on = False
+    active = []
     stop_reason = "generation_limit"
     # 包含第 0 代初始狀態；每輪先記錄當前族群，再決定是否推進下一代。
     for generation in range(config.generations + 1):
@@ -230,6 +258,16 @@ def simulate(config: Config = Config(), seed: int = 42, therapy: bool = True,
         # 首次達到治療門檻就記下當前世代；接下來的轉移持續套用治療。
         if therapy and therapy_generation is None and row["total"] >= config.therapy_start_size:
             therapy_generation = generation
+            therapy_on = True
+        # adaptive：降到首次治療負荷的一定比例以下就暫停，回到治療門檻再恢復。
+        elif therapy_generation is not None and config.therapy_mode == "adaptive":
+            reference = history[therapy_generation]["total"]
+            if therapy_on and row["total"] <= config.adaptive_pause_fraction * reference:
+                therapy_on = False
+            elif not therapy_on and row["total"] >= config.therapy_start_size:
+                therapy_on = True
+        active.append(therapy_on)
+        crowding = crowding_death(row["total"], config)
         # 依基因型批次處理所有父細胞；新世代完全由 offspring 取代。
         # 每代只計算一次共享環境；本代新突變會從下一次轉移開始提供 IL11。
         _, shared_benefit = il11_environment(population, config)
@@ -237,8 +275,10 @@ def simulate(config: Config = Config(), seed: int = 42, therapy: bool = True,
         for genotype, count in population.items():
             # 將 oncogene 與抑癌基因的效果合併，再套用治療殺傷。
             death, triple = growth_probabilities(genotype, config, shared_benefit)
+            if crowding:
+                death = min(1.0, death + crowding)
             # 治療殺傷作用於自然存活者，因此用兩個存活機率相乘計算總死亡率。
-            if therapy_generation is not None:
+            if therapy_on:
                 resistant = bool(genotype & (1 << config.resistance_gene))
                 kill = config.resistant_therapy_kill if resistant else config.sensitive_therapy_kill
                 death = 1 - (1 - death) * (1 - kill)
@@ -252,7 +292,7 @@ def simulate(config: Config = Config(), seed: int = 42, therapy: bool = True,
         # 所有分裂完成後才讓子代突變；新突變的生存效果從下一次轉移開始。
         population = mutate_offspring(offspring, config, rng)
     # 把逐代資料與停止資訊一起回傳，供繪圖和治療結果判讀使用。
-    return Result(config, seed, history, populations, therapy_generation, stop_reason)
+    return Result(config, seed, history, populations, therapy_generation, stop_reason, active)
 
 
 def therapy_outcome(result: Result) -> dict:

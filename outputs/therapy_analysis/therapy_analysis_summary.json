@@ -1,0 +1,447 @@
+{
+  "08_goldie_coldman": {
+    "summary": [
+      {
+        "threshold": 100,
+        "n": 200,
+        "cures": 199,
+        "p_cure": 0.995,
+        "ci_low": 0.9722256001302286,
+        "ci_high": 0.999116854010634,
+        "R0_mean": 0.0,
+        "R0_median": 0.0,
+        "R0_zero_fraction": 1.0,
+        "theory_p_cure": 0.9913569642081578,
+        "theory_R0_mean": 0.0,
+        "theory_T": 0
+      },
+      {
+        "threshold": 150,
+        "n": 200,
+        "cures": 167,
+        "p_cure": 0.835,
+        "ci_low": 0.7773410172613647,
+        "ci_high": 0.8800321587733603,
+        "R0_mean": 0.37,
+        "R0_median": 0.0,
+        "R0_zero_fraction": 0.745,
+        "theory_p_cure": 0.8175284527794818,
+        "theory_R0_mean": 0.4078368,
+        "theory_T": 2
+      },
+      {
+        "threshold": 200,
+        "n": 200,
+        "cures": 158,
+        "p_cure": 0.79,
+        "ci_low": 0.7283526118460081,
+        "ci_high": 0.8407167047213658,
+        "R0_mean": 0.51,
+        "R0_median": 0.0,
+        "R0_zero_fraction": 0.72,
+        "theory_p_cure": 0.8175284527794818,
+        "theory_R0_mean": 0.4078368,
+        "theory_T": 2
+      },
+      {
+        "threshold": 300,
+        "n": 200,
+        "cures": 121,
+        "p_cure": 0.605,
+        "ci_low": 0.5358822087449843,
+        "ci_high": 0.6701601300121683,
+        "R0_mean": 1.235,
+        "R0_median": 1.0,
+        "R0_zero_fraction": 0.475,
+        "theory_p_cure": 0.5459913753928619,
+        "theory_R0_mean": 1.6633085543423998,
+        "theory_T": 4
+      },
+      {
+        "threshold": 500,
+        "n": 200,
+        "cures": 80,
+        "p_cure": 0.4,
+        "ci_low": 0.3346046396837895,
+        "ci_high": 0.46916456149987484,
+        "R0_mean": 3.21,
+        "R0_median": 2.0,
+        "R0_zero_fraction": 0.28,
+        "theory_p_cure": 0.3884151078534612,
+        "theory_R0_mean": 2.9690057695011838,
+        "theory_T": 5
+      },
+      {
+        "threshold": 700,
+        "n": 200,
+        "cures": 42,
+        "p_cure": 0.21,
+        "ci_low": 0.15928329527863416,
+        "ci_high": 0.271647388153992,
+        "R0_mean": 5.895,
+        "R0_median": 4.0,
+        "R0_zero_fraction": 0.105,
+        "theory_p_cure": 0.23873376189990742,
+        "theory_R0_mean": 5.087688286617228,
+        "theory_T": 6
+      },
+      {
+        "threshold": 1000,
+        "n": 200,
+        "cures": 20,
+        "p_cure": 0.1,
+        "ci_low": 0.06566994117157123,
+        "ci_high": 0.14940686356308552,
+        "R0_mean": 8.52,
+        "R0_median": 6.0,
+        "R0_zero_fraction": 0.05,
+        "theory_p_cure": 0.11910895897934426,
+        "theory_R0_mean": 8.476088685504301,
+        "theory_T": 7
+      },
+      {
+        "threshold": 1500,
+        "n": 200,
+        "cures": 6,
+        "p_cure": 0.03,
+        "ci_low": 0.013820125830748327,
+        "ci_high": 0.06389511973247333,
+        "R0_mean": 14.295,
+        "R0_median": 11.0,
+        "R0_zero_fraction": 0.0,
+        "theory_p_cure": 0.04412293183179083,
+        "theory_R0_mean": 13.832976734743017,
+        "theory_T": 8
+      },
+      {
+        "threshold": 2000,
+        "n": 200,
+        "cures": 1,
+        "p_cure": 0.005,
+        "ci_low": 0.0008831459893662054,
+        "ci_high": 0.02777439986977148,
+        "R0_mean": 23.445,
+        "R0_median": 17.0,
+        "R0_zero_fraction": 0.0,
+        "theory_p_cure": 0.01068456493880592,
+        "theory_R0_mean": 22.222677124364658,
+        "theory_T": 9
+      },
+      {
+        "threshold": 3000,
+        "n": 200,
+        "cures": 1,
+        "p_cure": 0.005,
+        "ci_low": 0.0008831459893662054,
+        "ci_high": 0.02777439986977148,
+        "R0_mean": 36.05,
+        "R0_median": 29.0,
+        "R0_zero_fraction": 0.0,
+        "theory_p_cure": 0.0014099958182364587,
+        "theory_R0_mean": 35.25998103732526,
+        "theory_T": 10
+      },
+      {
+        "threshold": 5000,
+        "n": 200,
+        "cures": 0,
+        "p_cure": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.018846005918320894,
+        "R0_mean": 68.755,
+        "R0_median": 54.5,
+        "R0_zero_fraction": 0.0,
+        "theory_p_cure": 7.820286517347909e-05,
+        "theory_R0_mean": 55.38637821343052,
+        "theory_T": 11
+      }
+    ],
+    "theory_half_cure_size": 416.0,
+    "q_on": 0.47892063895842324
+  },
+  "09_relapse_time": {
+    "mae_baseline": 2.0,
+    "mae_genotype": 0.2,
+    "exact_genotype": 24,
+    "spearman_obs_vs_onc": -0.511012235817575,
+    "spearman_obs_vs_R0": -0.7023359288097887,
+    "rho_star": 0.6980001302846721,
+    "observed_sign_change_rho": [
+      0.6495037220843675,
+      0.6452702702702704
+    ]
+  },
+  "config": {
+    "n_genes": 20,
+    "driver_genes": [
+      0,
+      1,
+      2
+    ],
+    "resistance_gene": 3,
+    "driver_hits": 1,
+    "suppressor_genes": [
+      4,
+      5
+    ],
+    "suppressor_hits": 2,
+    "suppressor_death_reduction": 0.08,
+    "suppressor_triple_bonus": 0.12,
+    "il11_enabled": false,
+    "il11_gene": 6,
+    "il11_max_death_reduction": 0.06,
+    "il11_half_fraction": 0.02,
+    "mutation_rate": 0.001,
+    "death_rate": 0.3,
+    "driver_death_reduction": 0.08,
+    "triple_probability": 0.04,
+    "driver_triple_bonus": 0.12,
+    "initial_cells": 100,
+    "generations": 75,
+    "therapy_start_size": 20000,
+    "sensitive_therapy_kill": 0.9,
+    "resistant_therapy_kill": 0.04,
+    "max_cells": 1000000,
+    "therapy_mode": "continuous",
+    "adaptive_pause_fraction": 0.5,
+    "resistance_cost": 0.0,
+    "carrying_capacity": null
+  },
+  "10_parameter_sensitivity": {
+    "kills": [
+      0.0,
+      0.1,
+      0.2,
+      0.25,
+      0.3,
+      0.35,
+      0.4,
+      0.45,
+      0.5,
+      0.6
+    ],
+    "mutation_rates": [
+      0.0001,
+      0.0003,
+      0.001,
+      0.003
+    ],
+    "p_cure": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.16666666666666666,
+        0.6666666666666666,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.13333333333333333,
+        0.6333333333333333,
+        0.8,
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.36666666666666664,
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.43333333333333335,
+        1.0,
+        1.0
+      ]
+    ],
+    "median_delay": [
+      [
+        21.0,
+        28.0,
+        48.0,
+        76.0,
+        93.0,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        16.0,
+        21.0,
+        32.0,
+        45.5,
+        68.5,
+        88.0,
+        195.0,
+        null,
+        null,
+        null
+      ],
+      [
+        11.0,
+        15.0,
+        20.0,
+        28.0,
+        40.5,
+        66.0,
+        140.0,
+        null,
+        null,
+        null
+      ],
+      [
+        8.0,
+        10.0,
+        14.0,
+        17.0,
+        24.5,
+        38.0,
+        63.5,
+        120.0,
+        null,
+        null
+      ]
+    ],
+    "persistent": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.13333333333333333,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.1,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "boundaries": {
+      "baseline resistant": 0.299719887955182,
+      "+ oncogene": 0.40645773979107314,
+      "+ oncogene + TSG loss": 0.4900040799673604
+    }
+  },
+  "11_adaptive_therapy": {
+    "summary": [
+      {
+        "setting": "No competition",
+        "continuous_median_ttp": 13.0,
+        "continuous_progressed": 30,
+        "continuous_n": 30,
+        "continuous_extinct": 0,
+        "continuous_median_therapy_fraction": 1.0,
+        "adaptive_median_ttp": 11.0,
+        "adaptive_progressed": 30,
+        "adaptive_n": 30,
+        "adaptive_extinct": 0,
+        "adaptive_median_therapy_fraction": 0.4166666666666667,
+        "adaptive_longer_fraction": 0.0
+      },
+      {
+        "setting": "No competition + cost",
+        "continuous_median_ttp": 16.5,
+        "continuous_progressed": 30,
+        "continuous_n": 30,
+        "continuous_extinct": 0,
+        "continuous_median_therapy_fraction": 1.0,
+        "adaptive_median_ttp": 15.0,
+        "adaptive_progressed": 30,
+        "adaptive_n": 30,
+        "adaptive_extinct": 0,
+        "adaptive_median_therapy_fraction": 0.3944444444444445,
+        "adaptive_longer_fraction": 0.0
+      },
+      {
+        "setting": "Competition (K = 30,000)",
+        "continuous_median_ttp": 14.0,
+        "continuous_progressed": 30,
+        "continuous_n": 30,
+        "continuous_extinct": 0,
+        "continuous_median_therapy_fraction": 1.0,
+        "adaptive_median_ttp": 16.0,
+        "adaptive_progressed": 30,
+        "adaptive_n": 30,
+        "adaptive_extinct": 0,
+        "adaptive_median_therapy_fraction": 0.4444444444444444,
+        "adaptive_longer_fraction": 1.0
+      },
+      {
+        "setting": "Competition + cost",
+        "continuous_median_ttp": 17.5,
+        "continuous_progressed": 30,
+        "continuous_n": 30,
+        "continuous_extinct": 0,
+        "continuous_median_therapy_fraction": 1.0,
+        "adaptive_median_ttp": 20.0,
+        "adaptive_progressed": 30,
+        "adaptive_n": 30,
+        "adaptive_extinct": 0,
+        "adaptive_median_therapy_fraction": 0.5631955484896661,
+        "adaptive_longer_fraction": 0.9666666666666667
+      }
+    ],
+    "carrying_capacity": 30000,
+    "crowding_at_K": 0.20980392156862743
+  }
+}

@@ -1,0 +1,241 @@
+setting,strategy,seed,stop,therapy_generation,time_to_progression,therapy_fraction
+No competition,continuous,600042,cell_limit,15,13,1.0
+No competition,continuous,600043,cell_limit,15,13,1.0
+No competition,continuous,600044,cell_limit,15,12,1.0
+No competition,continuous,600045,cell_limit,16,13,1.0
+No competition,continuous,600046,cell_limit,15,11,1.0
+No competition,continuous,600047,cell_limit,15,11,1.0
+No competition,continuous,600048,cell_limit,15,11,1.0
+No competition,continuous,600049,cell_limit,15,13,1.0
+No competition,continuous,600050,cell_limit,15,14,1.0
+No competition,continuous,600051,cell_limit,15,13,1.0
+No competition,continuous,600052,cell_limit,15,13,1.0
+No competition,continuous,600053,cell_limit,15,12,1.0
+No competition,continuous,600054,cell_limit,15,12,1.0
+No competition,continuous,600055,cell_limit,15,7,1.0
+No competition,continuous,600056,cell_limit,15,11,1.0
+No competition,continuous,600057,cell_limit,15,11,1.0
+No competition,continuous,600058,cell_limit,15,14,1.0
+No competition,continuous,600059,cell_limit,15,12,1.0
+No competition,continuous,600060,cell_limit,15,14,1.0
+No competition,continuous,600061,cell_limit,15,15,1.0
+No competition,continuous,600062,cell_limit,15,14,1.0
+No competition,continuous,600063,cell_limit,15,13,1.0
+No competition,continuous,600064,cell_limit,15,14,1.0
+No competition,continuous,600065,cell_limit,15,12,1.0
+No competition,continuous,600066,cell_limit,14,14,1.0
+No competition,continuous,600067,cell_limit,14,13,1.0
+No competition,continuous,600068,cell_limit,15,14,1.0
+No competition,continuous,600069,cell_limit,15,12,1.0
+No competition,continuous,600070,cell_limit,15,12,1.0
+No competition,continuous,600071,cell_limit,15,12,1.0
+No competition,adaptive,600042,cell_limit,15,12,0.38461538461538464
+No competition,adaptive,600043,cell_limit,15,12,0.46153846153846156
+No competition,adaptive,600044,cell_limit,15,11,0.4166666666666667
+No competition,adaptive,600045,cell_limit,16,12,0.38461538461538464
+No competition,adaptive,600046,cell_limit,15,10,0.36363636363636365
+No competition,adaptive,600047,cell_limit,15,11,0.5833333333333334
+No competition,adaptive,600048,cell_limit,15,10,0.5454545454545454
+No competition,adaptive,600049,cell_limit,15,12,0.38461538461538464
+No competition,adaptive,600050,cell_limit,15,13,0.42857142857142855
+No competition,adaptive,600051,cell_limit,15,12,0.38461538461538464
+No competition,adaptive,600052,cell_limit,15,11,0.38461538461538464
+No competition,adaptive,600053,cell_limit,15,11,0.4166666666666667
+No competition,adaptive,600054,cell_limit,15,11,0.4166666666666667
+No competition,adaptive,600055,cell_limit,15,7,0.5
+No competition,adaptive,600056,cell_limit,15,10,0.5454545454545454
+No competition,adaptive,600057,cell_limit,15,10,0.36363636363636365
+No competition,adaptive,600058,cell_limit,15,13,0.42857142857142855
+No competition,adaptive,600059,cell_limit,15,11,0.3333333333333333
+No competition,adaptive,600060,cell_limit,15,13,0.42857142857142855
+No competition,adaptive,600061,cell_limit,15,13,0.35714285714285715
+No competition,adaptive,600062,cell_limit,15,13,0.42857142857142855
+No competition,adaptive,600063,cell_limit,15,11,0.4166666666666667
+No competition,adaptive,600064,cell_limit,15,13,0.42857142857142855
+No competition,adaptive,600065,cell_limit,15,12,0.46153846153846156
+No competition,adaptive,600066,cell_limit,14,13,0.42857142857142855
+No competition,adaptive,600067,cell_limit,14,11,0.38461538461538464
+No competition,adaptive,600068,cell_limit,15,13,0.42857142857142855
+No competition,adaptive,600069,cell_limit,15,11,0.4166666666666667
+No competition,adaptive,600070,cell_limit,15,11,0.4166666666666667
+No competition,adaptive,600071,cell_limit,15,11,0.4166666666666667
+No competition + cost,continuous,601042,cell_limit,15,18,1.0
+No competition + cost,continuous,601043,cell_limit,15,15,1.0
+No competition + cost,continuous,601044,cell_limit,15,13,1.0
+No competition + cost,continuous,601045,cell_limit,15,17,1.0
+No competition + cost,continuous,601046,cell_limit,15,17,1.0
+No competition + cost,continuous,601047,cell_limit,15,16,1.0
+No competition + cost,continuous,601048,cell_limit,15,14,1.0
+No competition + cost,continuous,601049,cell_limit,15,16,1.0
+No competition + cost,continuous,601050,cell_limit,15,15,1.0
+No competition + cost,continuous,601051,cell_limit,15,19,1.0
+No competition + cost,continuous,601052,cell_limit,15,16,1.0
+No competition + cost,continuous,601053,cell_limit,16,17,1.0
+No competition + cost,continuous,601054,cell_limit,15,15,1.0
+No competition + cost,continuous,601055,cell_limit,15,18,1.0
+No competition + cost,continuous,601056,cell_limit,15,17,1.0
+No competition + cost,continuous,601057,cell_limit,15,18,1.0
+No competition + cost,continuous,601058,cell_limit,16,15,1.0
+No competition + cost,continuous,601059,cell_limit,15,17,1.0
+No competition + cost,continuous,601060,cell_limit,15,16,1.0
+No competition + cost,continuous,601061,cell_limit,15,15,1.0
+No competition + cost,continuous,601062,cell_limit,15,14,1.0
+No competition + cost,continuous,601063,cell_limit,15,18,1.0
+No competition + cost,continuous,601064,cell_limit,15,18,1.0
+No competition + cost,continuous,601065,cell_limit,15,17,1.0
+No competition + cost,continuous,601066,cell_limit,15,17,1.0
+No competition + cost,continuous,601067,cell_limit,16,18,1.0
+No competition + cost,continuous,601068,cell_limit,15,17,1.0
+No competition + cost,continuous,601069,cell_limit,15,15,1.0
+No competition + cost,continuous,601070,cell_limit,15,16,1.0
+No competition + cost,continuous,601071,cell_limit,15,15,1.0
+No competition + cost,adaptive,601042,cell_limit,15,16,0.29411764705882354
+No competition + cost,adaptive,601043,cell_limit,15,14,0.3333333333333333
+No competition + cost,adaptive,601044,cell_limit,15,12,0.42857142857142855
+No competition + cost,adaptive,601045,cell_limit,15,14,0.375
+No competition + cost,adaptive,601046,cell_limit,15,16,0.3888888888888889
+No competition + cost,adaptive,601047,cell_limit,15,15,0.35294117647058826
+No competition + cost,adaptive,601048,cell_limit,15,14,0.4666666666666667
+No competition + cost,adaptive,601049,cell_limit,15,15,0.4375
+No competition + cost,adaptive,601050,cell_limit,15,14,0.3333333333333333
+No competition + cost,adaptive,601051,cell_limit,15,16,0.35294117647058826
+No competition + cost,adaptive,601052,cell_limit,15,14,0.4
+No competition + cost,adaptive,601053,cell_limit,16,15,0.47058823529411764
+No competition + cost,adaptive,601054,cell_limit,15,13,0.4666666666666667
+No competition + cost,adaptive,601055,cell_limit,15,16,0.29411764705882354
+No competition + cost,adaptive,601056,cell_limit,15,16,0.47058823529411764
+No competition + cost,adaptive,601057,cell_limit,15,17,0.3888888888888889
+No competition + cost,adaptive,601058,cell_limit,16,14,0.4
+No competition + cost,adaptive,601059,cell_limit,15,16,0.35294117647058826
+No competition + cost,adaptive,601060,cell_limit,15,14,0.5
+No competition + cost,adaptive,601061,cell_limit,15,14,0.3333333333333333
+No competition + cost,adaptive,601062,cell_limit,15,14,0.4666666666666667
+No competition + cost,adaptive,601063,cell_limit,15,17,0.4444444444444444
+No competition + cost,adaptive,601064,cell_limit,15,16,0.35294117647058826
+No competition + cost,adaptive,601065,cell_limit,15,16,0.35294117647058826
+No competition + cost,adaptive,601066,cell_limit,15,16,0.35294117647058826
+No competition + cost,adaptive,601067,cell_limit,16,16,0.3888888888888889
+No competition + cost,adaptive,601068,cell_limit,15,15,0.4375
+No competition + cost,adaptive,601069,cell_limit,15,13,0.42857142857142855
+No competition + cost,adaptive,601070,cell_limit,15,14,0.4375
+No competition + cost,adaptive,601071,cell_limit,15,13,0.4666666666666667
+"Competition (K = 30,000)",continuous,602042,cell_limit,17,14,1.0
+"Competition (K = 30,000)",continuous,602043,cell_limit,16,15,1.0
+"Competition (K = 30,000)",continuous,602044,cell_limit,17,17,1.0
+"Competition (K = 30,000)",continuous,602045,cell_limit,17,13,1.0
+"Competition (K = 30,000)",continuous,602046,cell_limit,17,15,1.0
+"Competition (K = 30,000)",continuous,602047,cell_limit,17,13,1.0
+"Competition (K = 30,000)",continuous,602048,cell_limit,16,14,1.0
+"Competition (K = 30,000)",continuous,602049,cell_limit,16,14,1.0
+"Competition (K = 30,000)",continuous,602050,cell_limit,17,16,1.0
+"Competition (K = 30,000)",continuous,602051,cell_limit,16,17,1.0
+"Competition (K = 30,000)",continuous,602052,cell_limit,17,14,1.0
+"Competition (K = 30,000)",continuous,602053,cell_limit,17,13,1.0
+"Competition (K = 30,000)",continuous,602054,cell_limit,17,14,1.0
+"Competition (K = 30,000)",continuous,602055,cell_limit,17,14,1.0
+"Competition (K = 30,000)",continuous,602056,cell_limit,17,14,1.0
+"Competition (K = 30,000)",continuous,602057,cell_limit,16,13,1.0
+"Competition (K = 30,000)",continuous,602058,cell_limit,17,14,1.0
+"Competition (K = 30,000)",continuous,602059,cell_limit,17,16,1.0
+"Competition (K = 30,000)",continuous,602060,cell_limit,17,14,1.0
+"Competition (K = 30,000)",continuous,602061,cell_limit,17,16,1.0
+"Competition (K = 30,000)",continuous,602062,cell_limit,17,13,1.0
+"Competition (K = 30,000)",continuous,602063,cell_limit,17,15,1.0
+"Competition (K = 30,000)",continuous,602064,cell_limit,16,14,1.0
+"Competition (K = 30,000)",continuous,602065,cell_limit,16,17,1.0
+"Competition (K = 30,000)",continuous,602066,cell_limit,17,15,1.0
+"Competition (K = 30,000)",continuous,602067,cell_limit,17,14,1.0
+"Competition (K = 30,000)",continuous,602068,cell_limit,17,15,1.0
+"Competition (K = 30,000)",continuous,602069,cell_limit,16,15,1.0
+"Competition (K = 30,000)",continuous,602070,cell_limit,17,18,1.0
+"Competition (K = 30,000)",continuous,602071,cell_limit,17,14,1.0
+"Competition (K = 30,000)",adaptive,602042,cell_limit,17,16,0.4444444444444444
+"Competition (K = 30,000)",adaptive,602043,cell_limit,16,16,0.47368421052631576
+"Competition (K = 30,000)",adaptive,602044,cell_limit,17,20,0.52
+"Competition (K = 30,000)",adaptive,602045,cell_limit,17,15,0.4444444444444444
+"Competition (K = 30,000)",adaptive,602046,cell_limit,17,16,0.42105263157894735
+"Competition (K = 30,000)",adaptive,602047,cell_limit,17,14,0.4117647058823529
+"Competition (K = 30,000)",adaptive,602048,cell_limit,16,15,0.4444444444444444
+"Competition (K = 30,000)",adaptive,602049,cell_limit,16,16,0.4444444444444444
+"Competition (K = 30,000)",adaptive,602050,cell_limit,17,17,0.45
+"Competition (K = 30,000)",adaptive,602051,cell_limit,16,18,0.47619047619047616
+"Competition (K = 30,000)",adaptive,602052,cell_limit,17,15,0.4444444444444444
+"Competition (K = 30,000)",adaptive,602053,cell_limit,17,14,0.4117647058823529
+"Competition (K = 30,000)",adaptive,602054,cell_limit,17,15,0.4117647058823529
+"Competition (K = 30,000)",adaptive,602055,cell_limit,17,16,0.47368421052631576
+"Competition (K = 30,000)",adaptive,602056,cell_limit,17,16,0.42105263157894735
+"Competition (K = 30,000)",adaptive,602057,cell_limit,16,14,0.4375
+"Competition (K = 30,000)",adaptive,602058,cell_limit,17,16,0.4444444444444444
+"Competition (K = 30,000)",adaptive,602059,cell_limit,17,17,0.45
+"Competition (K = 30,000)",adaptive,602060,cell_limit,17,15,0.4117647058823529
+"Competition (K = 30,000)",adaptive,602061,cell_limit,17,17,0.45
+"Competition (K = 30,000)",adaptive,602062,cell_limit,17,14,0.4117647058823529
+"Competition (K = 30,000)",adaptive,602063,cell_limit,17,17,0.45
+"Competition (K = 30,000)",adaptive,602064,cell_limit,16,16,0.4444444444444444
+"Competition (K = 30,000)",adaptive,602065,cell_limit,16,18,0.47619047619047616
+"Competition (K = 30,000)",adaptive,602066,cell_limit,17,16,0.47368421052631576
+"Competition (K = 30,000)",adaptive,602067,cell_limit,17,15,0.4117647058823529
+"Competition (K = 30,000)",adaptive,602068,cell_limit,17,16,0.42105263157894735
+"Competition (K = 30,000)",adaptive,602069,cell_limit,16,17,0.45
+"Competition (K = 30,000)",adaptive,602070,cell_limit,17,19,0.45454545454545453
+"Competition (K = 30,000)",adaptive,602071,cell_limit,17,16,0.3888888888888889
+Competition + cost,continuous,603042,cell_limit,16,16,1.0
+Competition + cost,continuous,603043,cell_limit,17,16,1.0
+Competition + cost,continuous,603044,cell_limit,17,15,1.0
+Competition + cost,continuous,603045,cell_limit,17,12,1.0
+Competition + cost,continuous,603046,cell_limit,17,20,1.0
+Competition + cost,continuous,603047,cell_limit,16,19,1.0
+Competition + cost,continuous,603048,cell_limit,18,20,1.0
+Competition + cost,continuous,603049,cell_limit,17,20,1.0
+Competition + cost,continuous,603050,cell_limit,17,18,1.0
+Competition + cost,continuous,603051,cell_limit,17,26,1.0
+Competition + cost,continuous,603052,cell_limit,16,15,1.0
+Competition + cost,continuous,603053,cell_limit,16,17,1.0
+Competition + cost,continuous,603054,cell_limit,17,17,1.0
+Competition + cost,continuous,603055,cell_limit,16,17,1.0
+Competition + cost,continuous,603056,cell_limit,17,21,1.0
+Competition + cost,continuous,603057,cell_limit,17,17,1.0
+Competition + cost,continuous,603058,cell_limit,17,19,1.0
+Competition + cost,continuous,603059,cell_limit,17,18,1.0
+Competition + cost,continuous,603060,cell_limit,16,20,1.0
+Competition + cost,continuous,603061,cell_limit,17,16,1.0
+Competition + cost,continuous,603062,cell_limit,17,17,1.0
+Competition + cost,continuous,603063,cell_limit,16,16,1.0
+Competition + cost,continuous,603064,cell_limit,18,15,1.0
+Competition + cost,continuous,603065,cell_limit,17,15,1.0
+Competition + cost,continuous,603066,cell_limit,17,18,1.0
+Competition + cost,continuous,603067,cell_limit,17,15,1.0
+Competition + cost,continuous,603068,cell_limit,17,23,1.0
+Competition + cost,continuous,603069,cell_limit,16,21,1.0
+Competition + cost,continuous,603070,cell_limit,17,19,1.0
+Competition + cost,continuous,603071,cell_limit,17,20,1.0
+Competition + cost,adaptive,603042,cell_limit,16,18,0.6451612903225806
+Competition + cost,adaptive,603043,cell_limit,17,19,0.5
+Competition + cost,adaptive,603044,cell_limit,17,18,0.6857142857142857
+Competition + cost,adaptive,603045,cell_limit,17,13,0.6896551724137931
+Competition + cost,adaptive,603046,cell_limit,17,22,0.5833333333333334
+Competition + cost,adaptive,603047,cell_limit,16,22,0.53125
+Competition + cost,adaptive,603048,cell_limit,18,23,0.5555555555555556
+Competition + cost,adaptive,603049,cell_limit,17,22,0.4827586206896552
+Competition + cost,adaptive,603050,cell_limit,17,20,0.5588235294117647
+Competition + cost,adaptive,603051,cell_limit,17,24,0.4666666666666667
+Competition + cost,adaptive,603052,cell_limit,16,18,0.6944444444444444
+Competition + cost,adaptive,603053,cell_limit,16,19,0.625
+Competition + cost,adaptive,603054,cell_limit,17,20,0.375
+Competition + cost,adaptive,603055,cell_limit,16,20,0.65
+Competition + cost,adaptive,603056,cell_limit,17,23,0.5555555555555556
+Competition + cost,adaptive,603057,cell_limit,17,20,0.6
+Competition + cost,adaptive,603058,cell_limit,17,21,0.4444444444444444
+Competition + cost,adaptive,603059,cell_limit,17,20,0.65
+Competition + cost,adaptive,603060,cell_limit,16,23,0.4838709677419355
+Competition + cost,adaptive,603061,cell_limit,17,18,0.717948717948718
+Competition + cost,adaptive,603062,cell_limit,17,20,0.5757575757575758
+Competition + cost,adaptive,603063,cell_limit,16,19,0.6829268292682927
+Competition + cost,adaptive,603064,cell_limit,18,16,0.35294117647058826
+Competition + cost,adaptive,603065,cell_limit,17,17,0.5
+Competition + cost,adaptive,603066,cell_limit,17,20,0.6956521739130435
+Competition + cost,adaptive,603067,cell_limit,17,17,0.47619047619047616
+Competition + cost,adaptive,603068,cell_limit,17,24,0.575
+Competition + cost,adaptive,603069,cell_limit,16,22,0.5675675675675675
+Competition + cost,adaptive,603070,cell_limit,17,22,0.5161290322580645
+Competition + cost,adaptive,603071,cell_limit,17,21,0.391304347826087
