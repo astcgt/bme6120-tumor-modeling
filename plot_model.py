@@ -18,6 +18,7 @@ OUT = OUTPUTS / "mathematical_model"
 INK, BLUE, RED, GRAY = "#182634", "#21658B", "#A54C38", "#66717A"
 
 
+# 將座標軸設為隱藏刻度的單位畫布，加入面板編號與標題。
 def panel(ax, letter, title, gap=0.055):
     ax.set(xlim=(0, 1), ylim=(0, 1))
     ax.axis("off")
@@ -25,12 +26,14 @@ def panel(ax, letter, title, gap=0.055):
     ax.text(gap, 0.995, title, fontsize=13, weight="bold", va="top", color=INK)
 
 
+# 以統一的預設字級、顏色與頂端對齊方式，在指定位置加入文字。
 def label(ax, x, y, text, size=12, **kw):
     return ax.text(
         x, y, text, fontsize=size, color=kw.pop("color", INK), va="top", **kw
     )
 
 
+# 在指定中心繪製圓角流程節點並加入置中文字。
 def node(ax, xy, text, width=0.25, height=0.115, color=BLUE):
     x, y = xy
     patch = FancyBboxPatch(
@@ -46,6 +49,7 @@ def node(ax, xy, text, width=0.25, height=0.115, color=BLUE):
     ax.text(x, y, text, ha="center", va="center", fontsize=11, color=INK)
 
 
+# 在兩點間加入可彎曲的箭頭，並依選項標示說明文字。
 def arrow(ax, a, b, text=None, at=None, rad=0, color=GRAY):
     ax.add_patch(
         FancyArrowPatch(
@@ -72,6 +76,7 @@ def arrow(ax, a, b, text=None, at=None, rad=0, color=GRAY):
         )
 
 
+# 以列至欄的慣例繪製數值矩陣，並依選項顯示列欄標籤。
 def matrix_display(ax, values, x, y, width, height, rows=None, cols=None, fmt=".6g"):
     """Draw an actual numeric matrix, with conventional row-to-column orientation."""
     nr, nc = values.shape
@@ -116,6 +121,7 @@ def matrix_display(ax, values, x, y, width, height, rows=None, cols=None, fmt=".
             )
 
 
+# 將模型圖儲存為 300 dpi PNG 與 SVG，然後關閉圖形。
 def save(fig, name):
     for suffix in ("png", "svg"):
         fig.savefig(
@@ -128,6 +134,7 @@ def save(fig, name):
     plt.close(fig)
 
 
+# 一個細胞一代會怎樣：子代分布、有限計數鏈，以及四種代表性細胞的數字。
 def single_cell_figure(config, matrix, offspring, phenotypes):
     """一個細胞一代會怎樣：子代分布、有限計數鏈，以及四種代表性細胞的數字。"""
     fig = plt.figure(figsize=(15, 11.2))
@@ -260,6 +267,7 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
     save(fig, "single_cell_rules")
 
 
+# 實際模擬路徑（完整基因型模型）：未治療面板畫治療前那段，治療面板畫治療開始之後那段。
 def draw_paths(ax, trials, events, highlight, therapy_phase):
     """實際模擬路徑（完整基因型模型）：未治療面板畫治療前那段，治療面板畫治療開始之後那段。"""
     for rep, states in trials.items():
@@ -278,6 +286,7 @@ def draw_paths(ax, trials, events, highlight, therapy_phase):
     ax.scatter(*xy[0 if therapy_phase else -1], s=60, marker="D", color=INK, zorder=7)
 
 
+# 線性座標的一步期望向量場；兩面板共用倍率與色階，不做單支箭頭正規化。
 def draw_field(ax, field, scale, norm, title, show_ylabel=True):
     """線性座標的一步期望向量場；兩面板共用倍率與色階，不做單支箭頭正規化。"""
     quiver = ax.quiver(
@@ -315,6 +324,7 @@ def draw_field(ax, field, scale, norm, title, show_ylabel=True):
     return quiver
 
 
+# M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。
 def matrices_to_flow_figure(
     config, qmatrix, before, during, fields, trials, events, highlight
 ):
@@ -465,6 +475,7 @@ def matrices_to_flow_figure(
     save(fig, "matrices_to_flow")
 
 
+# 附錄：完整基因型計數過程的 PGF 轉移核，以及程式的執行狀態機。
 def appendix_figure(config):
     """附錄：完整基因型計數過程的 PGF 轉移核，以及程式的執行狀態機。"""
     fig = plt.figure(figsize=(15, 14))

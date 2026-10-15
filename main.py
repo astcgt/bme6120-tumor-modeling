@@ -37,6 +37,7 @@ STEPS = ("results", "model", "phase", "genotype", "therapy")
 ANALYSES = ("goldie_coldman", "relapse_prediction", "sensitivity", "adaptive")
 
 
+# 解析命令列參數，依指定步驟執行實驗、數學圖、相圖、基因型圖與治療分析。
 def main():
     args = parse_args()
     steps = args.only or STEPS
@@ -52,6 +53,7 @@ def main():
         run_therapy(args)
 
 
+# 解析執行步驟、種子、試驗數與分析選項，並檢查主實驗重複次數。
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -89,12 +91,14 @@ def parse_args():
     return args
 
 
+# 依輸出紀錄重現完整治療試驗並快取，供相圖、基因型與復發分析共用。
 @lru_cache(maxsize=1)
 def reproduced_trials():
     """相圖、基因型與復發分析共用：依記錄的 seed 重跑治療試驗，取得完整基因型快照。"""
     return exp.reproduce_trials(exp.OUTPUTS)
 
 
+# 執行治療、TSG 與死亡率實驗，輸出比較圖、CSV 及可重現的執行紀錄。
 def run_results(args):
     """主實驗與兩組對照實驗：腫瘤總覽、死亡率與異質性、one-hit vs two-hit 三張圖與對應的 CSV。"""
     out = exp.OUTPUTS
@@ -137,6 +141,7 @@ def run_results(args):
     print(f"Figures and data saved to: {out.resolve()}")
 
 
+# 計算模型矩陣與線性向量場，輸出數學圖、流程附錄及矩陣資料。
 def run_model():
     """數學圖：矩陣與向量場由 analysis.py 計算，實際路徑讀取主實驗的 CSV。"""
     out = plot_model.OUT
@@ -164,6 +169,7 @@ def run_model():
     print(f"Verified matrices and saved PNG/SVG figures to {out}")
 
 
+# 重現代表軌跡並建立相圖、向量場及雙語理論與經驗比較圖，輸出相關資料。
 def run_phase(args):
     """實際軌跡相圖（與期望下一步）、向量場資料、兩張理論 vs 經驗相場圖。"""
     out = exp.OUTPUTS / "phase_plots"
@@ -212,6 +218,7 @@ def run_phase(args):
     print(f"Phase portraits saved to {out}")
 
 
+# 重現治療試驗，輸出雙語 Muller 圖、基因頻率圖及對應資料。
 def run_genotype():
     """Muller 圖與每基因突變頻率（雙語），以及繪圖數值的 CSV。"""
     out = exp.OUTPUTS / "genotype_evolution"
@@ -233,6 +240,7 @@ def run_genotype():
     print(f"Genotype figures saved to {out}")
 
 
+# 執行選定的治療延伸分析，輸出圖表與 CSV 並更新共用摘要。
 def run_therapy(args):
     """治療延伸分析（ANALYSES）；摘要依分析名稱累積寫入 therapy_analysis_summary.json。"""
     out = exp.OUTPUTS / "therapy_analysis"

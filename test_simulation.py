@@ -15,12 +15,14 @@ from simulation import (
 
 
 class SuppressorTests(unittest.TestCase):
+    # 驗證多次試驗統計會區分計算上限後缺失、滅絕後零值及仍在觀察的族群。
     def test_ensemble_censoring_and_extinction(self):
         from simulation import Result, summarize
 
         c = Config()
 
         # 上限後缺失、滅絕後零值、仍觀察中的正常族群應分開處理。
+        # 依指定族群快照與停止原因建立測試用 Result，並自動產生逐代摘要。
         def make(pops, reason):
             return Result(
                 c,
@@ -42,6 +44,7 @@ class SuppressorTests(unittest.TestCase):
         self.assertEqual(summary[2]["resistant_percent_n"], 1)
         self.assertTrue(np.isnan(summary[2]["resistant_percent_sd"]))
 
+    # 驗證 TSG 雙擊必須發生於同一基因，並檢查 one-hit 設定與生長優勢。
     def test_same_gene_two_hits(self):
         c = Config()
         first = 1 << c.suppressor_genes[0]
@@ -58,6 +61,7 @@ class SuppressorTests(unittest.TestCase):
             growth_probabilities(first | second, c)[0], growth_probabilities(0, c)[0]
         )
 
+    # 驗證突變保留細胞總數、零與必然突變邊界，以及 TSG 等位基因的獨立突變比例。
     def test_mutation_conservation_and_independent_alleles(self):
         c = Config(mutation_rate=1)
         full = (1 << (c.n_genes + len(c.suppressor_genes))) - 1
@@ -82,6 +86,7 @@ class SuppressorTests(unittest.TestCase):
         )
         self.assertEqual(sum(pop.values()), 100000)
 
+    # 驗證固定種子的可重現性、族群摘要一致性及無效參數的錯誤處理。
     def test_reproducibility_and_probability_validation(self):
         c = Config(generations=4)
         a = simulate(c, seed=9)

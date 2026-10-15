@@ -164,12 +164,14 @@ TEXT = {
 }
 
 
+# 將 D65 CIELAB 轉成 sRGB，必要時降低彩度以落入可顯示色域。
 def lab_to_rgb(lightness, a, b):
     """CIELAB（D65）→ sRGB，不在色域內就保持色相、逐步降低彩度。"""
     for scale in np.linspace(1, 0, 21):
         fy = (lightness + 16) / 116
         fx, fz = fy + a * scale / 500, fy - b * scale / 200
 
+        # 反轉 CIELAB 的分段轉換，取得相對 XYZ 分量。
         def inverse(f):
             return f**3 if f**3 > 0.008856 else (f - 16 / 116) / 7.787
 
@@ -184,6 +186,7 @@ def lab_to_rgb(lightness, a, b):
     return tuple(float(x) for x in np.clip(rgb, 0, 1))
 
 
+# 依 oncogene 與 TSG 組合選色系，再依基因及突變數調整色相與明暗。
 def genotype_color(genotype, config):
     """色系由 oncogene／TSG 決定；色系內依基因小幅偏移色相，突變越多越暗。抗藥位元不計入。"""
     onc = [
@@ -233,6 +236,7 @@ def genotype_color(genotype, config):
     return lab_to_rgb(lightness, chroma * np.cos(h), chroma * np.sin(h))
 
 
+# 依底色亮度選擇白色或深色斜線，維持抗藥標記的對比。
 def stripe_color(color):
     """深色帶用白色斜線、淺色帶用深色斜線，在任何底色上都看得見。"""
     r, g, b = color[:3]
@@ -240,6 +244,7 @@ def stripe_color(color):
     return (1, 1, 1, 0.7) if luminance < 0.45 else (0.1, 0.13, 0.17, 0.32)
 
 
+# 建立具有指定底色、斜線與標籤的圖例色塊。
 def swatch(color, stripes, label):
     color = to_rgb(color)
     return Patch(
@@ -251,6 +256,7 @@ def swatch(color, stripes, label):
     )
 
 
+# 建立功能基因色系、passenger 與抗藥斜線的圖例項目。
 def color_key(config, t):
     """三個色系的代表：各單一基因、單一 TSG 等位基因、oncogene+TSG、passenger、抗藥。"""
     onc = [(1 << gene, f"ONC{i + 1}") for i, gene in enumerate(config.driver_genes)]
@@ -282,10 +288,12 @@ def color_key(config, t):
     return handles
 
 
+# 檢查基因型是否含有設定的抗藥突變位元。
 def resistant(genotype, config):
     return bool(genotype & (1 << config.resistance_gene))
 
 
+# 在指定座標軸繪製巢狀基因型比例色帶、抗藥斜線與可選標籤。
 def draw_muller(ax, result, config, label=True, k=TOP_K):
     shown, parent, children, own = muller_layout(result, k)
     bands = muller_bands(shown, children, own)
@@ -334,6 +342,7 @@ def draw_muller(ax, result, config, label=True, k=TOP_K):
     return shown, parent, colors
 
 
+# 在座標軸標示治療啟動與復發的垂直線，並依選項加入文字標籤。
 def event_lines(ax, event, t, labels=True):
     for key, name, style in (
         ("therapy_generation", "therapy", "--"),
@@ -353,6 +362,7 @@ def event_lines(ax, event, t, labels=True):
                 )
 
 
+# 選取代表試驗並繪製含基因型比例、負荷、事件與色系圖例的 Muller 圖。
 def plot_muller(config, results, events, lang):
     t = TEXT[lang]
     rep = choose_exemplar({e["replicate"]: e for e in events})
@@ -467,6 +477,7 @@ def plot_muller(config, results, events, lang):
     return fig, rep, shown
 
 
+# 繪製以治療起點對齊的各基因突變頻率中位數與第 10 至 90 百分位帶。
 def plot_gene_frequencies(rel, data, config, n_trials: int, lang: str):
     """每個基因的突變細胞比例：中位數與 10–90 百分位帶，以治療開始對齊。"""
     t = TEXT[lang]

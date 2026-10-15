@@ -19,6 +19,7 @@ from matplotlib import pyplot as plt
 from matplotlib.mathtext import MathTextParser
 
 
+# 讀取命令列指定的公式清單，驗證 LaTeX 並將各公式輸出為透明背景圖片。
 def main():
     specification = Path(sys.argv[1])
     formulas = json.loads(specification.read_text())

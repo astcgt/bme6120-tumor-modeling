@@ -1281,10 +1281,12 @@ ARCH_SAYS = [
 ]
 
 
+# 將分鐘數格式化為分與秒的時間字串。
 def fmt_time(minutes: float) -> str:
     return f"{int(minutes)}:{int(round((minutes % 1) * 60)):02d}"
 
 
+# 擷取指定範圍的原始碼，移除共同縮排並保留原始行號。
 def code_lines(file: str, start: int, end: int) -> list[tuple[int, str]]:
     lines = (ROOT / file).read_text(encoding="utf-8").splitlines()
     chunk = lines[start - 1 : end]
@@ -1292,6 +1294,7 @@ def code_lines(file: str, start: int, end: int) -> list[tuple[int, str]]:
     return [(start + i, l[indent:]) for i, l in enumerate(chunk)]
 
 
+# 複製討論提示卡所需圖片，並以 macOS sips 等比例縮至網頁使用寬度。
 def prepare_figures():
     FIG_DIR.mkdir(parents=True, exist_ok=True)
     for key, (source, _) in FIGURES.items():
@@ -1435,10 +1438,12 @@ el('reset').addEventListener('click', () => {
 """
 
 
+# 跳脫文字中的 HTML 特殊字元及引號，供網頁內容安全插入。
 def esc(text: str) -> str:
     return html.escape(text, quote=True)
 
 
+# 將指定原始碼片段轉為含行號與重點標記的 HTML 區塊。
 def html_code(code, title) -> str:
     file, start, end, hl = code
     rows = "".join(
@@ -1452,6 +1457,7 @@ def html_code(code, title) -> str:
     )
 
 
+# 將指圖順序、關鍵句與補充提示轉為 HTML 提示區塊。
 def html_cues(beat) -> str:
     parts = []
     if beat.get("point"):
@@ -1477,6 +1483,7 @@ def html_cues(beat) -> str:
     return f'<div class="cues">{"".join(parts)}</div>'
 
 
+# 將單一討論節拍的圖片、提示與程式碼組成 HTML 內容。
 def html_beat(beat) -> str:
     cues = html_cues(beat)
     if beat.get("fig"):
@@ -1495,6 +1502,7 @@ def html_beat(beat) -> str:
     return f'<div class="beat nofig">{cues}</div>'
 
 
+# 建立包含分層架構、模組職責與函式索引的 HTML 程式導覽。
 def html_arch() -> str:
     layers = '<span class="layer-arrow">→</span>'.join(
         f'<div class="layer"><div class="ln">{esc(n)}</div><div'
@@ -1502,6 +1510,7 @@ def html_arch() -> str:
         for n, m, r in ARCH_LAYERS
     )
 
+    # 將名稱與說明配對轉為帶標題的 HTML 清單，空清單則回傳空字串。
     def members(label, rows):
         if not rows:
             return ""
@@ -1536,6 +1545,7 @@ def html_arch() -> str:
     )
 
 
+# 組合時間軸、程式導覽、討論段落、問答與計時功能，回傳完整提示卡 HTML。
 def build_html() -> str:
     ribbon = "".join(
         f'<a href="#{s["id"]}" data-id="{s["id"]}" style="flex:{s["end"] - s["start"]}"'
@@ -1602,6 +1612,7 @@ ACCENT = RGBColor(0xC9, 0x52, 0x2B)
 TEAL = RGBColor(0x13, 0x74, 0x8A)
 
 
+# 設定 Word 文字片段的西文與中文字型、字級、顏色及粗體。
 def set_fonts(
     run,
     latin="Arial",
@@ -1631,6 +1642,7 @@ def set_fonts(
     return run
 
 
+# 在 Word 段落屬性中加入指定底色。
 def shade(paragraph, fill):
     ppr = paragraph._p.get_or_add_pPr()
     shd = OxmlElement("w:shd")
@@ -1640,6 +1652,7 @@ def shade(paragraph, fill):
     ppr.append(shd)
 
 
+# 為 Word 段落加入指定顏色的左側框線。
 def left_border(paragraph, color="E4683F"):
     ppr = paragraph._p.get_or_add_pPr()
     borders = OxmlElement("w:pBdr")
@@ -1655,6 +1668,7 @@ def left_border(paragraph, color="E4683F"):
     ppr.append(borders)
 
 
+# 建立 Word 段落，設定段後距離並依選項加入格式化文字。
 def para(doc, text="", size=10.5, color=INK, bold=False, space_after=4, style=None):
     p = doc.add_paragraph(style=style)
     p.paragraph_format.space_after = Pt(space_after)
@@ -1663,6 +1677,7 @@ def para(doc, text="", size=10.5, color=INK, bold=False, space_after=4, style=No
     return p
 
 
+# 建立帶統一間距與字型的 Word 小標題段落。
 def label(doc, text):
     p = para(doc, space_after=2)
     p.paragraph_format.space_before = Pt(6)
@@ -1670,6 +1685,7 @@ def label(doc, text):
     return p
 
 
+# 將討論節拍的指圖順序、關鍵句與補充提示寫入 Word 文件。
 def word_cues(doc, beat):
     if beat.get("point"):
         label(doc, "指圖順序")
@@ -1698,6 +1714,7 @@ def word_cues(doc, beat):
         )
 
 
+# 將帶標題、原始行號與重點標記的程式碼片段寫入 Word 文件。
 def word_code(doc, code, title):
     file, start, end, hl = code
     p = para(doc, space_after=0)
@@ -1719,6 +1736,7 @@ def word_code(doc, code, title):
         set_fonts(q.add_run(line or " "), latin="Menlo", size=8, bold=n in hl)
 
 
+# 將名稱與說明配對寫成 Word 表格，空清單則略過。
 def word_members(doc, label_text, rows):
     if not rows:
         return
@@ -1733,6 +1751,7 @@ def word_members(doc, label_text, rows):
         row[0].width, row[1].width = Cm(8.6), Cm(9.2)
 
 
+# 將分層架構、模組職責與函式索引寫入 Word 程式導覽。
 def word_arch(doc):
     h = doc.add_heading(level=1)
     set_fonts(h.add_run("講前先讀　"), size=13, color=ACCENT)
@@ -1776,6 +1795,7 @@ def word_arch(doc):
         set_fonts(p.add_run(zh), size=9.5, color=MUTED)
 
 
+# 建立含版面樣式、程式導覽、討論提示與備用資料的 Word 文件並儲存。
 def build_docx(path: Path):
     doc = Document()
     sec = doc.sections[0]
@@ -1901,6 +1921,7 @@ def build_docx(path: Path):
     doc.save(path)
 
 
+# 準備圖片並輸出討論提示卡的 HTML 與 Word 檔案。
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     prepare_figures()

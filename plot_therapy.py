@@ -19,6 +19,7 @@ from simulation import Config
 INK, GRAY = "#172B42", "#64748B"
 
 
+# Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論），以及治療開始時已有的抗藥細胞。
 def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
     """Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論），以及治療開始時已有的抗藥細胞。"""
     summary, grid, curve = data["summary"], data["grid"], data["curve"]
@@ -130,6 +131,7 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
     save_figure(fig, output, "goldie_coldman")
 
 
+# 復發時間預測：預測 vs 觀察的復發延遲、R₀ 與復發延遲、治療中成長率對抗藥比例 ρ。
 def plot_relapse_prediction(data: dict, output: Path):
     """復發時間預測：預測 vs 觀察的復發延遲、R₀ 與復發延遲、治療中成長率對抗藥比例 ρ。"""
     rows, stats = data["rows"], data["stats"]
@@ -264,6 +266,7 @@ def plot_relapse_prediction(data: dict, output: Path):
     save_figure(fig, output, "relapse_time_prediction")
 
 
+# 參數敏感度：抗藥細胞殺傷率 × 突變率的治癒機率與復發延遲熱圖，並畫出理論邊界。
 def plot_sensitivity(data: dict, trials: int, output: Path):
     """參數敏感度：抗藥細胞殺傷率 × 突變率的治癒機率與復發延遲熱圖，並畫出理論邊界。"""
     kills, mus = data["kills"], data["mutation_rates"]
@@ -354,6 +357,7 @@ def plot_sensitivity(data: dict, trials: int, output: Path):
     save_figure(fig, output, "parameter_sensitivity")
 
 
+# 適應性治療：一次試驗的持續與間歇治療軌跡，以及四種設定下的惡化時間比較。
 def plot_adaptive(data: dict, config: Config, trials: int, output: Path):
     """適應性治療：一次試驗的持續與間歇治療軌跡，以及四種設定下的惡化時間比較。"""
     rows, summary, settings, K = (

@@ -11,12 +11,14 @@ from pathlib import Path
 import numpy as np
 
 
+# 讀取並核對已記錄的實驗輸出，整理簡報圖表所需摘要後寫入 results.json。
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, default=Path("outputs"))
     args = parser.parse_args()
     source = args.input
 
+    # 從指定輸入目錄讀取 CSV，回傳以欄名為鍵的字典列。
     def read(name):
         with (source / name).open(newline="") as handle:
             return list(csv.DictReader(handle))
@@ -49,6 +51,7 @@ def main():
         "count": [relapse.get(g, 0) for g in generations],
     }
 
+    # 依情境與世代彙整指定欄位，核對試驗數並計算第 10、50、90 百分位曲線。
     def group_curves(rows, condition_key, fields):
         curves = {}
         for condition in sorted({r[condition_key] for r in rows}):

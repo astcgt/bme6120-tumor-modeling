@@ -28,12 +28,14 @@ INK, GRAY = "#173042", "#687783"
 COLORS = ["#167D9A", "#ED7953", "#6C5B9C", "#57A773", "#D6A43B", "#BC5B86"]
 
 
+# 還原成 matplotlib 載入時的設定（保留 Agg 後端）。
 def reset_style():
     """還原成 matplotlib 載入時的設定（保留 Agg 後端）。"""
     original = {k: v for k, v in matplotlib.rcParamsOrig.items() if k != "backend"}
     plt.rcParams.update(original)
 
 
+# 統一簡報用視覺樣式；英文圖標籤避免依賴中文系統字型。
 def set_plot_style():
     """統一簡報用視覺樣式；英文圖標籤避免依賴中文系統字型。"""
     reset_style()
@@ -56,6 +58,7 @@ def set_plot_style():
     })
 
 
+# 建立輸出目錄，將圖形儲存為 240 dpi PNG 與 SVG 後關閉圖形。
 def save_figure(fig, output: Path, name: str):
     # 建立輸出目錄；同時支援呼叫端傳入字串或 Path 路徑。
     output = Path(output)
@@ -67,6 +70,7 @@ def save_figure(fig, output: Path, name: str):
     plt.close(fig)
 
 
+# 數學圖：DejaVu Sans 與 STIX 數學字型；SVG 保留可編輯文字。
 def set_model_style():
     """數學圖：DejaVu Sans 與 STIX 數學字型；SVG 保留可編輯文字。"""
     reset_style()
@@ -78,6 +82,7 @@ def set_model_style():
     })
 
 
+# 中文標籤及 Computer Modern 數學字型；SVG 保留字形路徑。
 def set_phase_style():
     """中文標籤及 Computer Modern 數學字型；SVG 保留字形路徑。"""
     reset_style()
@@ -111,6 +116,7 @@ def set_phase_style():
     })
 
 
+# 中文沿用既有相圖字型；英文用 DejaVu Sans，兩者數學式皆為 Computer Modern。
 def set_style(lang: str):
     """中文沿用既有相圖字型；英文用 DejaVu Sans，兩者數學式皆為 Computer Modern。"""
     reset_style()
@@ -135,6 +141,7 @@ def set_style(lang: str):
         })
 
 
+# 雙語圖：檔名加上 _zh／_en，PNG 300 dpi 與 SVG 各一份。
 def save_lang(fig, directory: Path, name: str, lang: str):
     """雙語圖：檔名加上 _zh／_en，PNG 300 dpi 與 SVG 各一份。"""
     directory.mkdir(parents=True, exist_ok=True)

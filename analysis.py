@@ -19,6 +19,7 @@ from simulation import (
 
 
 # ---------------------------------------------------------------- 統計工具 ----------
+# 計算二項成功比例的 Wilson 區間，預設使用 95% 常態臨界值。
 def wilson(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
     """二項比例的 Wilson 95% 區間。"""
     if n == 0:
@@ -29,12 +30,14 @@ def wilson(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return centre - half, centre + half
 
 
+# 以雙重 argsort 取得序位後計算相關係數，不對同值資料取平均序位。
 def spearman(x, y) -> float:
     rx, ry = np.argsort(np.argsort(x)), np.argsort(np.argsort(y))
     return float(np.corrcoef(rx, ry)[0, 1])
 
 
 # ---------------------------------------------------------------- 適應度與一步期望 --
+# 依基因型與治療狀態計算單一父細胞的期望子代數。
 def fitness(genotype: int, config: Config, therapy: bool) -> float:
     """每個父細胞的期望子代數 w = (1-d)(1-k)(2+q)；k 只在治療時作用。"""
     death, triple = growth_probabilities(genotype, config)
@@ -49,6 +52,7 @@ def fitness(genotype: int, config: Config, therapy: bool) -> float:
     return (1 - death) * (1 - kill) * (2 + triple)
 
 
+# 由完整基因型族群計算突變後敏感與抗藥細胞數及平均無治療適應度的一步期望。
 def expected_next(
     population: dict[int, float], config: Config, therapy: bool
 ) -> dict[str, float]:
@@ -111,6 +115,7 @@ def expected_next(
     }
 
 
+# 由完整基因型與單向抗藥突變，精確計算下一代敏感及抗藥細胞的條件期望。
 def projected_offspring_mean(
     population: dict[int, int], config: Config, therapy_active: bool
 ) -> dict[str, float]:
@@ -142,6 +147,7 @@ def projected_offspring_mean(
     }
 
 
+# 以半個細胞的平滑修正計算 log10((R+0.5)/(S+0.5))，使邊界比例仍有有限值。
 def logit_rho(resistant, sensitive):
     """經驗 logit：log10((R+½)/(S+½))；ρ=0 或 1 仍有限，且等於 log R − log S 的平滑版本。"""
     return np.log10(
@@ -149,6 +155,7 @@ def logit_rho(resistant, sensitive):
     )
 
 
+# 核對兩種一步期望計算法所得的敏感與抗藥細胞數是否一致。
 def check_expectation(config: Config) -> None:
     """expected_next 的 S/R 必須與既有 projected_offspring_mean 完全一致。"""
     population = {
@@ -174,15 +181,18 @@ def check_expectation(config: Config) -> None:
 
 # ---------------------------------------------------------------- 分枝過程理論 ------
 # ---------------------------------------------------------------- 共用理論 -------------
+# 依死亡率與三子細胞機率建立單一父細胞產生 0 至 3 個子細胞的機率分布。
 def offspring_law(death: float, triple: float) -> np.ndarray:
     """單一父細胞的子代數分布 P(0), P(1), P(2), P(3)。"""
     return np.array([death, 0.0, (1 - death) * (1 - triple), (1 - death) * triple])
 
 
+# 在指定 s 值計算子代數分布的機率生成函數。
 def pgf(law: np.ndarray, s: float) -> float:
     return float(law @ s ** np.arange(4))
 
 
+# 從零迭代機率生成函數，求單一祖細胞家系最終滅絕機率的最小不動點。
 def extinction(law: np.ndarray) -> float:
     """家系最終滅絕機率：f(s) = s 在 [0,1] 的最小根（由 0 迭代）。"""
     s = 0.0
@@ -194,6 +204,7 @@ def extinction(law: np.ndarray) -> float:
     return s
 
 
+# 依死亡率與三子細胞機率求解單一祖細胞家系的最終滅絕機率。
 def lineage_extinction(death, triple):
     """單一細胞家系最終滅絕機率：f(s)=δ+(1−δ)[(1−q)s²+qs³] 在 [0,1] 的最小不動點。"""
     s = 0.0
@@ -205,6 +216,7 @@ def lineage_extinction(death, triple):
     return s_next
 
 
+# 建立停用突變與治療、以零及溢位為吸收態的單型有限計數鏈轉移矩陣。
 def finite_count_matrix(death, triple, threshold=4):
     """Exact stopped one-type chain: 0,...,threshold-1, and overflow dagger.
 
@@ -223,6 +235,7 @@ def finite_count_matrix(death, triple, threshold=4):
     return matrix, offspring
 
 
+# 建立有限計數鏈、抗藥突變與期望子代矩陣，以及代表性細胞的表型資料。
 def markov_matrices(config: Config) -> dict:
     """單細胞規則圖與矩陣流向圖的數學物件：有限計數鏈 P、突變矩陣 Q、期望子代矩陣 M 與代表細胞表格。
 
@@ -287,6 +300,7 @@ def markov_matrices(config: Config) -> dict:
 
 
 # ---------------------------------------------------------------- Goldie–Coldman ------
+# 以基準敏感族群與抗藥家系存活機率，計算 Goldie–Coldman 型 Poisson 治癒近似。
 def goldie_coldman_theory(config: Config, threshold: float) -> dict:
     """突變 clone 的 Poisson 近似（Iwasa–Nowak–Michor 2006 型）。
 
@@ -336,6 +350,7 @@ LINEAR_SCALE = 16.0
 LOG_SCALE = 6.0
 
 
+# 由敏感與抗藥基準基因型的完整模型一步期望，建立二維期望子代矩陣。
 def baseline_mean_matrix(config: Config, therapy_active: bool) -> np.ndarray:
     """父代只取 g=0 和 g=抗藥位元；用完整模型的一步期望取得 M。
 
@@ -354,6 +369,7 @@ def baseline_mean_matrix(config: Config, therapy_active: bool) -> np.ndarray:
     return matrix
 
 
+# 在指定基準狀態網格上計算敏感與抗藥細胞的一步期望位移及顯示座標位移。
 def compute_phase_field(
     config: Config, therapy_active: bool, counts, coordinates="linear"
 ) -> dict:
@@ -404,6 +420,7 @@ def compute_phase_field(
     }
 
 
+# 逐點核對向量場與完整狀態期望，並驗證總數及零向量的意義。
 def verify_field(field, config):
     """逐點核對完整狀態期望；另驗證總數及零向量的語意。"""
     resistance = 1 << config.resistance_gene
@@ -427,6 +444,7 @@ def verify_field(field, config):
     assert np.all(field["expected_sensitive"][field["sensitive"] == 0] == 0)
 
 
+# 建立並驗證未治療與持續治療的線性座標向量場。
 def linear_flow_fields(config: Config) -> list[dict]:
     """矩陣流向圖的線性向量場：0–30,000 細胞的 13×13 網格，治療關閉與持續治療各一張，逐點核對。"""
     counts = np.rint(np.linspace(0, 30_000, 13)).astype(np.int64)
@@ -439,6 +457,7 @@ def linear_flow_fields(config: Config) -> list[dict]:
     return fields
 
 
+# 建立未治療與持續治療的線性及對數座標網格與向量場。
 def vector_field_grids(config: Config) -> tuple[dict, list[dict]]:
     """向量場資料檔用的網格：線性 19×19、對數 21×21，各分治療關閉與持續治療。"""
     grids = {
@@ -457,6 +476,7 @@ def vector_field_grids(config: Config) -> tuple[dict, list[dict]]:
     return grids, fields
 
 
+# 由完整基因型族群與治療狀態計算負荷、組成、適應度等候選相座標。
 def state_features(population: dict[int, int], config: Config, therapy: bool) -> dict:
     """由完整基因型快照計算所有候選相座標。"""
     genotypes = list(population)
@@ -506,6 +526,7 @@ def state_features(population: dict[int, int], config: Config, therapy: bool) ->
     }
 
 
+# 將各試驗逐代狀態轉為特徵列，附上實際與期望的下一步變化。
 def trial_feature_rows(config: Config, results: list[Result]) -> list[dict]:
     """每個 (試驗, 世代) 一列，供相圖與復發分析使用。
 
@@ -562,6 +583,7 @@ def trial_feature_rows(config: Config, results: list[Result]) -> list[dict]:
     return rows
 
 
+# 對每個可推進世代計算原始細胞計數的條件期望，並附上實際下一代計數。
 def conditional_steps(result: Result):
     """每個可推進世代的原始計數期望，以及實際下一代計數。"""
     rows = []
@@ -589,6 +611,7 @@ def conditional_steps(result: Result):
     return rows
 
 
+# 整理初始、治療啟動、治療後負荷谷底與首次復發的世代標記。
 def event_generations(states, event):
     start, relapse = event["therapy_generation"], event["relapse_generation"]
     points = {"初始": 0}
@@ -602,6 +625,7 @@ def event_generations(states, event):
     return points
 
 
+# 依復發世代與谷底接近中位數的程度，選出代表性實際試驗。
 def choose_exemplar(events):
     """先選最接近復發中位代數，再選谷底最接近中位數的實際試驗。"""
     eligible = [
@@ -624,6 +648,7 @@ def choose_exemplar(events):
 MIN_TRANSITIONS, MIN_TRIALS = 5, 2
 
 
+# 將相圖格點還原為指定截面的完整族群並計算期望座標位移，不可行時回傳 None。
 def theory_point(pair, x, y, config, therapy, size):
     """格點 → 完整族群（隱藏組成依截面固定）→ 一步期望 → 相座標位移。超出可行域時回傳 None。"""
     odds = 10**y
@@ -657,6 +682,7 @@ def theory_point(pair, x, y, config, therapy, size):
     return new_x - x, float(logit_rho(nxt["R"], nxt["S"])) - y
 
 
+# 計算同一試驗相鄰世代的相座標位移，並以起點標記治療狀態。
 def empirical_steps(rows, pair):
     """同一試驗相鄰世代的位移；治療狀態以起點世代為準（治療從該轉移起作用）。"""
     key = "log_N" if pair == "logN" else "mean_w_off"
@@ -680,6 +706,7 @@ def empirical_steps(rows, pair):
     return steps
 
 
+# 將相座標分箱，按治療狀態建立理論位移及符合樣本門檻的經驗平均位移。
 def build_fields(rows, config, pair):
     steps = empirical_steps(rows, pair)
     xs = np.array([s["x"] for s in steps])
@@ -734,6 +761,7 @@ def build_fields(rows, config, pair):
 
 
 # ---------------------------------------------------------------- 基因型組成 --------
+# 將突變位元轉為功能基因或 passenger 標籤，並區分 TSG 的第二等位基因。
 def gene_label(bit: int, config: Config) -> str:
     """位元 → 基因名稱；基因以 1 起算，TSG 第二等位基因位於 n_genes 之後。"""
     if bit in config.driver_genes:
@@ -747,6 +775,7 @@ def gene_label(bit: int, config: Config) -> str:
     return f"P{bit + 1}"
 
 
+# 將基因型位元組合轉為功能基因標籤與 passenger 數目的可讀文字。
 def genotype_label(genotype: int, config: Config) -> str:
     bits = [
         b
@@ -765,10 +794,12 @@ def genotype_label(genotype: int, config: Config) -> str:
 TOP_K = 10
 
 
+# 判斷 a 的所有突變位元是否都包含於 b。
 def is_subset(a: int, b: int) -> bool:
     return a & b == a
 
 
+# 依新增突變的優先順序，將子基因型分類為 oncogene、TSG、抗藥或 passenger。
 def added_class(child: int, parent: int, config: Config) -> int:
     """子基因型比父基因型多出的突變屬於哪一類：0 oncogene、1 TSG、2 抗藥、3 只有 passenger。"""
     added = child & ~parent
@@ -784,6 +815,7 @@ def added_class(child: int, parent: int, config: Config) -> int:
     return 3
 
 
+# 選取主要基因型並依突變子集建立顯示樹，將其餘細胞併入選定子集並排序色帶。
 def muller_layout(result: Result, k: int = TOP_K):
     """選 Top-k 基因型並建立巢狀樹；未選者併入最大的已選子集祖先，因此頻率總和恆為 1。
 
@@ -801,6 +833,7 @@ def muller_layout(result: Result, k: int = TOP_K):
     # 基因型 0（起始狀態）永遠是根，確保每個細胞都有可併入的祖先。
     shown = set(sorted(peak, key=lambda g: (-peak[g], g))[:k]) | {0}
 
+    # 在已選基因型中尋找 g 的最大嚴格突變子集，並以首次出現時的細胞數處理同分。
     def ancestor(g):
         """已呈現、位元為 g 子集的最大基因型（不含 g 本身）。"""
         at_birth = result.populations[first[g]]
@@ -818,6 +851,7 @@ def muller_layout(result: Result, k: int = TOP_K):
         for g in shown
     }
 
+    # 以深度優先順序列出指定顯示節點及其所有子節點。
     def walk(g):
         return [g] + [d for c in children[g] for d in walk(c)]
 
@@ -831,10 +865,12 @@ def muller_layout(result: Result, k: int = TOP_K):
     return shown, parent, children, own
 
 
+# 依自身與子樹比例遞迴計算 Muller 色帶的上下邊界。
 def muller_bands(shown, children, own):
     """遞迴：父基因型帶寬 = 自身 + 所有後代；子帶置於父帶中央，父色在上下兩側可見。"""
     subtree = {}
 
+    # 遞迴計算並快取指定顯示節點與所有子節點的合計比例序列。
     def total(g):
         if g not in subtree:
             subtree[g] = own[g] + sum(total(c) for c in children[g])
@@ -843,6 +879,7 @@ def muller_bands(shown, children, own):
     total(0)
     bands = {}
 
+    # 遞迴安排顯示樹的色帶位置，使子帶置於父帶自身比例的中央。
     def place(g, bottom):
         bands[g] = (bottom, bottom + subtree[g])
         cursor = bottom + own[g] / 2
@@ -854,6 +891,7 @@ def muller_bands(shown, children, own):
     return bands
 
 
+# 沿父節點索引計算指定節點到根節點的深度。
 def depth(g, parent):
     d = 0
     while parent[g] is not None:
@@ -862,6 +900,7 @@ def depth(g, parent):
     return d
 
 
+# 計算族群中各功能基因的突變細胞比例，並分列 TSG 任一及雙等位基因失活比例。
 def gene_frequencies(population, config):
     total = sum(population.values())
     freq = {}
@@ -893,6 +932,7 @@ def gene_frequencies(population, config):
     return freq
 
 
+# 以治療起點對齊各試驗的基因頻率，回傳共同存活觀察區間的矩陣與百分位摘要。
 def gene_frequency_series(config: Config, results: list[Result]):
     """以治療開始對齊；只取所有試驗都存活且有觀察的相對世代。
 

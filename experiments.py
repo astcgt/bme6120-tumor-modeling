@@ -48,6 +48,7 @@ OUTPUTS = ROOT / "outputs"
 
 
 # ---------------------------------------------------------------- 資料讀寫 ----------
+# 以第一筆資料的鍵作為欄名，將字典列寫入 UTF-8 CSV。
 def write_csv(path: Path, rows: list[dict]):
     # 以第一筆資料的鍵建立欄名；UTF-8 支援中文，newline 避免 CSV 多餘空行。
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -56,6 +57,7 @@ def write_csv(path: Path, rows: list[dict]):
         writer.writerows(rows)
 
 
+# 將資料寫成縮排兩格的 UTF-8 JSON，並依選項處理中文、結尾換行與特殊型別。
 def write_json(
     path: Path, data, *, ensure_ascii=False, trailing_newline=True, default=None
 ):
@@ -64,11 +66,13 @@ def write_json(
     path.write_text(text + ("\n" if trailing_newline else ""), encoding="utf-8")
 
 
+# 讀取 CSV，將每列轉成以欄名為鍵、字串為值的字典。
 def read_csv(path):
     with Path(path).open(newline="") as handle:
         return list(csv.DictReader(handle))
 
 
+# 從執行紀錄還原並驗證 Config，連同原始中繼資料回傳。
 def load_config(directory: Path) -> tuple[Config, dict]:
     metadata = json.loads((directory / "run_metadata.json").read_text())
     settings = metadata["config"].copy()
@@ -79,6 +83,7 @@ def load_config(directory: Path) -> tuple[Config, dict]:
     return config, metadata
 
 
+# 讀取並核對治療軌跡與事件，排除滅絕後補值並保留各試驗的實際觀察世代。
 def load_trials(directory):
     """只使用實際觀察；不在 cell_limit 後延伸路徑或連接不同試驗。"""
     directory = Path(directory)
@@ -119,6 +124,7 @@ def load_trials(directory):
     return config, trials, events
 
 
+# 依記錄的種子重跑治療試驗，核對 CSV 計數與治療起點並回傳完整基因型快照。
 def reproduce_trials(directory: Path) -> tuple[Config, list[Result], list[dict]]:
     """以記錄的 seed 重跑治療試驗，取得完整基因型快照；計數必須與 CSV 完全一致。"""
     config, metadata = load_config(directory)
@@ -163,11 +169,13 @@ def reproduce_trials(directory: Path) -> tuple[Config, list[Result], list[dict]]
 
 
 # ---------------------------------------------------------------- 主實驗 ------------
+# 以互異且可重現的種子執行指定次數的治療模擬。
 def run_therapy_trials(config: Config, replicates: int, seed: int) -> list[Result]:
     """主實驗：獨立重複試驗，達門檻後持續治療；第 rep 次的 seed 為 seed + 100000 + rep。"""
     return [simulate(config, seed + 100000 + rep) for rep in range(replicates)]
 
 
+# 按絕對世代彙整治療試驗的摘要與原始列，滅絕後補零且計算上限後視為缺失。
 def therapy_ensemble(trials: list[Result]) -> tuple[list[dict], list[dict]]:
     """依絕對世代彙整治療試驗；滅絕延續零值，計算上限後視為缺失。
 
@@ -228,6 +236,7 @@ def therapy_ensemble(trials: list[Result]) -> tuple[list[dict], list[dict]]:
     return summary, raw
 
 
+# 彙整每次試驗的種子、治療起點、停止原因、谷底與復發世代。
 def therapy_events(trials: list[Result]) -> list[dict]:
     """每次試驗的治療起點、停止原因、谷底與復發世代；保留所有結果，不只挑復發案例。"""
     return [
@@ -242,6 +251,7 @@ def therapy_events(trials: list[Result]) -> list[dict]:
     ]
 
 
+# 建立包含完整設定、種子、套件版本與結果計數的執行紀錄。
 def run_metadata(
     config: Config,
     seed: int,
@@ -270,6 +280,7 @@ def run_metadata(
 HIT_SCENARIOS = ("No TSG advantage", "TSG one-hit", "TSG two-hit")
 
 
+# 執行無 TSG 優勢、one-hit 與 two-hit 的無治療對照，回傳逐代與終點資料。
 def run_tsg_comparison(
     config: Config, repeats: int, seed: int, growth_horizon: int = 18
 ) -> tuple[list[dict], list[dict]]:
@@ -329,6 +340,7 @@ def run_tsg_comparison(
     return hit_rows, rows
 
 
+# 將 TSG 對照資料整理為各情境的試驗矩陣與第 18 代中位數摘要。
 def hit_comparison_series(rows: list[dict]) -> dict:
     """把逐代資料整理成每個情境的 (試驗 × 世代) 矩陣，並計算第 18 代中位數。"""
     last = max(r["generation"] for r in rows)
@@ -364,6 +376,7 @@ def hit_comparison_series(rows: list[dict]) -> dict:
     }
 
 
+# 從最後一代族群無放回取樣指定細胞數並計算摘要，數量不足時回傳 None。
 def sample_at_size(result: Result, size: int, rng: np.random.Generator) -> dict | None:
     """跨門檻的該代中無放回取固定數目，避免不同生長速度的 overshoot 偏差。
 
@@ -382,6 +395,7 @@ def sample_at_size(result: Result, size: int, rng: np.random.Generator) -> dict 
     return summarize(sampled, result.history[-1]["generation"], result.config)
 
 
+# 比較不同死亡率下的固定大小腫瘤樣本，彙整多樣性、達標世代與試驗終點。
 def run_death_rate_comparison(
     config: Config,
     repeats: int,
@@ -433,6 +447,7 @@ def run_death_rate_comparison(
 
 
 # ---------------------------------------------------------------- 數學圖與相圖資料 --
+# 輸出 P、Q、M 矩陣的 CSV 與模型假設，採列為父代、欄為子代的方向。
 def write_markov_data(output: Path, markov: dict):
     """矩陣 P、Q、M 的 CSV（列＝目前／父代，欄＝下一步／子代）與假設說明。"""
     for name, values, names in (
@@ -468,6 +483,7 @@ def write_markov_data(output: Path, markov: dict):
     )
 
 
+# 重跑指定試驗並核對軌跡，回傳完整結果、逐代條件期望與相圖摘要。
 def phase_portrait_data(config: Config, trials: dict, events: dict, replicate: int):
     """重跑代表試驗並逐代核對 CSV，計算每一代由完整基因型算出的期望下一步。"""
     if replicate not in trials:
@@ -532,6 +548,7 @@ def phase_portrait_data(config: Config, trials: dict, events: dict, replicate: i
     return result, steps, summary
 
 
+# 攤平向量場網格並寫入含原始位移、顯示位移及繪圖倍率的 CSV，同時回傳資料列。
 def write_grid_csv(fields, destination):
     rows = []
     keys = (
@@ -566,6 +583,7 @@ def write_grid_csv(fields, destination):
     return rows
 
 
+# 建立向量場的假設、狀態截面、網格設定與驗證結果紀錄。
 def vector_field_record(
     config: Config, grids: dict, fields: list[dict], rows: list
 ) -> dict:
@@ -618,6 +636,7 @@ def vector_field_record(
     }
 
 
+# 建立兩組相座標的理論與經驗向量場，連同逐代特徵及比較紀錄回傳。
 def phase_comparison_data(config: Config, results: list[Result]) -> dict:
     """理論 vs 經驗相場：兩組座標各自的理論箭頭與經驗平均箭頭。"""
     rows = trial_feature_rows(config, results)
@@ -655,6 +674,7 @@ def phase_comparison_data(config: Config, results: list[Result]) -> dict:
 
 
 # ---------------------------------------------------------------- 基因型資料 --------
+# 將代表試驗中各顯示基因型併入未顯示基因型後的自身比例寫入 CSV。
 def write_muller_csv(path: Path, result: Result, shown: list[int], config: Config):
     """代表試驗中每個已呈現基因型自己的比例（未呈現細胞已併入最近祖先）。"""
     _, _, _, own = muller_layout(result)
@@ -665,6 +685,7 @@ def write_muller_csv(path: Path, result: Result, shown: list[int], config: Confi
             writer.writerow([t] + [own[g][t] for g in shown])
 
 
+# 將各基因序列的相對世代、中位數及第 10、90 百分位數寫入 CSV。
 def write_gene_frequency_csv(path: Path, summary: dict):
     with path.open("w", newline="") as handle:
         writer = csv.writer(handle)
@@ -674,6 +695,7 @@ def write_gene_frequency_csv(path: Path, summary: dict):
                 writer.writerow([key, x, s["median"][i], s["p10"][i], s["p90"][i]])
 
 
+# 建立代表試驗、顯示基因型與 Muller 資料解讀方式的紀錄。
 def genotype_record(
     replicate: int, result: Result, shown: list[int], config: Config
 ) -> dict:
@@ -692,6 +714,7 @@ def genotype_record(
 
 
 # ---------------------------------------------------------------- 治療延伸分析 ------
+# 執行單次模擬並回傳結果摘要及逐代負荷、抗藥數與治療狀態，供子程序使用。
 def run_trial(args) -> dict:
     """子程序：跑一次試驗，只回傳摘要與逐代 N／R／治療狀態，避免傳回整個基因型快照。"""
     config, seed = args
@@ -711,11 +734,13 @@ def run_trial(args) -> dict:
     }
 
 
+# 使用程序池平行執行試驗工作，依輸入順序回傳結果。
 def run_many(jobs, workers):
     with ProcessPoolExecutor(max_workers=workers) as pool:
         return list(pool.map(run_trial, jobs, chunksize=4))
 
 
+# 比較不同治療起始負荷下的模擬治癒機率與 Goldie–Coldman 理論近似。
 def goldie_coldman_experiment(
     config: Config, trials: int, seed: int, workers: int
 ) -> dict:
@@ -776,6 +801,7 @@ def goldie_coldman_experiment(
     }
 
 
+# 由治療起點的抗藥基因型組成預測復發延遲，並與觀察結果比較。
 def relapse_prediction(config: Config, results: list[Result]) -> dict:
     """復發預測：用治療開始那一代的抗藥基因型組成預測每次試驗的復發延遲。"""
     w_off = fitness(0, config, False)
@@ -857,6 +883,7 @@ def relapse_prediction(config: Config, results: list[Result]) -> dict:
     }
 
 
+# 掃描抗藥殺傷率與突變率的參數網格，彙整治癒、復發與持續存活結果。
 def sensitivity_experiment(
     config: Config, trials: int, seed: int, workers: int
 ) -> dict:
@@ -944,6 +971,7 @@ def sensitivity_experiment(
 
 
 # ---------------------------------------------------------------- 11 適應性治療 --------
+# 尋找負荷曾下降後於用藥轉移中達到惡化門檻的延遲，未觀察到時回傳 None。
 def time_to_progression(record, start_size, factor=1.2):
     """惡化：治療開始後負荷曾降到門檻以下，之後在「上一代有用藥」的情況下仍 ≥ factor × 門檻。
 
@@ -965,6 +993,7 @@ def time_to_progression(record, start_size, factor=1.2):
     return None
 
 
+# 在有無競爭及抗藥代價的設定下，比較適應性與持續治療的惡化時間。
 def adaptive_experiment(config: Config, trials: int, seed: int, workers: int) -> dict:
     """適應性治療：間歇（適應性）與持續治療，在有／無承載量競爭與抗藥代價下的惡化時間。"""
     K = int(1.5 * config.therapy_start_size)

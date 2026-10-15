@@ -53,6 +53,7 @@ class Config:
     # 承載量 K：每個細胞額外死亡 c·N/K，c 使無突變細胞在 N=K 時平均子代剛好為 1。None＝無競爭。
     carrying_capacity: int | None = None
 
+    # 驗證基因索引、機率與模擬設定，遇到無效參數時拋出 ValueError。
     def validate(self):
         # 先檢查基因組大小、基因索引是否有效，以及 driver 門檻是否可達。
         if not 2 <= self.n_genes <= 20:
@@ -123,11 +124,13 @@ class Result:
 
 
 # ---------------------------------------------------------------- 基因型 → 表型 ------
+# 計算指定基因型中已突變的 oncogene 數目。
 def driver_count(genotype: int, config: Config) -> int:
     # 1 << g 選取第 g 個基因；位元 AND 判斷是否突變，再加總 driver 數。
     return sum(bool(genotype & (1 << g)) for g in config.driver_genes)
 
 
+# 回傳指定抑癌基因已失活的等位基因數（0、1 或 2）。
 def suppressor_alleles(genotype: int, gene: int, config: Config) -> int:
     """回傳同一抑癌基因失活的等位基因數（0、1 或 2）。"""
     # 第一個位元沿用基因座索引；第二個放在 n_genes 後，不增加基因座數。
@@ -135,6 +138,7 @@ def suppressor_alleles(genotype: int, gene: int, config: Config) -> int:
     return int(bool(genotype & (1 << gene))) + int(bool(genotype & (1 << second)))
 
 
+# 判斷是否至少有一個抑癌基因達到設定的失活門檻。
 def suppressor_loss(genotype: int, config: Config) -> bool:
     # 必須是同一基因達到門檻；兩個不同基因各一擊不等於同一基因兩擊。
     return any(
@@ -143,6 +147,7 @@ def suppressor_loss(genotype: int, config: Config) -> bool:
     )
 
 
+# 依 oncogene、抑癌基因與抗藥代價，回傳自然死亡率及存活後產生三個子細胞的機率。
 def growth_probabilities(genotype: int, config: Config) -> tuple[float, float]:
     """分開計算 oncogene 活化及抑癌功能喪失的生長優勢，可相加。"""
     oncogene = driver_count(genotype, config) >= config.driver_hits
@@ -165,6 +170,7 @@ def growth_probabilities(genotype: int, config: Config) -> tuple[float, float]:
     return death, triple
 
 
+# 依總細胞數與承載量計算競爭造成的額外死亡機率，未設定承載量時回傳零。
 def crowding_death(total: int, config: Config) -> float:
     """承載量競爭的額外死亡機率；係數讓無突變細胞在 N = K 時期望子代恰為 1。"""
     if config.carrying_capacity is None:
@@ -174,6 +180,7 @@ def crowding_death(total: int, config: Config) -> float:
 
 
 # ---------------------------------------------------------------- 突變與一代更新 ----
+# 逐位元抽樣不可逆突變並合併相同基因型，保持子代細胞總數不變。
 def mutate_offspring(
     population: dict[int, int], config: Config, rng: np.random.Generator
 ) -> dict[int, int]:
@@ -200,6 +207,7 @@ def mutate_offspring(
     return population
 
 
+# 彙整單代族群的負荷、抗藥組成、多樣性與功能性突變比例。
 def summarize(population: dict[int, int], generation: int, config: Config) -> dict:
     # 計算總負荷及各基因型比例；分母至少為 1，讓滅絕族群也能安全處理。
     total = sum(population.values())
@@ -241,6 +249,7 @@ def summarize(population: dict[int, int], generation: int, config: Config) -> di
     )
 
 
+# 執行含突變與可選持續或適應性治療的逐代分枝模擬，回傳族群快照、摘要及停止資訊。
 def simulate(
     config: Config = Config(),
     seed: int = 42,
@@ -331,6 +340,7 @@ def simulate(
 
 
 # ---------------------------------------------------------------- 判讀治療結果 ------
+# 依治療後負荷是否先下降再回升至起始負荷，判定治療結果並回傳谷底與首次復發世代。
 def therapy_outcome(result: Result) -> dict:
     """復發定義：先降至治療前負荷以下，再回到治療開始時負荷。"""
     # 未啟動治療的試驗單獨標記，不當作治療成功或失敗。

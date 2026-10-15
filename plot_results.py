@@ -22,6 +22,7 @@ HIT_SHORT = {
 }
 
 
+# 腫瘤總覽：負荷、異質性、抗藥比例；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。
 def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Path):
     """腫瘤總覽：負荷、異質性、抗藥比例；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。"""
     config = trials[0].config
@@ -124,6 +125,7 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
     save_figure(fig, output, "tumor_dashboard")
 
 
+# 同樣 5,000 個細胞：死亡率越高越異質；B 顯示機制是需要更多代（更多分裂）才長到同樣大小。
 def plot_death_rate(
     shannon: dict,
     generations: dict,
@@ -205,6 +207,7 @@ def plot_death_rate(
     save_figure(fig, output, "death_rate_heterogeneity")
 
 
+# one-hit vs two-hit：對照組、one-hit、two-hit 的生長、TSG 達標比例與第 18 代負荷。
 def plot_hit_comparison(hits: dict, config: Config, output: Path):
     """one-hit vs two-hit：對照組、one-hit、two-hit 的生長、TSG 達標比例與第 18 代負荷。"""
     # 圖 A 採線性尺度凸顯絕對數量差異；圖 B 顯示機制差異；圖 C 保留個別試驗。
@@ -289,6 +292,7 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
     save_figure(fig, output, "one_hit_vs_two_hit")
 
 
+# 輸出生長、基因型組成、多樣性與突變頻率四面板圖。
 def plot_dashboard(result: Result, output: Path):
     """輸出生長、基因型組成、多樣性與突變頻率四面板圖。"""
     # 建立 2×2 面板，使用自動排版協調標題、座標標籤與色條的空間。
@@ -387,6 +391,7 @@ def plot_dashboard(result: Result, output: Path):
     # 顯示時將零起算索引改成 Gene 1 起算，並標出 driver 與 resistance。
     config = result.config
 
+    # 依基因索引回傳 driver、抗藥或 TSG 的圖例文字，其他基因回傳空字串。
     def role(g: int) -> str:
         if g in config.driver_genes:
             return " · driver"

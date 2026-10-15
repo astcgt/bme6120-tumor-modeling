@@ -17,10 +17,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from simulation import Config, simulate
 
 
+# 從 outputs 目錄讀取指定 CSV，回傳以欄名為鍵的字典列。
 def read(name):
     return list(csv.DictReader((Path("outputs") / name).open()))
 
 
+# 重現並核對治療與對照試驗，將基因頻率及治療延伸分析補入簡報資料檔。
 def main():
     root = Path(__file__).resolve().parent
     destination = root / "data/results.json"

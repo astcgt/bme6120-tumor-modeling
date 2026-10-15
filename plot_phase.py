@@ -17,6 +17,7 @@ INK, BLUE, ORANGE, RED, GRAY = "#173042", "#236B8E", "#BC7844", "#A74F3D", "#687
 
 
 # ---------------------------------------------------------------- 實際軌跡相圖 ------
+# 將逐代計數轉為敏感與抗藥對數座標，或總負荷對數與抗藥百分比座標。
 def phase_coordinates(states, composition=False):
     total = np.array([r["total"] for r in states], dtype=float)
     if composition:
@@ -31,6 +32,7 @@ def phase_coordinates(states, composition=False):
     return np.log10(np.array([[r["sensitive"], r["resistant"]] for r in states]) + 1)
 
 
+# 依相座標種類設定標題、網格、軸標籤及抗藥比例的顯示範圍。
 def decorate_axis(ax, title, composition=False):
     ax.set_title(title, loc="left", fontsize=17, weight="bold", pad=16)
     ax.grid(color="#DDE4E8", alpha=0.6, linewidth=0.7)
@@ -46,6 +48,7 @@ def decorate_axis(ax, title, composition=False):
         ax.set_ylim(-0.18, 6.55)
 
 
+# 僅在起終點皆為有限數值時，於座標軸加入指定樣式的箭頭。
 def arrow(ax, a, b, color, size=12, linewidth=2, zorder=6):
     if np.isfinite([*a, *b]).all():
         ax.add_patch(
@@ -63,6 +66,7 @@ def arrow(ax, a, b, color, size=12, linewidth=2, zorder=6):
         )
 
 
+# 繪製實際試驗軌跡，突出代表案例並疊加由完整基因型算出的下一代期望箭頭。
 def plot_phase_portrait(trials, events, replicate, config, result, steps):
     """單一相平面：30 條實際軌跡、突出案例，以及由完整基因型狀態算出的期望下一代箭頭。
 
@@ -272,6 +276,7 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
     return fig
 
 
+# 將相圖儲存為 300 dpi PNG 與 SVG，然後關閉圖形。
 def save_phase_figure(fig, destination, name):
     for extension in ("png", "svg"):
         fig.savefig(destination / f"{name}.{extension}", dpi=300, facecolor="white")
@@ -369,12 +374,14 @@ TEXT = {
 }
 
 
+# 選取不大於輸入值的最大 1、2、5 乘十次方刻度，作為箭頭比例鍵。
 def nice(value):
     """取 1、2、5 × 10^k 中不大於 value 的最大值，作為比例鍵。"""
     exponent = np.floor(np.log10(value))
     return max(m for m in (1, 2, 5) if m * 10**exponent <= value) * 10**exponent
 
 
+# 將預設抗藥比例轉為 logit 刻度位置及百分比標籤。
 def rho_ticks(lang):
     positions = [np.log10(p / (1 - p)) for p in RHO_TICKS]
     labels = [
@@ -384,6 +391,7 @@ def rho_ticks(lang):
     return positions, labels
 
 
+# 依同一治療狀態的理論及經驗位移，計算共用箭頭倍率與比例鍵。
 def column_scale(fields, therapy, x_edges, y_edges):
     """同一治療狀態的理論與經驗共用比例：95 百分位箭頭 ≈ 0.9 格；長度仍與位移成正比。"""
     span = np.array([x_edges[-1] - x_edges[0], y_edges[-1] - y_edges[0]])
@@ -396,6 +404,7 @@ def column_scale(fields, therapy, x_edges, y_edges):
     return 0.9 * cell / np.percentile(lengths, 95)
 
 
+# 繪製指定相座標下未治療及治療中的理論與經驗向量場四面板比較圖。
 def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
     t = TEXT[lang]
     fig, axes = plt.subplots(2, 2, figsize=(16.8, 13.2), sharex=True, sharey=True)
