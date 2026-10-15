@@ -1,4 +1,4 @@
-"""數學圖：06 單細胞規則、07 從 M 矩陣到流向、A1 附錄（完整轉移核與程式流程）。
+"""數學圖：單細胞規則、從 M 矩陣到流向、附錄（完整轉移核與程式流程）。
 
 矩陣與向量場由 analysis.py 計算；這裡只負責畫圖與存檔。
 """
@@ -257,7 +257,7 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
         fontsize=10,
         color=GRAY,
     )
-    save(fig, "06_single_cell_rules")
+    save(fig, "single_cell_rules")
 
 
 def draw_paths(ax, trials, events, highlight, therapy_phase):
@@ -462,7 +462,7 @@ def matrices_to_flow_figure(
         color=GRAY,
     )
     assert quivers[0].scale == quivers[1].scale
-    save(fig, "07_matrices_to_flow")
+    save(fig, "matrices_to_flow")
 
 
 def appendix_figure(config):
@@ -600,4 +600,4 @@ def appendix_figure(config):
     ]
     for i, text in enumerate(notes):
         label(ax, 0, 0.86 - i * 0.16, text, 12)
-    save(fig, "A1_markov_kernel_and_controller")
+    save(fig, "markov_kernel_and_controller")

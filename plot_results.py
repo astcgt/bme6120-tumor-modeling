@@ -1,4 +1,4 @@
-"""主結果圖：01 治療反應、02 死亡率與異質性、03 one-hit vs two-hit。
+"""主結果圖：腫瘤總覽（治療反應）、死亡率與異質性、one-hit vs two-hit。
 
 資料由 experiments.py 計算；這裡只負責畫圖與存檔。
 """
@@ -23,7 +23,7 @@ HIT_SHORT = {
 
 
 def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Path):
-    """圖 01：負荷、異質性、抗藥比例；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。"""
+    """腫瘤總覽：負荷、異質性、抗藥比例；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。"""
     config = trials[0].config
     length = len(summary)
     keys = ("total", "sensitive", "resistant")
@@ -121,7 +121,7 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
         f" {config.max_cells:,}-cell computational cap (not tumor death).",
         fontsize=10,
     )
-    save_figure(fig, output, "01_tumor_dashboard")
+    save_figure(fig, output, "tumor_dashboard")
 
 
 def plot_death_rate(
@@ -202,11 +202,11 @@ def plot_death_rate(
         " → higher diversity.",
         fontsize=10,
     )
-    save_figure(fig, output, "02_death_rate_heterogeneity")
+    save_figure(fig, output, "death_rate_heterogeneity")
 
 
 def plot_hit_comparison(hits: dict, config: Config, output: Path):
-    """圖 03：對照組、one-hit、two-hit 的生長、TSG 達標比例與第 18 代負荷。"""
+    """one-hit vs two-hit：對照組、one-hit、two-hit 的生長、TSG 達標比例與第 18 代負荷。"""
     # 圖 A 採線性尺度凸顯絕對數量差異；圖 B 顯示機制差異；圖 C 保留個別試驗。
     set_plot_style()
     output = Path(output)
@@ -286,7 +286,7 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
     for ax in axes[:2]:
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.legend(frameon=False, loc="lower right", fontsize=9)
-    save_figure(fig, output, "03_one_hit_vs_two_hit")
+    save_figure(fig, output, "one_hit_vs_two_hit")
 
 
 def plot_dashboard(result: Result, output: Path):
@@ -409,4 +409,4 @@ def plot_dashboard(result: Result, output: Path):
     for ax in axes.flat:
         ax.set_xlabel("Generation")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    save_figure(fig, output, "01_tumor_dashboard")
+    save_figure(fig, output, "tumor_dashboard")

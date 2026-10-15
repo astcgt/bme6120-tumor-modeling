@@ -1,4 +1,4 @@
-"""治療延伸分析圖：08 治療時機、09 復發時間預測、10 參數敏感度、11 適應性治療。
+"""治療延伸分析圖：治療時機（Goldie–Coldman）、復發時間預測、參數敏感度、適應性治療。
 
 資料由 experiments.py 計算；這裡只負責畫圖與存檔。
 """
@@ -20,7 +20,7 @@ INK, GRAY = "#172B42", "#64748B"
 
 
 def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
-    """圖 08：治療起始負荷 vs 治癒機率（模擬與理論），以及治療開始時已有的抗藥細胞。"""
+    """Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論），以及治療開始時已有的抗藥細胞。"""
     summary, grid, curve = data["summary"], data["grid"], data["curve"]
     set_plot_style()
     fig, axes = plt.subplots(1, 2, figsize=(16, 6.3), layout="constrained")
@@ -127,11 +127,11 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
         " mutations (Luria–Delbrück).",
         fontsize=10,
     )
-    save_figure(fig, output, "08_goldie_coldman")
+    save_figure(fig, output, "goldie_coldman")
 
 
 def plot_relapse_prediction(data: dict, output: Path):
-    """圖 09：預測 vs 觀察的復發延遲、R₀ 與復發延遲、治療中成長率對抗藥比例 ρ。"""
+    """復發時間預測：預測 vs 觀察的復發延遲、R₀ 與復發延遲、治療中成長率對抗藥比例 ρ。"""
     rows, stats = data["rows"], data["stats"]
     obs, pred1, pred2 = data["obs"], data["pred_baseline"], data["pred_genotype"]
     onc, m_r, m_s = data["oncogene_share"], data["m_r"], data["m_s"]
@@ -261,11 +261,11 @@ def plot_relapse_prediction(data: dict, output: Path):
         " jitter ±0.12 only separates overlapping points.",
         fontsize=10,
     )
-    save_figure(fig, output, "09_relapse_time_prediction")
+    save_figure(fig, output, "relapse_time_prediction")
 
 
 def plot_sensitivity(data: dict, trials: int, output: Path):
-    """圖 10：抗藥細胞殺傷率 × 突變率的治癒機率與復發延遲熱圖，並畫出理論邊界。"""
+    """參數敏感度：抗藥細胞殺傷率 × 突變率的治癒機率與復發延遲熱圖，並畫出理論邊界。"""
     kills, mus = data["kills"], data["mutation_rates"]
     cure, delay, persistent = data["cure"], data["delay"], data["persistent"]
     set_plot_style()
@@ -351,11 +351,11 @@ def plot_sensitivity(data: dict, trials: int, output: Path):
         " therapy; cure still fails if a fitter resistant genotype exists.",
         fontsize=10,
     )
-    save_figure(fig, output, "10_parameter_sensitivity")
+    save_figure(fig, output, "parameter_sensitivity")
 
 
 def plot_adaptive(data: dict, config: Config, trials: int, output: Path):
-    """圖 11：一次試驗的持續與間歇治療軌跡，以及四種設定下的惡化時間比較。"""
+    """適應性治療：一次試驗的持續與間歇治療軌跡，以及四種設定下的惡化時間比較。"""
     rows, summary, settings, K = (
         data["rows"],
         data["summary"],
@@ -460,4 +460,4 @@ def plot_adaptive(data: dict, config: Config, trials: int, output: Path):
         " ratio.",
         fontsize=10,
     )
-    save_figure(fig, output, "11_adaptive_therapy")
+    save_figure(fig, output, "adaptive_therapy")

@@ -224,7 +224,7 @@ def finite_count_matrix(death, triple, threshold=4):
 
 
 def markov_matrices(config: Config) -> dict:
-    """圖 06／07 的數學物件：有限計數鏈 P、突變矩陣 Q、期望子代矩陣 M 與代表細胞表格。
+    """單細胞規則圖與矩陣流向圖的數學物件：有限計數鏈 P、突變矩陣 Q、期望子代矩陣 M 與代表細胞表格。
 
     P 停用突變與治療；Q、M 只保留抗藥位元（敏感 S／抗藥 R 兩類）。
     """
@@ -286,7 +286,7 @@ def markov_matrices(config: Config) -> dict:
     }
 
 
-# ---------------------------------------------------------------- 08 Goldie–Coldman ----
+# ---------------------------------------------------------------- Goldie–Coldman ------
 def goldie_coldman_theory(config: Config, threshold: float) -> dict:
     """突變 clone 的 Poisson 近似（Iwasa–Nowak–Michor 2006 型）。
 
@@ -428,7 +428,7 @@ def verify_field(field, config):
 
 
 def linear_flow_fields(config: Config) -> list[dict]:
-    """圖 07 的線性向量場：0–30,000 細胞的 13×13 網格，治療關閉與持續治療各一張，逐點核對。"""
+    """矩陣流向圖的線性向量場：0–30,000 細胞的 13×13 網格，治療關閉與持續治療各一張，逐點核對。"""
     counts = np.rint(np.linspace(0, 30_000, 13)).astype(np.int64)
     fields = [
         compute_phase_field(config, active, counts, "linear")

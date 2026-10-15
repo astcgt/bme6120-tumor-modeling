@@ -28,39 +28,51 @@ FIG_DIR = OUT / "figs"
 WEB_WIDTH = 1800  # 網頁與 Word 共用的縮圖寬度（px）
 
 FIGURES = {
-    "06": ("outputs/mathematical_model/06_single_cell_rules.png", "圖 06 單細胞規則"),
-    "01": ("outputs/01_tumor_dashboard.png", "圖 01 治療下的腫瘤（30 次試驗）"),
+    "single_cell_rules": (
+        "outputs/mathematical_model/single_cell_rules.png",
+        "圖 06 單細胞規則",
+    ),
+    "tumor_dashboard": (
+        "outputs/tumor_dashboard.png",
+        "圖 01 治療下的腫瘤（30 次試驗）",
+    ),
     "muller": (
-        "outputs/genotype_evolution/01_muller_top_genotypes_en.png",
+        "outputs/genotype_evolution/muller_top_genotypes_en.png",
         "Muller 圖 基因型組成隨時間",
     ),
-    "07": (
-        "outputs/mathematical_model/07_matrices_to_flow.png",
+    "matrices_to_flow": (
+        "outputs/mathematical_model/matrices_to_flow.png",
         "圖 07 期望矩陣 M → 向量場",
     ),
-    "p05": (
-        "outputs/phase_plots/05_phase_field_burden_logit_en.png",
+    "phase_field_burden": (
+        "outputs/phase_plots/phase_field_burden_logit_en.png",
         "相圖 05 負荷 × 抗藥比例：理論 vs 實際",
     ),
-    "p06": (
-        "outputs/phase_plots/06_phase_field_fitness_logit_en.png",
+    "phase_field_fitness": (
+        "outputs/phase_plots/phase_field_fitness_logit_en.png",
         "相圖 06 適應度 × 抗藥比例：演化與篩選的分工",
     ),
-    "09": (
-        "outputs/therapy_analysis/09_relapse_time_prediction.png",
+    "relapse_prediction": (
+        "outputs/therapy_analysis/relapse_time_prediction.png",
         "圖 09 復發時間預測",
     ),
-    "08": (
-        "outputs/therapy_analysis/08_goldie_coldman.png",
+    "goldie_coldman": (
+        "outputs/therapy_analysis/goldie_coldman.png",
         "圖 08 Goldie–Coldman 治癒曲線",
     ),
-    "10": (
-        "outputs/therapy_analysis/10_parameter_sensitivity.png",
+    "sensitivity": (
+        "outputs/therapy_analysis/parameter_sensitivity.png",
         "圖 10 k_R × μ 敏感度",
     ),
-    "03": ("outputs/03_one_hit_vs_two_hit.png", "圖 03 One-hit vs two-hit"),
-    "02": ("outputs/02_death_rate_heterogeneity.png", "圖 02 死亡率與異質性"),
-    "11": ("outputs/therapy_analysis/11_adaptive_therapy.png", "圖 11 適應性治療"),
+    "one_hit_vs_two_hit": (
+        "outputs/one_hit_vs_two_hit.png",
+        "圖 03 One-hit vs two-hit",
+    ),
+    "death_rate": ("outputs/death_rate_heterogeneity.png", "圖 02 死亡率與異質性"),
+    "adaptive_therapy": (
+        "outputs/therapy_analysis/adaptive_therapy.png",
+        "圖 11 適應性治療",
+    ),
 }
 
 THESIS = (
@@ -131,7 +143,7 @@ SEGMENTS = [
         ),
         beats=[
             dict(
-                fig="06",
+                fig="single_cell_rules",
                 point=[
                     "A：一個父細胞 → 0／2／3 子細胞，機率 0.300／0.672／0.028",
                     "A 下方：m = f′(1) = 1.428 > 1 → 平均會長大",
@@ -296,7 +308,7 @@ SEGMENTS = [
         goal="用圖 01 + Muller 圖證明：抗藥細胞治療前就存在，治療只是讓它們接手。",
         beats=[
             dict(
-                fig="01",
+                fig="tumor_dashboard",
                 point=[
                     "A：藍線（敏感）在第 14–16 代治療後崩落；橘線（抗藥）幾乎不受影響",
                     "A：黑線總量 → 谷底 → 回升 = 復發",
@@ -426,7 +438,7 @@ SEGMENTS = [
         ),
         beats=[
             dict(
-                fig="07",
+                fig="matrices_to_flow",
                 point=[
                     "左：Q（突變機率，列和 = 1）與 M = m·Q（期望子代，列和 = m）",
                     "B 無治療：箭頭全部往右上，S 與 R 一起長",
@@ -464,7 +476,7 @@ SEGMENTS = [
                 numbers=["ΔS = −0.8573 S", "ΔR = 0.0001428 S + 0.3709 R"],
             ),
             dict(
-                fig="p05",
+                fig="phase_field_burden",
                 point=[
                     "上排 = 理論（藍）、下排 = 實際平均一步（橘，顏色 = 轉移數）；左無治療、右持續治療",
                     (
@@ -527,7 +539,7 @@ SEGMENTS = [
                 ],
             ),
             dict(
-                fig="p06",
+                fig="phase_field_fitness",
                 point=[
                     "x 換成無治療平均適應度 w̄_off（oncogene 累積 → 往右），y 同相圖 05",
                     "左（無治療）：箭頭水平往右 = 演化；ρ 停在約 1%",
@@ -580,7 +592,7 @@ SEGMENTS = [
                 ],
             ),
             dict(
-                fig="09",
+                fig="relapse_prediction",
                 point=[
                     "A：灰點 = 只用抗藥細胞數的基準預測；紫點 = 依基因型組成的預測，貼近對角線",
                     "B：R₀ 越多 → 越早復發（Spearman −0.70）",
@@ -623,7 +635,7 @@ SEGMENTS = [
                 ],
             ),
             dict(
-                fig="08",
+                fig="goldie_coldman",
                 point=[
                     (
                         "A：x = 開始治療時的大小（對數），y = 治癒機率；黑色階梯 ="
@@ -687,7 +699,7 @@ SEGMENTS = [
                 numbers=[],
             ),
             dict(
-                fig="10",
+                fig="sensitivity",
                 optional=True,
                 point=[
                     "A：x = 抗藥細胞殺傷率 k_R，y = 突變率 μ；顏色 = 治癒機率",
@@ -725,7 +737,7 @@ SEGMENTS = [
         goal="每張圖只講一個結論與一個機制；保留對照組，避免過度解讀。",
         beats=[
             dict(
-                fig="03",
+                fig="one_hit_vs_two_hit",
                 point=[
                     "A：三條生長曲線幾乎重疊，one-hit（橘）最上面",
                     "B：TSG 達標比例 one-hit 第 18 代 27.9%；two-hit 0.07%，與對照差不多",
@@ -782,7 +794,7 @@ SEGMENTS = [
                 numbers=[],
             ),
             dict(
-                fig="02",
+                fig="death_rate",
                 point=[
                     "A：同樣 5,000 細胞樣本，死亡率 0.20 → 0.45，Shannon H 1.06 → 2.83",
                     "B：長到 5,000 細胞的代數 8 → 14 → 26.5",
@@ -824,7 +836,7 @@ SEGMENTS = [
         goal="說明一個反直覺結果：間歇治療只有在敏感細胞能壓制抗藥細胞時才有用。",
         beats=[
             dict(
-                fig="11",
+                fig="adaptive_therapy",
                 point=[
                     "A：持續治療；B：間歇治療（陰影 = 用藥中），敏感細胞被保留下來",
                     "C：四種設定的惡化時間；右側比值 ×0.85 → ×1.14",
@@ -1032,7 +1044,13 @@ ARCH_CLASSES = [
         name="main",
         file="main.py",
         role="唯一的執行入口；本身不含模型邏輯，只負責依序呼叫各步驟。",
-        attrs=[("STEPS", "results, model, phase, genotype, therapy")],
+        attrs=[
+            ("STEPS", "results, model, phase, genotype, therapy"),
+            (
+                "ANALYSES",
+                "goldie_coldman, relapse_prediction, sensitivity, adaptive（--analyses 可只跑部分）",
+            ),
+        ],
         methods=[
             (
                 "main() / parse_args()",

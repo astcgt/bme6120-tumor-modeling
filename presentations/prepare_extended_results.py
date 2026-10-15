@@ -142,10 +142,10 @@ def main():
                     "R0_median",
                 )
             }
-            for r in therapy["08_goldie_coldman"]["summary"]
+            for r in therapy["goldie_coldman"]["summary"]
         ],
-        "half_cure_size": therapy["08_goldie_coldman"]["theory_half_cure_size"],
-        "relapse": therapy["09_relapse_time"],
+        "half_cure_size": therapy["goldie_coldman"]["theory_half_cure_size"],
+        "relapse": therapy["relapse_prediction"],
         "relapse_rows": [
             {
                 k: float(r[k])
@@ -159,8 +159,8 @@ def main():
             }
             for r in read("therapy_analysis/relapse_time_prediction.csv")
         ],
-        "sensitivity": therapy["10_parameter_sensitivity"],
-        "adaptive": therapy["11_adaptive_therapy"]["summary"],
+        "sensitivity": therapy["sensitivity"],
+        "adaptive": therapy["adaptive"]["summary"],
     }
     data.pop("gene_heatmaps", None)
     data.pop("availability", None)

@@ -1,4 +1,4 @@
-"""相圖：01 實際軌跡與期望下一步、05／06 理論 vs 經驗相場。
+"""相圖：實際軌跡與期望下一步（phase_portrait）、理論 vs 經驗相場（plot_pair）。
 
 期望步伐與箭頭資料由 analysis.py、experiments.py 計算；這裡只負責畫圖與存檔。
 """
@@ -16,7 +16,7 @@ from analysis import MIN_TRANSITIONS, MIN_TRIALS, event_generations, fitness, lo
 INK, BLUE, ORANGE, RED, GRAY = "#173042", "#236B8E", "#BC7844", "#A74F3D", "#687783"
 
 
-# ---------------------------------------------------------------- 相圖 01 -----------
+# ---------------------------------------------------------------- 實際軌跡相圖 ------
 def phase_coordinates(states, composition=False):
     total = np.array([r["total"] for r in states], dtype=float)
     if composition:
@@ -67,7 +67,7 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
     """單一相平面：30 條實際軌跡、突出案例，以及由完整基因型狀態算出的期望下一代箭頭。
 
     取代舊的 01（軌跡兩格）與 02（條件期望）：同一試驗、同一座標不再畫兩次。
-    負荷 × 抗藥比例的座標改看相圖 05（logit 軸）；推導公式在圖 07。
+    負荷 × 抗藥比例的座標改看 phase_field_burden_logit（logit 軸）；推導公式在 matrices_to_flow。
     """
     fig = plt.figure(figsize=(15.5, 10.2))
     ax = fig.add_axes((0.07, 0.2, 0.5, 0.58))
@@ -250,7 +250,7 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
         0.07,
         0.115,
         r"箭頭端點 $=\phi(\mathrm{E}[S_{t+1}\mid s],\mathrm{E}[R_{t+1}\mid s])$，"
-        r"$\phi(S,R)=(\log_{10}(S+1),\log_{10}(R+1))$；公式推導見圖 07。",
+        r"$\phi(S,R)=(\log_{10}(S+1),\log_{10}(R+1))$；公式推導見矩陣流向圖（matrices_to_flow）。",
         fontsize=12.5,
     )
     fig.text(
@@ -278,7 +278,7 @@ def save_phase_figure(fig, destination, name):
     plt.close(fig)
 
 
-# ---------------------------------------------------------------- 相圖 05／06 -------
+# ---------------------------------------------------------------- 理論 vs 經驗相場 --
 THEORY, EMPIRICAL_CMAP, TRACE = "#2a78d6", "Oranges", "#C3CCD2"
 RHO_TICKS = (0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999, 0.99999, 0.999999)
 TEXT = {

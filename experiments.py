@@ -619,7 +619,7 @@ def vector_field_record(
 
 
 def phase_comparison_data(config: Config, results: list[Result]) -> dict:
-    """相圖 05／06：兩組座標各自的理論箭頭與經驗平均箭頭。"""
+    """理論 vs 經驗相場：兩組座標各自的理論箭頭與經驗平均箭頭。"""
     rows = trial_feature_rows(config, results)
     built = {pair: build_fields(rows, config, pair) for pair in ("logN", "fitness")}
     all_fields, record = [], {}
@@ -719,7 +719,7 @@ def run_many(jobs, workers):
 def goldie_coldman_experiment(
     config: Config, trials: int, seed: int, workers: int
 ) -> dict:
-    """08：治療起始負荷 100–5,000 細胞，每個大小 trials 次；與分枝過程理論比較。"""
+    """Goldie–Coldman：治療起始負荷 100–5,000 細胞，每個大小 trials 次；與分枝過程理論比較。"""
     sizes = [100, 150, 200, 300, 500, 700, 1000, 1500, 2000, 3000, 5000]
     jobs, keys = [], []
     for i, size in enumerate(sizes):
@@ -777,7 +777,7 @@ def goldie_coldman_experiment(
 
 
 def relapse_prediction(config: Config, results: list[Result]) -> dict:
-    """09：用治療開始那一代的抗藥基因型組成預測每次試驗的復發延遲。"""
+    """復發預測：用治療開始那一代的抗藥基因型組成預測每次試驗的復發延遲。"""
     w_off = fitness(0, config, False)
     m_r = fitness(1 << config.resistance_gene, config, True)
     m_s = fitness(0, config, True)
@@ -860,7 +860,7 @@ def relapse_prediction(config: Config, results: list[Result]) -> dict:
 def sensitivity_experiment(
     config: Config, trials: int, seed: int, workers: int
 ) -> dict:
-    """10：抗藥細胞殺傷率 k_R × 突變率 μ，每格 trials 次；分類為治癒、復發或持續存活。"""
+    """參數敏感度：抗藥細胞殺傷率 k_R × 突變率 μ，每格 trials 次；分類為治癒、復發或持續存活。"""
     kills = [0.0, 0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6]
     mus = [1e-4, 3e-4, 1e-3, 3e-3]
     jobs, keys = [], []
@@ -966,7 +966,7 @@ def time_to_progression(record, start_size, factor=1.2):
 
 
 def adaptive_experiment(config: Config, trials: int, seed: int, workers: int) -> dict:
-    """11：間歇（適應性）與持續治療，在有／無承載量競爭與抗藥代價下的惡化時間。"""
+    """適應性治療：間歇（適應性）與持續治療，在有／無承載量競爭與抗藥代價下的惡化時間。"""
     K = int(1.5 * config.therapy_start_size)
     settings = [
         ("No competition", None, 0.0),

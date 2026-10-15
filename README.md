@@ -14,10 +14,10 @@ Use the project virtual environment directly; activation is unnecessary:
 .venv/bin/python main.py                                   # every step (about 3 minutes on 12 cores)
 .venv/bin/python main.py --only results                    # main and control experiments only
 .venv/bin/python main.py --only results --suppressor-hits 1
-.venv/bin/python main.py --only therapy --analyses 08 09   # part of the therapy analyses
+.venv/bin/python main.py --only therapy --analyses goldie_coldman relapse_prediction   # part of the therapy analyses
 ```
 
-Steps run in order: `results` (figures 01–03), `model` (06, 07, A1), `phase` (phase portraits), `genotype` (Muller plot and gene frequencies), `therapy` (08–11). Later steps read the CSVs written by `results`, so run `results` first on a fresh checkout. Outputs always go to `outputs/`; `--seed` and `--replicates` change the main and control experiments.
+Steps run in order: `results` (tumor dashboard, death rate, one-hit vs two-hit), `model` (single-cell rules, matrices to flow, appendix), `phase` (phase portraits), `genotype` (Muller plot and gene frequencies), `therapy` (`goldie_coldman`, `relapse_prediction`, `sensitivity`, `adaptive`). Later steps read the CSVs written by `results`, so run `results` first on a fresh checkout. Outputs always go to `outputs/`; `--seed` and `--replicates` change the main and control experiments.
 
 ### Code structure
 
@@ -57,9 +57,9 @@ The `outputs/` directory contains:
 
 | File | Purpose |
 | --- | --- |
-| `01_tumor_dashboard.png / .svg` | Ensemble burden, effective genotypes and resistant fraction under therapy; resistance present at therapy start is annotated |
-| `02_death_rate_heterogeneity.png / .svg` | Shannon diversity of 5,000-cell samples and generations needed to reach 5,000 cells at three death rates |
-| `03_one_hit_vs_two_hit.png / .svg` | No-TSG-advantage control, one-hit and two-hit: linear growth, TSG-loss fraction, and trial burdens at generation 18 |
+| `tumor_dashboard.png / .svg` | Ensemble burden, effective genotypes and resistant fraction under therapy; resistance present at therapy start is annotated |
+| `death_rate_heterogeneity.png / .svg` | Shannon diversity of 5,000-cell samples and generations needed to reach 5,000 cells at three death rates |
+| `one_hit_vs_two_hit.png / .svg` | No-TSG-advantage control, one-hit and two-hit: linear growth, TSG-loss fraction, and trial burdens at generation 18 |
 | `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | Per-generation comparison data and endpoint medians |
 | `trajectory.csv` | Ensemble statistics per generation: n, mean, sample SD, median, p10, p90 |
 | `therapy_trajectories.csv` | Individual treatment trajectories used in the ensemble |
@@ -69,17 +69,17 @@ The `outputs/` directory contains:
 
 PNG figures use 240 dpi; SVG figures scale without loss of quality. Growth curves use symlog to display zero, with an approximately logarithmic scale above 1. `suppressor_fraction` records cells meeting the selected TSG threshold; `suppressor_biallelic_fraction` records cells with both alleles lost at at least one TSG. `driver_fraction` continues to refer only to the oncogene threshold.
 
-Growth comparisons keep oncogene effects, mutation rates, and loci identical, varying only the TSG advantage: disabled (control), one-hit, or two-hit; all three appear in figure 03. By default, growth comparisons show the median and 10th–90th percentile interval across 30 trials. This describes variation across trials, not a confidence interval. Death-rate comparisons sample 5,000 cells without replacement from the first generation to cross 5,000 cells and calculate Shannon H; horizontal bars show medians. These are equal-sized **samples**, conditional on reaching the threshold, rather than whole tumors at an exactly matched size. Figure 02 panel B plots the generation at which each trial first reached 5,000 cells (medians 8 / 14 / 26.5 at death 0.20 / 0.35 / 0.45): more generations mean more divisions and more accumulated mutations at the same size. Trials that do not reach the threshold are excluded but retained in the CSV; the plot reports how many trials reached it.
+Growth comparisons keep oncogene effects, mutation rates, and loci identical, varying only the TSG advantage: disabled (control), one-hit, or two-hit; all three appear in `one_hit_vs_two_hit`. By default, growth comparisons show the median and 10th–90th percentile interval across 30 trials. This describes variation across trials, not a confidence interval. Death-rate comparisons sample 5,000 cells without replacement from the first generation to cross 5,000 cells and calculate Shannon H; horizontal bars show medians. These are equal-sized **samples**, conditional on reaching the threshold, rather than whole tumors at an exactly matched size. Panel B of `death_rate_heterogeneity` plots the generation at which each trial first reached 5,000 cells (medians 8 / 14 / 26.5 at death 0.20 / 0.35 / 0.45): more generations mean more divisions and more accumulated mutations at the same size. Trials that do not reach the threshold are excluded but retained in the CSV; the plot reports how many trials reached it.
 
 ### Direct one-hit versus two-hit comparison
 
-![One-hit versus two-hit comparison](outputs/03_one_hit_vs_two_hit.png)
+![One-hit versus two-hit comparison](outputs/one_hit_vs_two_hit.png)
 
 The figure shows the same 30 trials per scenario from the growth experiment, including the no-TSG-advantage control (dotted gray; TSG loss is counted with the two-hit rule but gives no advantage); no therapy is applied. At generation 18 the median burdens are 76,446 (control), 94,618 (one-hit) and 73,879 (two-hit), and 0.05% / 27.9% / 0.07% of cells meet the TSG threshold. Panel A uses a linear cell-count axis, panel B shows the percentage meeting each scenario's TSG-loss threshold (symlog, linear below 0.01%), and panel C shows every trial at generation 18 with median bars. The threshold differs by definition; panel B measures the resulting phenotype, not an identical mutation state in both groups. Bands show trial variation, not confidence intervals. Overlap and stochastic reversals are retained rather than selecting favorable seeds.
 
 ### Replication and uncertainty
 
-`--replicates` controls **all stochastic experiment groups**, including the main treatment dashboard; default 30. For example, `.venv/bin/python main.py --only results --replicates 100`. The main dashboard now uses ensemble statistics instead of one trajectory. Population counts and diversity include extinct trials as zero; after a computational cell limit, later values are missing, never padded with the last population. The footnote states the last generation at which every trial is observed (generation 31 by default). Resistant proportions condition on observed living tumors; empty populations have no defined fraction. Per-gene frequencies are shown in `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`.
+`--replicates` controls **all stochastic experiment groups**, including the main treatment dashboard; default 30. For example, `.venv/bin/python main.py --only results --replicates 100`. The main dashboard now uses ensemble statistics instead of one trajectory. Population counts and diversity include extinct trials as zero; after a computational cell limit, later values are missing, never padded with the last population. The footnote states the last generation at which every trial is observed (generation 31 by default). Resistant proportions condition on observed living tumors; empty populations have no defined fraction. Per-gene frequencies are shown in `outputs/genotype_evolution/gene_mutation_frequencies_{zh,en}`.
 
 Trials are aligned by absolute generation; treatment starts separately at each trial's size threshold, so the dashboard shades the range of start generations instead of a single line, and panel C annotates the median resistant fraction at each trial's own therapy start. `therapy_replicates.csv` retains each start time and outcome. `trajectory.csv` is now an ensemble summary; `therapy_trajectories.csv` stores individual trajectories. The standalone `plot_dashboard(result, ...)` remains available for explicitly requested single-trial exploration.
 
@@ -87,29 +87,29 @@ Growth comparisons show medians and 10–90% trial intervals; endpoint and diver
 
 ### Phase portraits
 
-`.venv/bin/python main.py --only phase` creates one 300 dpi PNG/vector SVG figure, `outputs/phase_plots/01_phase_portrait`, without modifying the presentation. It shows sensitive vs resistant counts in `log10(count+1)` coordinates. Gray curves retain every observed trial; one actual trial is highlighted, selected first by proximity to the median relapse generation, then to the median nadir, and colored by pre-therapy, therapy-to-relapse and post-relapse. Treatment onset, minimum burden and relapse are marked. Black arrows end at the one-generation conditional mean calculated from the highlighted trial's full genotype snapshot, including the exact S-to-R mutation contribution; the distance from each arrowhead to the next observed point is that generation's stochastic deviation. A side column lists expected and observed next states at therapy start and at the nadir. The reproduced trial is checked against its recorded CSV counts. Arrows end at the log-transformed raw-count expectation, which differs from the expectation of log-transformed counts; the formulas are in figure 07.
+`.venv/bin/python main.py --only phase` creates one 300 dpi PNG/vector SVG figure, `outputs/phase_plots/phase_portrait`, without modifying the presentation. It shows sensitive vs resistant counts in `log10(count+1)` coordinates. Gray curves retain every observed trial; one actual trial is highlighted, selected first by proximity to the median relapse generation, then to the median nadir, and colored by pre-therapy, therapy-to-relapse and post-relapse. Treatment onset, minimum burden and relapse are marked. Black arrows end at the one-generation conditional mean calculated from the highlighted trial's full genotype snapshot, including the exact S-to-R mutation contribution; the distance from each arrowhead to the next observed point is that generation's stochastic deviation. A side column lists expected and observed next states at therapy start and at the nadir. The reproduced trial is checked against its recorded CSV counts. Arrows end at the log-transformed raw-count expectation, which differs from the expectation of log-transformed counts; the formulas are in `matrices_to_flow`.
 
-This is a projection of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver or TSG composition. Computational endpoints are not equilibria. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `.venv/bin/python main.py --only phase --replicate 0` to highlight another actual trial (this overwrites the phase-portrait files). Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths. The burden × resistant-fraction view is in `05_phase_field_burden_logit` below, which uses a logit axis instead of a linear percentage.
+This is a projection of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver or TSG composition. Computational endpoints are not equilibria. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `.venv/bin/python main.py --only phase --replicate 0` to highlight another actual trial (this overwrites the phase-portrait files). Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths. The burden × resistant-fraction view is in `phase_field_burden_logit` below, which uses a logit axis instead of a linear percentage.
 
-The same step computes the grid vector-field data whose formulas figure 07 uses: `phase_vector_grid.csv` and `phase_vector_assumptions.json`. Each grid point specifies a full parent population with genotype 0 for S and only the resistance bit for R, and the one-step projected mean is checked against the full model at all 1,604 points (linear and log grids). Other offspring mutations remain enabled and can move later states off this slice. Treatment is fixed within each panel rather than switched at the size threshold. The former standalone linear and log vector-field figures were merged into figure 07 or removed.
+The same step computes the grid vector-field data whose formulas `matrices_to_flow` uses: `phase_vector_grid.csv` and `phase_vector_assumptions.json`. Each grid point specifies a full parent population with genotype 0 for S and only the resistance bit for R, and the one-step projected mean is checked against the full model at all 1,604 points (linear and log grids). Other offspring mutations remain enabled and can move later states off this slice. Treatment is fixed within each panel rather than switched at the size threshold. The former standalone linear and log vector-field figures were merged into `matrices_to_flow` or removed.
 
 ### Theory versus empirical phase fields
 
 The phase step also draws two coordinate pairs, each shown as theory versus empirical drift with therapy off and on:
 
-- `05_phase_field_burden_logit_{zh,en}`: x = log10(N+1), y = resistant fraction on an empirical-logit axis, log10((R+½)/(S+½)), labeled in percent. It stays finite when ρ is 0 or 1, and the dashed and dotted lines mark S = 0 and R = 0.
-- `06_phase_field_fitness_logit_{zh,en}`: x = mean no-therapy fitness w̄_off, y = the same logit axis. It separates evolution (oncogene accumulation) from selection (resistance).
+- `phase_field_burden_logit_{zh,en}`: x = log10(N+1), y = resistant fraction on an empirical-logit axis, log10((R+½)/(S+½)), labeled in percent. It stays finite when ρ is 0 or 1, and the dashed and dotted lines mark S = 0 and R = 0.
+- `phase_field_fitness_logit_{zh,en}`: x = mean no-therapy fitness w̄_off, y = the same logit axis. It separates evolution (oncogene accumulation) from selection (resistance).
 
 Theory arrows use a fixed hidden-genotype slice: sensitive cells are genotype 0 and resistant cells carry only the resistance bit. For the fitness plane, the oncogene fraction is derived from w̄, independent of resistance, at N equal to the therapy threshold. Arrows end at the transformed one-step raw-count expectation, which is checked against `projected_offspring_mean`. Empirical arrows average the observed one-step displacement of all transitions starting in a cell, drawn only when a cell has ≥5 transitions from ≥2 trials; color shows the transition count. Within each therapy column, theory and empirical arrows share one length scale with separate x and y keys. Under therapy, theoretical logit ρ rises about 0.98 decades per generation: ρ → 1 is a stable compositional direction, but log N has no fixed point. Differences between rows show the effect of projected-out degrees of freedom and stochasticity. `phase_field_comparison.csv/.json` record every arrow, bin edge and assumption.
 
 ### Therapy analyses
 
-`.venv/bin/python main.py --only therapy` (about 2 minutes on 12 cores; `--analyses 08 09` runs a subset) writes four figures with CSV/JSON data to `outputs/therapy_analysis/`. Analysis 09 reuses the 30 recorded main-experiment trials; the others use separate seed blocks. All parameters are teaching assumptions.
+`.venv/bin/python main.py --only therapy` (about 2 minutes on 12 cores; `--analyses goldie_coldman relapse_prediction` runs a subset) writes four figures with CSV/JSON data to `outputs/therapy_analysis/`. `relapse_prediction` reuses the 30 recorded main-experiment trials; the others use separate seed blocks. All parameters are teaching assumptions.
 
-- `08_goldie_coldman`: cure probability versus burden at the start of continuous therapy (100–5,000 cells, 200 trials each, Wilson 95% intervals), against a branching-process theory with no fitted parameters. Resistant mutant clones arise as a Poisson process; a clone born s generations before therapy survives with 1 − f^(s)(q_on), where f is the untreated offspring generating function and q_on = 0.479 is the extinction probability of one resistant lineage under therapy. Cure ≈ exp(−Λ). Theory and simulation agree; 50% cure falls near 416 cells (99.5% at 100, 10% at 1,000, 0% at 5,000). Panel B shows the resistant cells already present at therapy start, whose mean exceeds the median (Luria–Delbrück jackpots).
-- `09_relapse_time_prediction`: each main trial's relapse delay predicted from its genotypes at therapy start. A baseline prediction ln(N/R₀)/ln 1.371 is off by 2.0 generations on average; letting each resistant genotype grow at its own on-therapy mean (oncogene cells ×1.62) predicts the exact generation in 24/30 trials (mean error 0.2). Relapse is earlier with more resistant cells (Spearman −0.70) and with a larger oncogene share among them (−0.51). Panel C shows expected on-therapy growth versus resistant fraction ρ; it crosses zero at ρ* = (1 − m_S)/(m_R − m_S) ≈ 70%, the nadir.
-- `10_parameter_sensitivity`: cure probability and median relapse delay over resistant-cell kill k_R (0–0.6) × mutation rate μ (10⁻⁴–3×10⁻³), 30 trials per cell. Plain resistant cells stop growing at k_R = 0.30, but cure requires about 0.41, where oncogene-carrying resistant cells also stop growing; higher μ makes such cells more likely to pre-exist.
-- `11_adaptive_therapy`: intermittent (pause at 50% of the treatment-start burden, resume at 20,000) versus continuous therapy, 30 paired trials per setting. Progression = burden ≥ 24,000 while on drug, after first dropping below 20,000; the on-drug condition prevents a single off-drug growth step from counting as treatment failure. Without competition adaptive therapy is worse (median ratio ×0.85; ×0.91 with a resistance cost). With carrying-capacity competition (K = 30,000) it delays progression ×1.14 (14 → 16 generations, longer in 30/30 pairs; 17.5 → 20 with cost) while using drug about half the time.
+- `goldie_coldman`: cure probability versus burden at the start of continuous therapy (100–5,000 cells, 200 trials each, Wilson 95% intervals), against a branching-process theory with no fitted parameters. Resistant mutant clones arise as a Poisson process; a clone born s generations before therapy survives with 1 − f^(s)(q_on), where f is the untreated offspring generating function and q_on = 0.479 is the extinction probability of one resistant lineage under therapy. Cure ≈ exp(−Λ). Theory and simulation agree; 50% cure falls near 416 cells (99.5% at 100, 10% at 1,000, 0% at 5,000). Panel B shows the resistant cells already present at therapy start, whose mean exceeds the median (Luria–Delbrück jackpots).
+- `relapse_time_prediction`: each main trial's relapse delay predicted from its genotypes at therapy start. A baseline prediction ln(N/R₀)/ln 1.371 is off by 2.0 generations on average; letting each resistant genotype grow at its own on-therapy mean (oncogene cells ×1.62) predicts the exact generation in 24/30 trials (mean error 0.2). Relapse is earlier with more resistant cells (Spearman −0.70) and with a larger oncogene share among them (−0.51). Panel C shows expected on-therapy growth versus resistant fraction ρ; it crosses zero at ρ* = (1 − m_S)/(m_R − m_S) ≈ 70%, the nadir.
+- `parameter_sensitivity`: cure probability and median relapse delay over resistant-cell kill k_R (0–0.6) × mutation rate μ (10⁻⁴–3×10⁻³), 30 trials per cell. Plain resistant cells stop growing at k_R = 0.30, but cure requires about 0.41, where oncogene-carrying resistant cells also stop growing; higher μ makes such cells more likely to pre-exist.
+- `adaptive_therapy`: intermittent (pause at 50% of the treatment-start burden, resume at 20,000) versus continuous therapy, 30 paired trials per setting. Progression = burden ≥ 24,000 while on drug, after first dropping below 20,000; the on-drug condition prevents a single off-drug growth step from counting as treatment failure. Without competition adaptive therapy is worse (median ratio ×0.85; ×0.91 with a resistance cost). With carrying-capacity competition (K = 30,000) it delays progression ×1.14 (14 → 16 generations, longer in 30/30 pairs; 17.5 → 20 with cost) while using drug about half the time.
 
 The adaptive analysis uses three `Config` options that are off by default and leave all other outputs unchanged: `therapy_mode="adaptive"` with `adaptive_pause_fraction`, `resistance_cost` (extra natural death for resistant cells), and `carrying_capacity` (extra death 0.21·N/K per cell, so a mutation-free cell has mean offspring 1 at N = K). The PCA coordinate analysis used in an earlier version was removed because its leading component only tracked time and size.
 
@@ -117,8 +117,8 @@ The adaptive analysis uses three `Config` options that are off by default and le
 
 `.venv/bin/python main.py --only genotype` writes to `outputs/genotype_evolution/`:
 
-- `01_muller_top_genotypes_{zh,en}`: a Muller plot of the representative trial (selected by the same rule as the phase portraits) beneath its burden curve, plus six other trials spanning early to late relapse. For each trial, the 10 genotypes with the highest peak frequency are shown. Each sits inside the largest shown genotype whose mutations are a subset of its own, and unshown cells merge into their nearest shown ancestor, so fractions always sum to 1. This is genotype containment, not a reconstructed lineage. Hue encodes functional class and lightness separates genotypes within a class. The main panel lists every genotype by name.
-- `02_gene_mutation_frequencies_{zh,en}`: mutant-cell fractions per gene across all 30 trials, aligned at therapy start, as median and 10th–90th percentile bands. Panels cover oncogenes, TSGs (any allele and biallelic loss), resistance, and the passenger mean as a neutral control. Only relative generations observed in every trial are shown, on a symlog y-axis.
+- `muller_top_genotypes_{zh,en}`: a Muller plot of the representative trial (selected by the same rule as the phase portraits) beneath its burden curve, plus six other trials spanning early to late relapse. For each trial, the 10 genotypes with the highest peak frequency are shown. Each sits inside the largest shown genotype whose mutations are a subset of its own, and unshown cells merge into their nearest shown ancestor, so fractions always sum to 1. This is genotype containment, not a reconstructed lineage. Hue encodes functional class and lightness separates genotypes within a class. The main panel lists every genotype by name.
+- `gene_mutation_frequencies_{zh,en}`: mutant-cell fractions per gene across all 30 trials, aligned at therapy start, as median and 10th–90th percentile bands. Panels cover oncogenes, TSGs (any allele and biallelic loss), resistance, and the passenger mean as a neutral control. Only relative generations observed in every trial are shown, on a symlog y-axis.
 
 `muller_representative.csv`, `gene_frequency_summary.csv` and `genotype_evolution.json` hold the plotted values.
 
@@ -126,9 +126,9 @@ The adaptive analysis uses three `Config` options that are off by default and le
 
 `.venv/bin/python main.py --only model` regenerates the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`:
 
-- `06_single_cell_rules`: the offspring distribution of a mutation-free cell, the same rule as an exact five-state matrix (mutations and therapy disabled; the overflow state is imposed bookkeeping absorption, not biological saturation), and a table of d, q, offspring probabilities, mean offspring m with and without therapy, and the probability that one cell's lineage eventually dies out (smallest root of s = f(s)). A baseline resistant lineage survives therapy with probability 0.52; sensitive lineages under therapy always die out.
-- `07_matrices_to_flow`: the reduced sensitive/resistant mutation matrix Q and expected-offspring matrices M, the conditional-mean formulas E[S′ | s] and E[R′ | s], and beside them the linear S–R vector fields with therapy off and on (13×13 grid up to 30,000 cells, shared length scale). The 30 main-experiment trajectories are overlaid: the pre-therapy segment on the untreated panel and the segment from therapy start on the treated panel, with the representative trial highlighted. The actual paths follow the arrows even though the arrows use baseline cells only.
-- `A1_markov_kernel_and_controller` (appendix): the full genotype-count Markov kernel written with probability-generating functions, and the execution state machine.
+- `single_cell_rules`: the offspring distribution of a mutation-free cell, the same rule as an exact five-state matrix (mutations and therapy disabled; the overflow state is imposed bookkeeping absorption, not biological saturation), and a table of d, q, offspring probabilities, mean offspring m with and without therapy, and the probability that one cell's lineage eventually dies out (smallest root of s = f(s)). A baseline resistant lineage survives therapy with probability 0.52; sensitive lineages under therapy always die out.
+- `matrices_to_flow`: the reduced sensitive/resistant mutation matrix Q and expected-offspring matrices M, the conditional-mean formulas E[S′ | s] and E[R′ | s], and beside them the linear S–R vector fields with therapy off and on (13×13 grid up to 30,000 cells, shared length scale). The 30 main-experiment trajectories are overlaid: the pre-therapy segment on the untreated panel and the segment from therapy start on the treated panel, with the representative trial highlighted. The actual paths follow the arrows even though the arrows use baseline cells only.
+- `markov_kernel_and_controller` (appendix): the full genotype-count Markov kernel written with probability-generating functions, and the execution state machine.
 
 P and Q are row-stochastic; M contains offspring means and is not a probability transition matrix. Rows are current/parent states and columns are next/offspring states. CSV matrices and a JSON assumptions record are exported alongside the figures; analytic checks run during generation.
 
@@ -196,10 +196,10 @@ Discussion topics include how drivers change expected offspring per generation; 
 .venv/bin/python main.py                                   # 全部步驟（12 核心約 3 分鐘）
 .venv/bin/python main.py --only results                    # 只跑主實驗與對照實驗
 .venv/bin/python main.py --only results --suppressor-hits 1
-.venv/bin/python main.py --only therapy --analyses 08 09   # 只跑部分治療分析
+.venv/bin/python main.py --only therapy --analyses goldie_coldman relapse_prediction   # 只跑部分治療分析
 ```
 
-步驟依序為：`results`（圖 01–03）、`model`（06、07、A1）、`phase`（相圖）、`genotype`（Muller 圖與基因頻率）、`therapy`（08–11）。後面的步驟讀取 `results` 寫出的 CSV，所以剛取得專案時要先跑 `results`。輸出一律寫到 `outputs/`；`--seed` 與 `--replicates` 改變主實驗與對照實驗。
+步驟依序為：`results`（腫瘤總覽、死亡率、one-hit vs two-hit）、`model`（單細胞規則、矩陣與流向、附錄）、`phase`（相圖）、`genotype`（Muller 圖與基因頻率）、`therapy`（`goldie_coldman`、`relapse_prediction`、`sensitivity`、`adaptive`）。後面的步驟讀取 `results` 寫出的 CSV，所以剛取得專案時要先跑 `results`。輸出一律寫到 `outputs/`；`--seed` 與 `--replicates` 改變主實驗與對照實驗。
 
 ### 程式架構
 
@@ -239,9 +239,9 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 
 | 檔案 | 用途 |
 | --- | --- |
-| `01_tumor_dashboard.png / .svg` | 治療下多次試驗的負荷、有效基因型數與抗藥比例；標示治療開始時已存在的抗藥細胞 |
-| `02_death_rate_heterogeneity.png / .svg` | 三種死亡率下 5,000 細胞樣本的 Shannon 多樣性，以及長到 5,000 細胞所需代數 |
-| `03_one_hit_vs_two_hit.png / .svg` | 無 TSG 優勢對照組、one-hit、two-hit：線性生長、TSG 達標比例與第 18 代各次試驗負荷 |
+| `tumor_dashboard.png / .svg` | 治療下多次試驗的負荷、有效基因型數與抗藥比例；標示治療開始時已存在的抗藥細胞 |
+| `death_rate_heterogeneity.png / .svg` | 三種死亡率下 5,000 細胞樣本的 Shannon 多樣性，以及長到 5,000 細胞所需代數 |
+| `one_hit_vs_two_hit.png / .svg` | 無 TSG 優勢對照組、one-hit、two-hit：線性生長、TSG 達標比例與第 18 代各次試驗負荷 |
 | `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | 逐代比較資料與終點中位數 |
 | `trajectory.csv` | 多次試驗逐代統計：n、平均、樣本 SD、中位數、p10、p90 |
 | `therapy_trajectories.csv` | 彙整圖使用的各次治療試驗逐代資料 |
@@ -251,17 +251,17 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 
 PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示，1 以上近似對數尺度。`suppressor_fraction` 記錄符合所選 TSG 門檻的細胞比例；`suppressor_biallelic_fraction` 記錄至少一個 TSG 雙等位基因失活的細胞比例。`driver_fraction` 仍只表示達到 oncogene 門檻的比例。
 
-生長比較固定 oncogene 效果、突變率與基因座，只改變 TSG 優勢條件：取消優勢（對照組）、一擊或兩擊，三者都畫在圖 03。預設展示 30 次試驗的中位數及 10–90 百分位區間，這是試驗間變異，並不是信賴區間。死亡率比較使用各試驗首次跨過 5,000 細胞的世代，無放回取樣 5,000 細胞計算 Shannon H；圖上的橫線是中位數。此結果是在達門檻條件下的等大小**樣本**比較，並非精確命中該大小的完整腫瘤。圖 02 的 B 面板畫出每次試驗首次達到 5,000 細胞的世代（死亡率 0.20／0.35／0.45 時中位數 8／14／26.5 代）：代數越多，分裂越多，同樣大小時累積的突變也越多。未達門檻者不納入，但會保留於 CSV 並顯示成功試驗數。
+生長比較固定 oncogene 效果、突變率與基因座，只改變 TSG 優勢條件：取消優勢（對照組）、一擊或兩擊，三者都畫在 `one_hit_vs_two_hit`。預設展示 30 次試驗的中位數及 10–90 百分位區間，這是試驗間變異，並不是信賴區間。死亡率比較使用各試驗首次跨過 5,000 細胞的世代，無放回取樣 5,000 細胞計算 Shannon H；圖上的橫線是中位數。此結果是在達門檻條件下的等大小**樣本**比較，並非精確命中該大小的完整腫瘤。`death_rate_heterogeneity` 的 B 面板畫出每次試驗首次達到 5,000 細胞的世代（死亡率 0.20／0.35／0.45 時中位數 8／14／26.5 代）：代數越多，分裂越多，同樣大小時累積的突變也越多。未達門檻者不納入，但會保留於 CSV 並顯示成功試驗數。
 
 ### One-hit 與 two-hit 直接比較
 
-![One-hit 與 two-hit 比較](outputs/03_one_hit_vs_two_hit.png)
+![One-hit 與 two-hit 比較](outputs/one_hit_vs_two_hit.png)
 
 此圖呈現生長試驗每種情境的同一批 30 次試驗，並加入無 TSG 優勢的對照組（灰色點線；TSG 失活以 two-hit 規則計數，但沒有生長優勢），不施加治療。第 18 代負荷中位數為 76,446（對照）、94,618（one-hit）、73,879（two-hit），達到 TSG 門檻的細胞分別占 0.05%／27.9%／0.07%。A 面板以線性座標顯示細胞數，B 面板顯示各情境達到 TSG 失活門檻的細胞百分比（symlog，0.01% 以下為線性），C 面板顯示第 18 代每次試驗的負荷與中位數橫線。兩情境的門檻定義不同，B 比較的是功能表型，而非完全相同的突變狀態。陰影表示試驗間變異，不是信賴區間；保留重疊與隨機反轉，不挑選有利種子。
 
 ### 重複試驗與不確定性
 
-`--replicates` 統一控制**所有隨機實驗組**，包含主治療圖，預設 30 次。例如：`.venv/bin/python main.py --only results --replicates 100`。主圖改用多次試驗彙整，不再只展示一條軌跡。細胞數與多樣性將滅絕試驗延續為零；達計算上限後的後續值視為缺失，不使用最後數量補值；註腳寫出所有試驗都有觀察的最後世代（預設第 31 代）。抗藥比例只針對仍存活且有觀察值的腫瘤，空族群不定義比例。逐基因突變頻率見 `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`。
+`--replicates` 統一控制**所有隨機實驗組**，包含主治療圖，預設 30 次。例如：`.venv/bin/python main.py --only results --replicates 100`。主圖改用多次試驗彙整，不再只展示一條軌跡。細胞數與多樣性將滅絕試驗延續為零；達計算上限後的後續值視為缺失，不使用最後數量補值；註腳寫出所有試驗都有觀察的最後世代（預設第 31 代）。抗藥比例只針對仍存活且有觀察值的腫瘤，空族群不定義比例。逐基因突變頻率見 `outputs/genotype_evolution/gene_mutation_frequencies_{zh,en}`。
 
 試驗依絕對世代對齊，治療各自在達到大小門檻後開始，因此主圖以淡色區間標出治療起點的範圍，而不是單一條線；C 面板標出各試驗在自己治療起點的抗藥比例中位數。`therapy_replicates.csv` 保留每次起點與結果。`trajectory.csv` 現為多次試驗摘要，`therapy_trajectories.csv` 保留各次軌跡。仍可自行呼叫 `plot_dashboard(result, ...)` 查看明確指定的單次案例。
 
@@ -269,29 +269,29 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 
 ### 相平面圖
 
-執行 `.venv/bin/python main.py --only phase`，即可在 `outputs/phase_plots/` 生成一張 300 dpi PNG／向量 SVG：`01_phase_portrait`，不修改簡報。圖中以 `log10(count+1)` 座標呈現敏感／抗藥細胞數。灰線保留所有實際觀察軌跡；突出一條實際試驗，先選最接近復發中位代數，再選谷底最接近中位數的案例，並依治療前、治療至復發、復發後上色，標示治療啟動、最低負荷與復發。黑色箭頭的端點是由突出案例完整基因型快照算出的下一代條件期望，包含敏感細胞突變成抗藥細胞的精確貢獻；箭頭頭端到下一個實際點的距離就是該代的隨機偏差。右欄列出治療啟動與谷底時的期望與實際下一代。重現案例會逐代核對記錄的 CSV 計數。箭頭端點是原始計數期望的對數轉換，並非對數計數的期望；公式見圖 07。
+執行 `.venv/bin/python main.py --only phase`，即可在 `outputs/phase_plots/` 生成一張 300 dpi PNG／向量 SVG：`phase_portrait`，不修改簡報。圖中以 `log10(count+1)` 座標呈現敏感／抗藥細胞數。灰線保留所有實際觀察軌跡；突出一條實際試驗，先選最接近復發中位代數，再選谷底最接近中位數的案例，並依治療前、治療至復發、復發後上色，標示治療啟動、最低負荷與復發。黑色箭頭的端點是由突出案例完整基因型快照算出的下一代條件期望，包含敏感細胞突變成抗藥細胞的精確貢獻；箭頭頭端到下一個實際點的距離就是該代的隨機偏差。右欄列出治療啟動與谷底時的期望與實際下一代。重現案例會逐代核對記錄的 CSV 計數。箭頭端點是原始計數期望的對數轉換，並非對數計數的期望；公式見 `matrices_to_flow`。
 
-這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver 或 TSG 組成。計算終點不是平衡點。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可用 `.venv/bin/python main.py --only phase --replicate 0` 突出另一條實際試驗（會覆寫相圖檔案）。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。負荷 × 抗藥比例的視角改看下方的 `05_phase_field_burden_logit`，它用 logit 軸取代線性百分比。
+這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver 或 TSG 組成。計算終點不是平衡點。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可用 `.venv/bin/python main.py --only phase --replicate 0` 突出另一條實際試驗（會覆寫相圖檔案）。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。負荷 × 抗藥比例的視角改看下方的 `phase_field_burden_logit`，它用 logit 軸取代線性百分比。
 
-同一步驟也計算網格向量場資料（圖 07 使用相同公式）：`phase_vector_grid.csv` 與 `phase_vector_assumptions.json`。每個網格點都指定完整父代族群：S 的基因型為 0，R 只有抗藥位元為 1；全部 1,604 點（線性與對數網格）的一步投影期望均與完整模型核對。子代仍可發生其他突變，後續狀態可能離開此截面。治療在每面板固定，不依大小門檻切換。原本獨立的線性與對數向量場圖已併入圖 07 或刪除。
+同一步驟也計算網格向量場資料（`matrices_to_flow` 使用相同公式）：`phase_vector_grid.csv` 與 `phase_vector_assumptions.json`。每個網格點都指定完整父代族群：S 的基因型為 0，R 只有抗藥位元為 1；全部 1,604 點（線性與對數網格）的一步投影期望均與完整模型核對。子代仍可發生其他突變，後續狀態可能離開此截面。治療在每面板固定，不依大小門檻切換。原本獨立的線性與對數向量場圖已併入 `matrices_to_flow` 或刪除。
 
 ### 理論與經驗相場
 
 相圖步驟也畫出兩組座標，每組皆以「理論 vs 經驗」漂移場呈現，並分開治療關閉與持續治療：
 
-- `05_phase_field_burden_logit_{zh,en}`：x = log10(N+1)，y = 以經驗 logit log10((R+½)/(S+½)) 呈現的抗藥比例，刻度標為百分比。ρ 為 0 或 1 時仍有限值，虛線與點線分別標示 S = 0 與 R = 0。
-- `06_phase_field_fitness_logit_{zh,en}`：x = 無治療平均適應度 w̄_off，y 軸同上。這張圖把演化（oncogene 累積）和選擇（抗藥）分開。
+- `phase_field_burden_logit_{zh,en}`：x = log10(N+1)，y = 以經驗 logit log10((R+½)/(S+½)) 呈現的抗藥比例，刻度標為百分比。ρ 為 0 或 1 時仍有限值，虛線與點線分別標示 S = 0 與 R = 0。
+- `phase_field_fitness_logit_{zh,en}`：x = 無治療平均適應度 w̄_off，y 軸同上。這張圖把演化（oncogene 累積）和選擇（抗藥）分開。
 
 理論箭頭使用固定的隱藏基因型截面：敏感細胞為基因型 0，抗藥細胞只帶抗藥位元。適應度平面中，oncogene 比例由 w̄ 換算，與抗藥獨立，N 取治療門檻。箭頭端點是一步原始計數期望經座標轉換後的位置，並與 `projected_offspring_mean` 核對。經驗箭頭是起點落在同一格的所有一步轉移之平均位移，僅在該格有 ≥5 次轉移且來自 ≥2 次試驗時繪製；顏色表示轉移數。同一治療欄中，理論與經驗箭頭共用長度比例，x、y 各有比例鍵。治療中理論 logit ρ 每代約上升 0.98 個 10 倍：ρ → 1 是組成上的穩定方向，但 log N 沒有不動點。上下排的差異反映被投影掉的自由度與隨機性。`phase_field_comparison.csv/.json` 記錄每支箭頭、分格邊界與假設。
 
 ### 治療延伸分析
 
-執行 `.venv/bin/python main.py --only therapy`（12 核心約 2 分鐘；`--analyses 08 09` 只跑部分），會在 `outputs/therapy_analysis/` 輸出四張圖與 CSV／JSON 資料。分析 09 重用主實驗記錄的 30 次試驗，其餘使用獨立的 seed 區段。所有參數都是教學假設。
+執行 `.venv/bin/python main.py --only therapy`（12 核心約 2 分鐘；`--analyses goldie_coldman relapse_prediction` 只跑部分），會在 `outputs/therapy_analysis/` 輸出四張圖與 CSV／JSON 資料。`relapse_prediction` 重用主實驗記錄的 30 次試驗，其餘使用獨立的 seed 區段。所有參數都是教學假設。
 
-- `08_goldie_coldman`：開始持續治療時的負荷（100–5,000 細胞，每個大小 200 次，Wilson 95% 區間）與治癒機率，並與沒有擬合參數的分枝過程理論比較。抗藥突變 clone 以 Poisson 過程出現；在治療前 s 代出生的 clone 最終存活機率為 1 − f^(s)(q_on)，f 是未治療子代生成函數，q_on = 0.479 是一個抗藥家系在治療下的滅絕機率。治癒 ≈ exp(−Λ)。理論與模擬吻合，50% 治癒點約在 416 個細胞（100 個細胞時 99.5%，1,000 時 10%，5,000 時 0%）。B 面板是治療開始時已存在的抗藥細胞，平均數大於中位數（Luria–Delbrück 的 jackpot）。
-- `09_relapse_time_prediction`：用治療開始時的基因型組成預測主實驗每次試驗的復發延遲。基準預測 ln(N/R₀)/ln 1.371 平均誤差 2.0 代；讓每種抗藥基因型以自己的治療中平均子代數成長（oncogene 細胞 ×1.62），30 次中 24 次預測到正確世代（平均誤差 0.2）。抗藥細胞越多（Spearman −0.70）、其中 oncogene 比例越高（−0.51），復發越早。C 面板是治療中期望成長率對抗藥比例 ρ，在 ρ* = (1 − m_S)/(m_R − m_S) ≈ 70% 穿過零，也就是谷底。
-- `10_parameter_sensitivity`：抗藥細胞殺傷率 k_R（0–0.6）× 突變率 μ（10⁻⁴–3×10⁻³）的治癒機率與復發延遲中位數，每格 30 次。單純抗藥細胞在 k_R = 0.30 停止成長，但治癒需要約 0.41，也就是帶 oncogene 的抗藥細胞也停止成長的殺傷率；μ 越高，這種細胞越可能事先存在。
-- `11_adaptive_therapy`：間歇治療（負荷降到治療起點的 50% 就暫停，回到 20,000 再恢復）與持續治療，每種設定 30 對試驗。惡化 = 負荷曾低於 20,000 後，在用藥中仍 ≥ 24,000；要求「用藥中」是為了不把暫停期的一步成長算成治療失敗。沒有競爭時間歇治療較差（中位比 ×0.85；加抗藥代價 ×0.91）。有承載量競爭（K = 30,000）時延後惡化 ×1.14（14 → 16 代，30/30 對較長；加代價 17.5 → 20 代），且只用約一半的藥量。
+- `goldie_coldman`：開始持續治療時的負荷（100–5,000 細胞，每個大小 200 次，Wilson 95% 區間）與治癒機率，並與沒有擬合參數的分枝過程理論比較。抗藥突變 clone 以 Poisson 過程出現；在治療前 s 代出生的 clone 最終存活機率為 1 − f^(s)(q_on)，f 是未治療子代生成函數，q_on = 0.479 是一個抗藥家系在治療下的滅絕機率。治癒 ≈ exp(−Λ)。理論與模擬吻合，50% 治癒點約在 416 個細胞（100 個細胞時 99.5%，1,000 時 10%，5,000 時 0%）。B 面板是治療開始時已存在的抗藥細胞，平均數大於中位數（Luria–Delbrück 的 jackpot）。
+- `relapse_time_prediction`：用治療開始時的基因型組成預測主實驗每次試驗的復發延遲。基準預測 ln(N/R₀)/ln 1.371 平均誤差 2.0 代；讓每種抗藥基因型以自己的治療中平均子代數成長（oncogene 細胞 ×1.62），30 次中 24 次預測到正確世代（平均誤差 0.2）。抗藥細胞越多（Spearman −0.70）、其中 oncogene 比例越高（−0.51），復發越早。C 面板是治療中期望成長率對抗藥比例 ρ，在 ρ* = (1 − m_S)/(m_R − m_S) ≈ 70% 穿過零，也就是谷底。
+- `parameter_sensitivity`：抗藥細胞殺傷率 k_R（0–0.6）× 突變率 μ（10⁻⁴–3×10⁻³）的治癒機率與復發延遲中位數，每格 30 次。單純抗藥細胞在 k_R = 0.30 停止成長，但治癒需要約 0.41，也就是帶 oncogene 的抗藥細胞也停止成長的殺傷率；μ 越高，這種細胞越可能事先存在。
+- `adaptive_therapy`：間歇治療（負荷降到治療起點的 50% 就暫停，回到 20,000 再恢復）與持續治療，每種設定 30 對試驗。惡化 = 負荷曾低於 20,000 後，在用藥中仍 ≥ 24,000；要求「用藥中」是為了不把暫停期的一步成長算成治療失敗。沒有競爭時間歇治療較差（中位比 ×0.85；加抗藥代價 ×0.91）。有承載量競爭（K = 30,000）時延後惡化 ×1.14（14 → 16 代，30/30 對較長；加代價 17.5 → 20 代），且只用約一半的藥量。
 
 適應性治療分析使用三個預設關閉的 `Config` 選項，不影響其他輸出：`therapy_mode="adaptive"` 與 `adaptive_pause_fraction`、`resistance_cost`（抗藥細胞額外自然死亡率），以及 `carrying_capacity`（每個細胞額外死亡 0.21·N/K，使無突變細胞在 N = K 時平均子代為 1）。前一版的 PCA 相座標分析已刪除，因為它的主成分只反映時間與大小。
 
@@ -299,8 +299,8 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 
 執行 `.venv/bin/python main.py --only genotype`，輸出至 `outputs/genotype_evolution/`：
 
-- `01_muller_top_genotypes_{zh,en}`：代表試驗（與相平面圖相同的選取規則）的 Muller 圖，上方附負荷曲線；另有 6 個由早到晚復發的其他試驗。每個試驗呈現峰值頻率最高的 10 個基因型。每個基因型位於「已呈現且突變為其子集的最大基因型」內，未呈現的細胞併入最接近的已呈現祖先，因此比例總和恆為 1。這是基因型包含關係，不是重建的譜系。色相表示功能類別，同類別內以明度區分基因型；主圖逐一列出基因型名稱。
-- `02_gene_mutation_frequencies_{zh,en}`：30 次試驗每個基因的突變細胞比例，以治療開始對齊，呈現中位數與 10–90 百分位帶。面板涵蓋 oncogene、TSG（任一等位基因與雙等位基因失活）、抗藥基因，以及作為中性對照的 passenger 平均。只呈現所有試驗都有觀察的相對世代，縱軸為 symlog。
+- `muller_top_genotypes_{zh,en}`：代表試驗（與相平面圖相同的選取規則）的 Muller 圖，上方附負荷曲線；另有 6 個由早到晚復發的其他試驗。每個試驗呈現峰值頻率最高的 10 個基因型。每個基因型位於「已呈現且突變為其子集的最大基因型」內，未呈現的細胞併入最接近的已呈現祖先，因此比例總和恆為 1。這是基因型包含關係，不是重建的譜系。色相表示功能類別，同類別內以明度區分基因型；主圖逐一列出基因型名稱。
+- `gene_mutation_frequencies_{zh,en}`：30 次試驗每個基因的突變細胞比例，以治療開始對齊，呈現中位數與 10–90 百分位帶。面板涵蓋 oncogene、TSG（任一等位基因與雙等位基因失活）、抗藥基因，以及作為中性對照的 passenger 平均。只呈現所有試驗都有觀察的相對世代，縱軸為 symlog。
 
 `muller_representative.csv`、`gene_frequency_summary.csv` 與 `genotype_evolution.json` 保存繪圖數值。
 
@@ -308,9 +308,9 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 
 執行 `.venv/bin/python main.py --only model`，可在 `outputs/mathematical_model/` 重新生成論文風格的 300 dpi PNG 與向量 SVG：
 
-- `06_single_cell_rules`：未突變細胞的子代分布、同一規則寫成的精確五狀態矩陣（停用突變與治療；溢出狀態是人為設定的記帳吸收狀態，不是生物飽和），以及 d、q、子代機率、治療前後平均子代數 m 和單一細胞家系最終滅絕機率（s = f(s) 的最小根）的表格。基準抗藥細胞的家系在治療下有 0.52 的機率存活；敏感細胞家系在治療下必定滅絕。
-- `07_matrices_to_flow`：簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M、條件期望公式 E[S′ | s] 與 E[R′ | s]，旁邊是治療關閉與持續治療的線性 S–R 向量場（13×13 網格至 30,000 細胞，共用長度比例）。疊上主實驗 30 次試驗的實際路徑：未治療面板畫治療前那段，治療面板畫治療開始之後那段，並突出代表試驗。雖然箭頭只用基準細胞計算，實際路徑仍順著箭頭走。
-- `A1_markov_kernel_and_controller`（附錄）：以機率生成函數寫出的完整基因型計數 Markov 轉移核，以及程式執行狀態機。
+- `single_cell_rules`：未突變細胞的子代分布、同一規則寫成的精確五狀態矩陣（停用突變與治療；溢出狀態是人為設定的記帳吸收狀態，不是生物飽和），以及 d、q、子代機率、治療前後平均子代數 m 和單一細胞家系最終滅絕機率（s = f(s) 的最小根）的表格。基準抗藥細胞的家系在治療下有 0.52 的機率存活；敏感細胞家系在治療下必定滅絕。
+- `matrices_to_flow`：簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M、條件期望公式 E[S′ | s] 與 E[R′ | s]，旁邊是治療關閉與持續治療的線性 S–R 向量場（13×13 網格至 30,000 細胞，共用長度比例）。疊上主實驗 30 次試驗的實際路徑：未治療面板畫治療前那段，治療面板畫治療開始之後那段，並突出代表試驗。雖然箭頭只用基準細胞計算，實際路徑仍順著箭頭走。
+- `markov_kernel_and_controller`（附錄）：以機率生成函數寫出的完整基因型計數 Markov 轉移核，以及程式執行狀態機。
 
 P 與 Q 每列加總為 1；M 記錄期望子代數，不是機率轉移矩陣。列代表當前／父代，欄代表下一步／子代。圖旁另存 CSV 矩陣及 JSON 假設紀錄，生成時會執行解析數值檢查。
 
