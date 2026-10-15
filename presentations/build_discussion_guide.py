@@ -1007,6 +1007,258 @@ CHEAT = [
     ("適應性治療（K = 30,000）", "×1.14，約一半藥量"),
 ]
 
+# 程式導覽：以類別卡（UML 風格）介紹架構。Config／Result 是真正的類別（dataclass）；
+# 其他檔案是無狀態的模組，這裡把「一個模組」畫成「一張類別卡」：職責 + 對外方法。
+ARCH_INTRO = (
+    "Config 與 Result 是真正的類別（dataclass），代表「參數」與「一次試驗的結果」兩個物件；"
+    "其他檔案是無狀態的模組，這裡把每個模組畫成一張類別卡：上半是它保存的資料（屬性），"
+    "下半是對外的方法與回傳值。整條資料流只有一個方向：Config → simulate() → Result → 彙整／理論 → 圖與 CSV。"
+)
+
+# 分層：(層名, 模組, 一句話職責)；網頁畫成由左到右的流程帶。
+ARCH_LAYERS = [
+    ("入口", "main.py", "讀命令列參數，依序呼叫 5 個步驟"),
+    ("實驗", "experiments.py", "用不同設定重複跑模型、彙整、讀寫 CSV"),
+    ("模型", "simulation.py", "Config → simulate() → Result"),
+    ("理論", "analysis.py", "由規則直接推出的公式與統計量"),
+    ("呈現", "plot_*.py", "把彙整後的資料畫成圖 01–11"),
+]
+
+# 每張類別卡：kind（UML 刻板印象）、name、file、role、attrs [(名稱: 型別, 說明)]、
+# methods [(簽名 → 回傳, 說明)]。只列對外會用到的方法，內部小工具省略。
+ARCH_CLASSES = [
+    dict(
+        kind="«module» 入口",
+        name="main",
+        file="main.py",
+        role="唯一的執行入口；本身不含模型邏輯，只負責依序呼叫各步驟。",
+        attrs=[("STEPS", "results, model, phase, genotype, therapy")],
+        methods=[
+            (
+                "main() / parse_args()",
+                "讀 --only、--seed、--replicates…，決定要跑哪些步驟",
+            ),
+            (
+                "run_results(args)",
+                "主實驗 + 對照實驗 → 圖 01–03 與 CSV（其他步驟都讀它的 CSV）",
+            ),
+            ("run_model() / run_phase(args)", "數學圖 06／07 與相圖 01／05／06"),
+            ("run_genotype() / run_therapy(args)", "基因型演化圖與治療延伸分析 08–11"),
+            ("reproduced_trials()（快取）", "依 seed 重跑一次，後面三個步驟共用"),
+        ],
+    ),
+    dict(
+        kind="«dataclass, frozen»",
+        name="Config",
+        file="simulation.py",
+        role="模型的全部參數；建立後不可修改（frozen），同一組參數可安全地分給 30 次試驗。",
+        attrs=[
+            ("n_genes: int = 20", "基因座數；另加 2 個位元給 TSG 的第二等位基因"),
+            ("driver_genes = (0, 1, 2)", "3 個 oncogene；任一突變即活化"),
+            (
+                "suppressor_genes = (4, 5)",
+                "2 個 TSG；suppressor_hits = 2 表示需兩個等位基因都失活",
+            ),
+            ("resistance_gene = 3", "抗藥基因；沒有治療時是中性"),
+            (
+                "death_rate = 0.30, triple_probability = 0.04",
+                "基礎死亡率 d 與三子細胞機率 q",
+            ),
+            ("mutation_rate = 0.001", "每個子細胞、每個未突變位元、每代的突變機率 μ"),
+            ("therapy_start_size = 20,000", "負荷首次達到此值就開始治療"),
+            (
+                "sensitive / resistant_therapy_kill = 0.90 / 0.04",
+                "治療對敏感／抗藥細胞的額外殺傷率 k",
+            ),
+            (
+                "initial_cells = 100, generations = 75, max_cells = 10⁶",
+                "起始細胞數、觀察代數、計算上限",
+            ),
+        ],
+        methods=[
+            ("validate() → None", "檢查索引與機率是否合法；不合法就丟出 ValueError"),
+        ],
+    ),
+    dict(
+        kind="«dataclass»",
+        name="Result",
+        file="simulation.py",
+        role="一次試驗的完整紀錄；由 simulate() 產生，之後所有彙整、理論與畫圖都讀它。",
+        attrs=[
+            ("config: Config", "產生這次試驗的參數（組合關係）"),
+            ("seed: int", "亂數種子；同 seed 必得到同結果"),
+            ("history: list[dict]", "每代摘要：total、resistant、sensitive、shannon…"),
+            ("populations: list[dict[int, int]]", "每代的 {基因型: 細胞數} 快照"),
+            ("therapy_generation: int | None", "開始治療的世代；None = 從未達門檻"),
+            (
+                "stop_reason: str",
+                "extinction／cell_limit／generation_limit／target_reached",
+            ),
+            ("therapy_active: list[bool]", "每次轉移是否用藥（適應性治療會開關）"),
+        ],
+        methods=[],
+    ),
+    dict(
+        kind="«module» 模型核心",
+        name="simulation",
+        file="simulation.py",
+        role=(
+            "細胞不是一個個物件，而是字典 {基因型: 細胞數}；基因型是整數位元遮罩，第 i 位元 = 1"
+            " 代表基因 i 已突變。每代對每個基因型做二項抽樣，與逐細胞模擬等價但快很多。"
+        ),
+        attrs=[],
+        methods=[
+            (
+                "simulate(config, seed, therapy=True) → Result",
+                "主迴圈：一代一代推進，直到滅絕、達上限或時間到",
+            ),
+            (
+                "growth_probabilities(genotype, config) → (d, q)",
+                "基因型 → 表型：oncogene／TSG 降低 d、提高 q",
+            ),
+            (
+                "mutate_offspring(offspring, config, rng) → dict",
+                "子代逐位元以 μ 突變；細胞總數不變，只換基因型",
+            ),
+            (
+                "summarize(population, generation, config) → dict",
+                "算一代的負荷、抗藥數與多樣性，存進 history",
+            ),
+            (
+                "therapy_outcome(result) → dict",
+                "判讀復發：先降到治療前負荷以下，再回到該負荷",
+            ),
+            (
+                "driver_count / suppressor_loss(genotype, config)",
+                "位元運算判斷 oncogene 是否活化、TSG 是否失活",
+            ),
+        ],
+    ),
+    dict(
+        kind="«module» 實驗管理",
+        name="experiments",
+        file="experiments.py",
+        role="決定「跑哪些設定、跑幾次」，把多個 Result 整理成表格並寫檔；也負責從 CSV 讀回結果。",
+        attrs=[("OUTPUTS: Path", "所有輸出的根目錄 outputs/")],
+        methods=[
+            (
+                "run_therapy_trials(config, n, seed) → list[Result]",
+                "主實驗：第 rep 次用 seed + 100000 + rep 呼叫 simulate",
+            ),
+            (
+                "therapy_ensemble(trials) → (summary, raw)",
+                "依世代彙整中位數與 10–90% 範圍（圖 01）",
+            ),
+            (
+                "therapy_events(trials) → list[dict]",
+                "每次試驗的治療起點、谷底、復發世代",
+            ),
+            (
+                "run_tsg_comparison / run_death_rate_comparison",
+                "對照實驗：圖 03 與圖 02",
+            ),
+            (
+                "goldie_coldman / relapse_prediction / sensitivity / adaptive_experiment",
+                "治療延伸分析 08／09／10／11",
+            ),
+            ("run_many(jobs, workers)", "多核心平行跑試驗（08、10、11 使用）"),
+            (
+                "load_trials / reproduce_trials(directory)",
+                "讀回 CSV，或依記錄的 seed 重跑取得完整基因型",
+            ),
+            ("write_csv / write_json(path, …)", "寫出資料檔"),
+        ],
+    ),
+    dict(
+        kind="«module» 理論",
+        name="analysis",
+        file="analysis.py",
+        role="不跑模擬，直接由規則算出理論值，用來和模擬結果互相核對。",
+        attrs=[],
+        methods=[
+            ("offspring_law(d, q) → array", "單一細胞的子代分布 P(0), P(2), P(3)"),
+            ("extinction(law) → float", "PGF 不動點 s = f(s)：家系滅絕機率"),
+            (
+                "fitness(genotype, config, therapy) → float",
+                "期望子代數 m = (1−d)(1−k)(2+q)",
+            ),
+            ("markov_matrices(config) → dict", "圖 06／07 的矩陣 P、Q、M"),
+            ("expected_next / compute_phase_field(config, …)", "一步期望 → 相圖向量場"),
+            (
+                "goldie_coldman_theory(config, size) → dict",
+                "Poisson 近似的治癒機率（圖 08 理論線）",
+            ),
+            ("muller_layout / gene_frequency_series", "Muller 圖與基因頻率所需的整理"),
+            ("wilson / spearman", "信賴區間與等級相關"),
+        ],
+    ),
+    dict(
+        kind="«module» × 6 呈現",
+        name="plot_*",
+        file="plot_style.py + 5 個繪圖檔",
+        role="只畫圖，不做計算；輸入是 experiments／analysis 整理好的資料，輸出 PNG 與 SVG。",
+        attrs=[],
+        methods=[
+            (
+                "plot_style.set_style(lang) / save_lang(fig, …)",
+                "共用字型、配色與雙語存檔",
+            ),
+            (
+                "plot_results.plot_therapy_ensemble / death_rate / hit_comparison",
+                "圖 01、02、03",
+            ),
+            ("plot_model.single_cell_figure / matrices_to_flow_figure", "圖 06、07"),
+            ("plot_phase.plot_phase_portrait / plot_pair", "相圖 01、05、06"),
+            (
+                "plot_genotype.plot_muller / plot_gene_frequencies",
+                "Muller 圖與基因頻率",
+            ),
+            (
+                "plot_therapy.plot_goldie_coldman / relapse / sensitivity / adaptive",
+                "圖 08–11",
+            ),
+        ],
+    ),
+]
+
+# 執行流程：(呼叫, 說明)。第 4 步展開 simulate() 內一代發生的事。
+ARCH_FLOW = [
+    ("$ .venv/bin/python main.py", "main() → parse_args() 決定要跑的步驟"),
+    ("run_results(args)", "建立參數物件 config = Config(suppressor_hits=2)"),
+    ("exp.run_therapy_trials(config, 30, seed)", "對 30 個不同 seed 呼叫 simulate()"),
+    (
+        "simulate(config, seed) 每一代",
+        "summarize() 記錄 → 檢查是否停止 → 負荷 ≥ 20,000 就開治療 → 每個基因型："
+        "growth_probabilities() 取 d、q → Binomial 抽存活數 → Binomial 抽三子數 →"
+        " 全部分裂完才 mutate_offspring()",
+    ),
+    ("return Result", "history、populations、therapy_generation、stop_reason"),
+    (
+        "exp.therapy_ensemble / therapy_events",
+        "多個 Result → 逐代摘要與每次試驗的事件 → write_csv",
+    ),
+    ("plot_results.plot_*", "畫圖 01–03"),
+    (
+        "run_model / run_phase / run_genotype / run_therapy",
+        "讀回 CSV 或依 seed 重跑 → analysis 算理論值 → plot_* 畫圖 06–11",
+    ),
+]
+
+ARCH_SAYS = [
+    (
+        "The code has one direction of data flow: a Config goes into simulate, a Result comes out, and everything else only reads Results.",
+        "資料只往一個方向流：Config 進 simulate，Result 出來，其他程式都只讀 Result。",
+    ),
+    (
+        "A tumor is a dictionary from genotype bitmask to cell count, so one generation is a few binomial draws per genotype.",
+        "腫瘤是 {基因型位元遮罩: 細胞數}，所以一代只是每個基因型幾次二項抽樣。",
+    ),
+    (
+        "Model, experiments, theory and plotting are separate files, so the theory can check the simulation independently.",
+        "模型、實驗、理論、畫圖分檔，理論可以獨立核對模擬。",
+    ),
+]
+
 
 def fmt_time(minutes: float) -> str:
     return f"{int(minutes)}:{int(round((minutes % 1) * 60)):02d}"
@@ -1108,6 +1360,29 @@ table.cheat{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
 table.cheat td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
 table.cheat td:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .optional{font:600 11px var(--mono);color:var(--sens);border:1px solid var(--sens);border-radius:3px;padding:1px 6px;margin-left:8px;vertical-align:middle}
+.layers{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin-top:16px}
+.layer{flex:1 1 150px;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--sens);border-radius:6px;padding:8px 10px;min-width:0}
+.layer .ln{font:600 11px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.layer .lm{font:600 14px var(--mono);overflow-wrap:anywhere}
+.layer .lr{font-size:13px;color:var(--muted)}
+.layer-arrow{align-self:center;color:var(--res);font-weight:700}
+@media (max-width:860px){.layer-arrow{display:none}}
+.classes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:16px;margin-top:18px}
+.cls{background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;min-width:0}
+.cls-h{background:var(--sens-soft);padding:8px 12px;border-bottom:1px solid var(--line)}
+.cls-h .k{font:500 11px var(--mono);color:var(--muted)}
+.cls-h .n{font:700 17px var(--mono)}
+.cls-h .f{font:500 11px var(--mono);color:var(--muted);float:right}
+.cls-role{font-size:13px;color:var(--muted);padding:8px 12px 2px}
+.cls-part{border-top:1px dashed var(--line);margin-top:6px;padding:6px 12px 8px}
+.cls-part .lbl{margin-bottom:4px}
+.mem{padding:3px 0}
+.mem code{font:500 12.5px/1.45 var(--mono);display:block;overflow-wrap:anywhere}
+.mem span{font-size:13px;color:var(--muted);display:block}
+ol.flow{margin:12px 0 0;padding-left:22px;display:grid;gap:6px}
+ol.flow code{font:600 13px var(--mono);background:var(--code-bg);padding:1px 6px;border-radius:3px;overflow-wrap:anywhere}
+ol.flow span{display:block;font-size:14px;color:var(--muted)}
+h3.sub{font:700 17px/1.3 var(--display);margin:26px 0 0}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 """
 
@@ -1199,6 +1474,47 @@ def html_beat(beat) -> str:
     return f'<div class="beat nofig">{cues}</div>'
 
 
+def html_arch() -> str:
+    layers = '<span class="layer-arrow">→</span>'.join(
+        f'<div class="layer"><div class="ln">{esc(n)}</div><div'
+        f' class="lm">{esc(m)}</div><div class="lr">{esc(r)}</div></div>'
+        for n, m, r in ARCH_LAYERS
+    )
+
+    def members(label, rows):
+        if not rows:
+            return ""
+        items = "".join(
+            f'<div class="mem"><code>{esc(a)}</code><span>{esc(b)}</span></div>'
+            for a, b in rows
+        )
+        return f'<div class="cls-part"><p class="lbl">{label}</p>{items}</div>'
+
+    cards = "".join(
+        f'<div class="cls"><div class="cls-h"><span class="f">{esc(c["file"])}</span>'
+        f'<div class="k">{esc(c["kind"])}</div><div class="n">{esc(c["name"])}</div></div>'
+        f'<div class="cls-role">{esc(c["role"])}</div>'
+        f'{members("屬性", c["attrs"])}{members("方法 → 回傳", c["methods"])}</div>'
+        for c in ARCH_CLASSES
+    )
+    flow = "".join(
+        f"<li><code>{esc(a)}</code><span>{esc(b)}</span></li>" for a, b in ARCH_FLOW
+    )
+    says = "".join(
+        f'<li><span class="en">{esc(en)}</span><span class="zh">{esc(zh)}</span></li>'
+        for en, zh in ARCH_SAYS
+    )
+    return (
+        '<section class="seg" id="arch"><div class="seg-head"><span class="t">講前先讀</span>'
+        "<h2>程式導覽：架構與函式</h2></div>"
+        f'<p class="goal">{esc(ARCH_INTRO)}</p><div class="layers">{layers}</div>'
+        f'<h3 class="sub">類別卡</h3><div class="classes">{cards}</div>'
+        f'<h3 class="sub">執行一次 main.py 發生什麼事</h3><ol class="flow">{flow}</ol>'
+        '<h3 class="sub">被問到程式架構時</h3>'
+        f'<ul class="says" style="margin-top:10px">{says}</ul></section>'
+    )
+
+
 def build_html() -> str:
     ribbon = "".join(
         f'<a href="#{s["id"]}" data-id="{s["id"]}" style="flex:{s["end"] - s["start"]}"'
@@ -1223,10 +1539,12 @@ def build_html() -> str:
         for q, a in QA
     )
     cheat = "".join(f"<tr><td>{esc(k)}</td><td>{esc(v)}</td></tr>" for k, v in CHEAT)
-    segs_js = str([
-        dict(id=s["id"], start=s["start"], end=s["end"], title=s["title"])
-        for s in SEGMENTS
-    ]).replace("'", '"')
+    segs_js = str(
+        [
+            dict(id=s["id"], start=s["start"], end=s["end"], title=s["title"])
+            for s in SEGMENTS
+        ]
+    ).replace("'", '"')
     return f"""<title>腫瘤模擬討論提示卡</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1244,6 +1562,7 @@ def build_html() -> str:
   <button id="go" type="button">開始計時</button><button id="reset" type="button">歸零</button>
   <span id="elapsed">0:00</span><span id="now">按「開始計時」後，會標出目前該講的段落</span>
 </div><div class="ribbon">{ribbon}<span id="needle"></span></div></div>
+{html_arch()}
 {"".join(sections)}
 <section class="seg" id="qa"><div class="seg-head"><span class="t">備用</span><h2>老師可能問的問題</h2></div>
 <p class="goal">先用一句英文回答核心，再指向對應的圖或程式行。</p><div class="grid2">{qa}</div></section>
@@ -1379,6 +1698,63 @@ def word_code(doc, code, title):
         set_fonts(q.add_run(line or " "), latin="Menlo", size=8, bold=n in hl)
 
 
+def word_members(doc, label_text, rows):
+    if not rows:
+        return
+    label(doc, label_text)
+    table = doc.add_table(rows=0, cols=2)
+    table.style = "Light List Accent 1"
+    for a, b in rows:
+        row = table.add_row().cells
+        row[0].text = row[1].text = ""
+        set_fonts(row[0].paragraphs[0].add_run(a), latin="Menlo", size=8.5)
+        set_fonts(row[1].paragraphs[0].add_run(b), size=9, color=MUTED)
+        row[0].width, row[1].width = Cm(8.6), Cm(9.2)
+
+
+def word_arch(doc):
+    h = doc.add_heading(level=1)
+    set_fonts(h.add_run("講前先讀　"), size=13, color=ACCENT)
+    set_fonts(h.add_run("程式導覽：架構與函式"), size=16, color=INK)
+    para(doc, ARCH_INTRO, size=10, color=MUTED, space_after=6)
+    label(doc, "分層（由入口往下呼叫）")
+    para(
+        doc,
+        "  →  ".join(m for _, m, _ in ARCH_LAYERS),
+        size=10,
+        color=TEAL,
+        bold=True,
+    )
+    for n, m, r in ARCH_LAYERS:
+        p = para(doc, space_after=1)
+        set_fonts(p.add_run(f"{n}　{m}　"), latin="Menlo", size=9, bold=True)
+        set_fonts(p.add_run(r), size=9, color=MUTED)
+    for c in ARCH_CLASSES:
+        p = para(doc, space_after=0)
+        p.paragraph_format.space_before = Pt(12)
+        shade(p, "E1F0F3")
+        set_fonts(p.add_run(c["kind"] + "  "), latin="Menlo", size=8.5, color=MUTED)
+        set_fonts(p.add_run(c["name"]), latin="Menlo", size=13, bold=True)
+        set_fonts(p.add_run("    " + c["file"]), latin="Menlo", size=8.5, color=MUTED)
+        para(doc, c["role"], size=9.5, color=MUTED, space_after=2)
+        word_members(doc, "屬性", c["attrs"])
+        word_members(doc, "方法 → 回傳", c["methods"])
+    label(doc, "執行一次 main.py 發生什麼事")
+    for a, b in ARCH_FLOW:
+        p = para(doc, style="List Number", space_after=2)
+        set_fonts(p.add_run(a), latin="Menlo", size=9, bold=True)
+        p.add_run().add_break()
+        set_fonts(p.add_run(b), size=9.5, color=MUTED)
+    label(doc, "被問到程式架構時")
+    for en, zh in ARCH_SAYS:
+        p = para(doc, space_after=3)
+        p.paragraph_format.left_indent = Cm(0.3)
+        left_border(p)
+        set_fonts(p.add_run(en), size=10.5, bold=True)
+        p.add_run().add_break()
+        set_fonts(p.add_run(zh), size=9.5, color=MUTED)
+
+
 def build_docx(path: Path):
     doc = Document()
     sec = doc.sections[0]
@@ -1437,6 +1813,9 @@ def build_docx(path: Path):
     for row in table.rows:
         for cell, width in zip(row.cells, (Cm(2.6), Cm(7.6), Cm(7.6))):
             cell.width = width
+
+    doc.add_page_break()
+    word_arch(doc)
 
     for s in SEGMENTS:
         doc.add_page_break()
