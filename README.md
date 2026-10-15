@@ -169,6 +169,16 @@ PRESENTATION_BUILD_DIR=.presentation-build/code-v11 PRESENTATION_FILENAME=tumor_
 
 The builder uses the installed bundled Artifact Tool and validators. Equation rendering uses the project-local Python without an external TeX installation. Private candidates, equation assets, renders and validation records stay in the ignored `.presentation-build/` directory. No conda environment is changed. The previous v3 and v9 decks are retained separately.
 
+### Discussion guide
+
+`outputs/discussion_guide/` holds a 20-minute cue sheet for the one-on-one discussion, as a web page (`discussion_guide.html`, with downscaled figures in `figs/`) and a Word file (`腫瘤模擬_20分鐘討論提示卡.docx`). It is not a script: each timed segment lists the figure to open, where to point, the code lines to show, key English sentences with Traditional Chinese glosses, concept anchors, the numbers to cite and a transition line. Likely questions and a number cheat sheet follow. The web page has a talk timer that highlights the current segment.
+
+Both files come from one script, so they stay consistent. Code excerpts are read from the source files by line range; recheck the ranges in `SEGMENTS` after editing `simulation.py` or `analysis.py`.
+
+```bash
+.venv/bin/python presentations/build_discussion_guide.py
+```
+
 ### Customize and reuse
 
 Code style: all Python files are formatted with black (settings in `pyproject.toml`; long expressions are split one argument or condition per line). Install it into the project environment with `.venv/bin/python -m pip install black`, then run `.venv/bin/python -m black --unstable *.py presentations/*.py`. Each plotting style function first restores Matplotlib's initial settings, so running every step in one process gives the same figures as running them separately. A few chained conditionals are kept in a one-condition-per-line layout with `# fmt: off`. Formatting moves lines, so recheck the code-excerpt line ranges in `presentations/teach_model.mjs` before rebuilding the deck.
@@ -357,6 +367,16 @@ PRESENTATION_BUILD_DIR=.presentation-build/code-v11 PRESENTATION_FILENAME=tumor_
 ```
 
 繪製程式使用已安裝的 bundled Artifact Tool 與檢查工具。公式使用專案 Python 排版，不需外部 TeX 安裝。候選檔、公式素材、預覽與檢查紀錄放在 Git 忽略的 `.presentation-build/`，不修改 conda。前版 v3 與 v9 簡報另行保留。
+
+### 討論提示卡
+
+`outputs/discussion_guide/` 是一對一討論用的 20 分鐘提示卡，有網頁（`discussion_guide.html`，縮小的圖在 `figs/`）與 Word（`腫瘤模擬_20分鐘討論提示卡.docx`）兩種版本。內容不是逐字稿：每個時段列出要打開的圖、指圖順序、要對照的程式行、可直接說出口的英文關鍵句（附繁體中文意思）、概念錨點、要引用的數字與銜接句；最後附老師可能問的問題與數字小抄。網頁有計時器，會標出目前該講的段落。
+
+兩個檔案由同一個腳本產生，內容一致。程式節錄依行號從原始檔讀取；修改 `simulation.py` 或 `analysis.py` 後，須重新檢查 `SEGMENTS` 內的行號。
+
+```bash
+.venv/bin/python presentations/build_discussion_guide.py
+```
 
 ### 修改與重用
 
