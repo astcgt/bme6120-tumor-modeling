@@ -13,7 +13,6 @@ from simulation import (
     Result,
     driver_count,
     growth_probabilities,
-    il11_environment,
     suppressor_alleles,
     suppressor_loss,
 )
@@ -118,12 +117,11 @@ def projected_offspring_mean(
     """精確的條件期望；其他基因突變不改變子代的 S/R 分組機率。
 
     S 子代以 μ 成為 R，既有 R 不逆轉。B_S/B_R 是突變前的期望子代數。
-    這不是只依賴 (S,R) 的封閉模型：m_g 需要完整基因型與共享環境。
+    這不是只依賴 (S,R) 的封閉模型：m_g 需要完整基因型。
     """
-    _, benefit = il11_environment(population, config)
     before = {"sensitive": 0.0, "resistant": 0.0}
     for genotype, count in population.items():
-        death, triple = growth_probabilities(genotype, config, benefit)
+        death, triple = growth_probabilities(genotype, config)
         resistant = bool(genotype & (1 << config.resistance_gene))
         kill = (
             config.resistant_therapy_kill
@@ -172,13 +170,6 @@ def check_expectation(config: Config) -> None:
         weights.values()
     )
     assert np.isclose(ours["w_off"], direct, rtol=1e-12)
-
-
-def il11_benefit_curve(config: Config) -> tuple[np.ndarray, np.ndarray]:
-    """IL11 共享效益公式 b(f) = Bmax·f/(K+f) 在 f = 0…1 的值（教學假設，不是實驗擬合）。"""
-    fraction = np.linspace(0, 1, 1001)
-    maximum, half = config.il11_max_death_reduction, config.il11_half_fraction
-    return fraction, maximum * fraction / (half + fraction)
 
 
 # ---------------------------------------------------------------- 分枝過程理論 ------
@@ -467,7 +458,7 @@ def vector_field_grids(config: Config) -> tuple[dict, list[dict]]:
 
 
 def state_features(population: dict[int, int], config: Config, therapy: bool) -> dict:
-    """由完整基因型快照計算所有候選相座標；IL11 不在基礎模型中，故不列入。"""
+    """由完整基因型快照計算所有候選相座標。"""
     genotypes = list(population)
     counts = np.array(list(population.values()), float)
     total = counts.sum()

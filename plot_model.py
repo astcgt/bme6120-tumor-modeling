@@ -343,7 +343,7 @@ def matrices_to_flow_figure(
         ax,
         0.015,
         0.90,
-        "Reduced slice: resistance bit only; other growth effects and IL11 off.",
+        "Reduced slice: resistance bit only; other growth effects off.",
         10,
         color=GRAY,
     )
@@ -506,23 +506,15 @@ def appendix_figure(config):
         ax,
         0.015,
         0.47,
-        r"$b(\mathbf{N})=0.06\,f/(0.02+f),\qquad f=\sum_{g:\,g_6=1}N_g/\sum_gN_g$",
-        15,
-    )
-    label(
-        ax,
-        0.015,
-        0.29,
-        r"$\delta_g=1-(1-d_g(\mathbf{N}))(1-\alpha k_g),\qquad"
+        r"$\delta_g=1-(1-d_g)(1-\alpha k_g),\qquad"
         r" u_g(\mathbf{z})=\sum_hQ_{gh}z_h$",
         15,
     )
     label(
         ax,
         0.015,
-        0.10,
-        "IL11 OFF: b = 0. Empty population: b = 0. Fixed Config; kernel applies before"
-        " stopping.",
+        0.29,
+        "Fixed Config; kernel applies before stopping.",
         11,
         color=GRAY,
     )

@@ -17,14 +17,14 @@ Use the project virtual environment directly; activation is unnecessary:
 .venv/bin/python main.py --only therapy --analyses 08 09   # part of the therapy analyses
 ```
 
-Steps run in order: `results` (figures 01–04), `model` (06, 07, A1), `phase` (phase portraits), `genotype` (Muller plot and gene frequencies), `therapy` (08–11). Later steps read the CSVs written by `results`, so run `results` first on a fresh checkout. Outputs always go to `outputs/`; `--seed` and `--replicates` change the main and control experiments.
+Steps run in order: `results` (figures 01–03), `model` (06, 07, A1), `phase` (phase portraits), `genotype` (Muller plot and gene frequencies), `therapy` (08–11). Later steps read the CSVs written by `results`, so run `results` first on a fresh checkout. Outputs always go to `outputs/`; `--seed` and `--replicates` change the main and control experiments.
 
 ### Code structure
 
 | File | Contents |
 | --- | --- |
 | `simulation.py` | The model only: `Config`, genotype → phenotype, `growth_probabilities`, `mutate_offspring`, `simulate`, `therapy_outcome`. Start here when explaining the code. |
-| `experiments.py` | Runs the model under different conditions (main experiment, TSG / death-rate / IL11 controls, therapy analyses), summarizes trials, and reads/writes data files. |
+| `experiments.py` | Runs the model under different conditions (main experiment, TSG and death-rate controls, therapy analyses), summarizes trials, and reads/writes data files. |
 | `analysis.py` | Formulas derived from the model rules: expected offspring and one-step drift, branching-process extinction, Goldie–Coldman theory, phase-plane vector fields, Muller layout and gene frequencies. |
 | `plot_style.py`, `plot_results.py`, `plot_model.py`, `plot_phase.py`, `plot_genotype.py`, `plot_therapy.py` | Figures only, grouped by topic; each takes data computed above. |
 | `main.py` | Entry point: `main()` calls one short function per step. |
@@ -60,7 +60,6 @@ The `outputs/` directory contains:
 | `01_tumor_dashboard.png / .svg` | Ensemble burden, effective genotypes and resistant fraction under therapy; resistance present at therapy start is annotated |
 | `02_death_rate_heterogeneity.png / .svg` | Shannon diversity of 5,000-cell samples and generations needed to reach 5,000 cells at three death rates |
 | `03_one_hit_vs_two_hit.png / .svg` | No-TSG-advantage control, one-hit and two-hit: linear growth, TSG-loss fraction, and trial burdens at generation 18 |
-| `04_il11_shared_fitness.png / .svg` | IL11 ON/OFF growth, producer fraction, and the benefit curve with the observed producer range |
 | `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | Per-generation comparison data and endpoint medians |
 | `trajectory.csv` | Ensemble statistics per generation: n, mean, sample SD, median, p10, p90 |
 | `therapy_trajectories.csv` | Individual treatment trajectories used in the ensemble |
@@ -78,37 +77,19 @@ Growth comparisons keep oncogene effects, mutation rates, and loci identical, va
 
 The figure shows the same 30 trials per scenario from the growth experiment, including the no-TSG-advantage control (dotted gray; TSG loss is counted with the two-hit rule but gives no advantage); no therapy is applied. At generation 18 the median burdens are 76,446 (control), 94,618 (one-hit) and 73,879 (two-hit), and 0.05% / 27.9% / 0.07% of cells meet the TSG threshold. Panel A uses a linear cell-count axis, panel B shows the percentage meeting each scenario's TSG-loss threshold (symlog, linear below 0.01%), and panel C shows every trial at generation 18 with median bars. The threshold differs by definition; panel B measures the resulting phenotype, not an identical mutation state in both groups. Bands show trial variation, not confidence intervals. Overlap and stochastic reversals are retained rather than selecting favorable seeds.
 
-### IL11+ populations and shared fitness
-
-Enable the functional IL11 locus with `Config(il11_enabled=True)` or:
-
-```bash
-.venv/bin/python main.py --only results --il11
-```
-
-The default is OFF. ON repurposes passenger index 6 (Gene 7) as IL11; OFF retains it as a neutral passenger, keeping 20 loci and identical mutation opportunities. Thus ON has 13 passengers plus IL11, while OFF has 14 passengers and no functional IL11 locus. A mutation marks IL11+ producers; this is a teaching assumption, not a calibrated mechanism of IL11 activation. Genotype groups may include multiple independent lineages, so “IL11+ clone” here means the producer population rather than a reconstructed ancestry.
-
-At each generation, producer fraction `f` sets a shared absolute death-probability reduction `b = il11_max_death_reduction * f / (il11_half_fraction + f)`. Defaults are 0.06 maximum and 0.02 half-saturation. All cells, including IL11-negative cells, receive the same reduction before therapy; death probability is floored at zero. New producers affect the next transition. This assumes uniform mixing, no secretion cost, and no spatial effects or cytokine persistence. Without producers or with the switch OFF, the benefit is zero.
-
-![IL11 shared fitness comparison](outputs/04_il11_shared_fitness.png)
-
-Every normal run generates an ON/OFF comparison without therapy over 18 generations (30 trials by default). Panel A shows whole-tumor growth, panel B the producer fraction, and panel C the exact benefit formula (0–10% zoom) with the 10th–90th percentile range of producer fractions observed in ON trials and the generation-18 median marked. The shared death reduction and the expected offspring of a mutation-free nonproducer are deterministic transformations of the producer fraction, so they are reported in the footnote and the CSV rather than as separate panels. At generation 18, 1.6% producers lower every cell's death probability by 2.7 percentage points (nonproducer offspring 1.428 → 1.482) and the median tumor is 52% larger. Matching seed numbers aid reproducibility but do not imply cell-by-cell pairing after trajectories diverge. Raw data and endpoint medians are saved to `il11_comparison.csv` and `il11_comparison_summary.csv`; `il11_benefit_curve.csv` stores the curve.
-
-At 2% IL11+ cells, the shared reduction is 3 **percentage points** (half of the 6-point asymptotic cap): baseline death changes from 30% to 27%. This is an absolute reduction, not a 3% relative reduction. The curve is a teaching assumption, not fitted experimental data.
-
 ### Replication and uncertainty
 
 `--replicates` controls **all stochastic experiment groups**, including the main treatment dashboard; default 30. For example, `.venv/bin/python main.py --only results --replicates 100`. The main dashboard now uses ensemble statistics instead of one trajectory. Population counts and diversity include extinct trials as zero; after a computational cell limit, later values are missing, never padded with the last population. The footnote states the last generation at which every trial is observed (generation 31 by default). Resistant proportions condition on observed living tumors; empty populations have no defined fraction. Per-gene frequencies are shown in `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`.
 
 Trials are aligned by absolute generation; treatment starts separately at each trial's size threshold, so the dashboard shades the range of start generations instead of a single line, and panel C annotates the median resistant fraction at each trial's own therapy start. `therapy_replicates.csv` retains each start time and outcome. `trajectory.csv` is now an ensemble summary; `therapy_trajectories.csv` stores individual trajectories. The standalone `plot_dashboard(result, ...)` remains available for explicitly requested single-trial exploration.
 
-Growth and IL11 comparisons show medians and 10–90% trial intervals; endpoint and diversity scatter plots show individual trials and medians. More replicates stabilize summaries but do not remove biological stochasticity; percentile bands describe trial variability, **not confidence intervals or standard errors**. The IL11 benefit curve is deterministic and has no sampling variance, so it has no uncertainty band.
+Growth comparisons show medians and 10–90% trial intervals; endpoint and diversity scatter plots show individual trials and medians. More replicates stabilize summaries but do not remove biological stochasticity; percentile bands describe trial variability, **not confidence intervals or standard errors**.
 
 ### Phase portraits
 
 `.venv/bin/python main.py --only phase` creates one 300 dpi PNG/vector SVG figure, `outputs/phase_plots/01_phase_portrait`, without modifying the presentation. It shows sensitive vs resistant counts in `log10(count+1)` coordinates. Gray curves retain every observed trial; one actual trial is highlighted, selected first by proximity to the median relapse generation, then to the median nadir, and colored by pre-therapy, therapy-to-relapse and post-relapse. Treatment onset, minimum burden and relapse are marked. Black arrows end at the one-generation conditional mean calculated from the highlighted trial's full genotype snapshot, including the exact S-to-R mutation contribution; the distance from each arrowhead to the next observed point is that generation's stochastic deviation. A side column lists expected and observed next states at therapy start and at the nadir. The reproduced trial is checked against its recorded CSV counts. Arrows end at the log-transformed raw-count expectation, which differs from the expectation of log-transformed counts; the formulas are in figure 07.
 
-This is a projection of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver, TSG or IL11 composition. Computational endpoints are not equilibria. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `.venv/bin/python main.py --only phase --replicate 0` to highlight another actual trial (this overwrites the phase-portrait files). Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths. The burden × resistant-fraction view is in `05_phase_field_burden_logit` below, which uses a logit axis instead of a linear percentage.
+This is a projection of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver or TSG composition. Computational endpoints are not equilibria. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `.venv/bin/python main.py --only phase --replicate 0` to highlight another actual trial (this overwrites the phase-portrait files). Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths. The burden × resistant-fraction view is in `05_phase_field_burden_logit` below, which uses a logit axis instead of a linear percentage.
 
 The same step computes the grid vector-field data whose formulas figure 07 uses: `phase_vector_grid.csv` and `phase_vector_assumptions.json`. Each grid point specifies a full parent population with genotype 0 for S and only the resistance bit for R, and the one-step projected mean is checked against the full model at all 1,604 points (linear and log grids). Other offspring mutations remain enabled and can move later states off this slice. Treatment is fixed within each panel rather than switched at the size threshold. The former standalone linear and log vector-field figures were merged into figure 07 or removed.
 
@@ -158,6 +139,8 @@ P and Q are row-stochastic; M contains offspring means and is not a probability 
 The code lessons use excerpts from `simulation.py` (and `experiments.py` for repeated trials), with variable meanings, numerical examples and detailed speaker notes. They cover Config, sparse genotype counts, bitmasks, TSG alleles, IL11, update timing, Binomial reproduction, mutation conservation, P/Q/M, relapse identification, ensemble statistics, sampling and tests. Excerpts are selected by line number; when `simulation.py` or `experiments.py` changes, the ranges in `presentations/teach_model.mjs` must be re-checked (v10 re-mapped every range to the current source). Equations use LaTeX math syntax rendered with Computer Modern fonts at high resolution; they are image objects rather than native PowerPoint equation objects. Text, matrices, diagrams, tables and charts remain editable.
 
 v10 follows the same merge rules as the figures: the trial-availability chart became a footnote, the two gene-frequency heatmaps became one aligned gene-frequency chart with a passenger control, the full-range IL11 curve was dropped, and the TSG fraction and endpoint slides include the no-TSG-advantage control. Four slides summarize the therapy analyses (Goldie–Coldman cure curve, relapse-time prediction, the k_R × μ cure table, and adaptive versus continuous therapy). Shared treatment curves show generations 0–30, where all 30 trials are observed and alive. Log transformations are labeled explicitly.
+
+The IL11 module was later removed from the code. The existing decks (v3–v10) still contain the IL11 slides, and the deck build scripts (`presentations/prepare_results.py`, `prepare_extended_results.py`, `teach_model.mjs`, `tell_results.mjs`) still reference the deleted IL11 outputs and old `simulation.py` line numbers, so they must be updated before building a new deck.
 
 The data preparation reproduces the treatment populations and the no-TSG-advantage control, checks recorded CSV counts, and reads the verified outputs of the `genotype` and `therapy` steps. Rebuild the data and deck with:
 
@@ -216,14 +199,14 @@ Discussion topics include how drivers change expected offspring per generation; 
 .venv/bin/python main.py --only therapy --analyses 08 09   # 只跑部分治療分析
 ```
 
-步驟依序為：`results`（圖 01–04）、`model`（06、07、A1）、`phase`（相圖）、`genotype`（Muller 圖與基因頻率）、`therapy`（08–11）。後面的步驟讀取 `results` 寫出的 CSV，所以剛取得專案時要先跑 `results`。輸出一律寫到 `outputs/`；`--seed` 與 `--replicates` 改變主實驗與對照實驗。
+步驟依序為：`results`（圖 01–03）、`model`（06、07、A1）、`phase`（相圖）、`genotype`（Muller 圖與基因頻率）、`therapy`（08–11）。後面的步驟讀取 `results` 寫出的 CSV，所以剛取得專案時要先跑 `results`。輸出一律寫到 `outputs/`；`--seed` 與 `--replicates` 改變主實驗與對照實驗。
 
 ### 程式架構
 
 | 檔案 | 內容 |
 | --- | --- |
 | `simulation.py` | 只有模型：`Config`、基因型 → 表型、`growth_probabilities`、`mutate_offspring`、`simulate`、`therapy_outcome`。解釋程式時從這裡開始。 |
-| `experiments.py` | 在不同條件下重複執行模型（主實驗、TSG／死亡率／IL11 對照、治療分析），彙整試驗結果並讀寫資料檔。 |
+| `experiments.py` | 在不同條件下重複執行模型（主實驗、TSG／死亡率對照、治療分析），彙整試驗結果並讀寫資料檔。 |
 | `analysis.py` | 由模型規則推出的公式：期望子代與一步漂移、分枝過程滅絕機率、Goldie–Coldman 理論、相平面向量場、Muller 版面與基因頻率。 |
 | `plot_style.py`、`plot_results.py`、`plot_model.py`、`plot_phase.py`、`plot_genotype.py`、`plot_therapy.py` | 只畫圖，依主題分檔；各自使用上面算好的資料。 |
 | `main.py` | 執行入口：`main()` 依序呼叫每個步驟的短函數。 |
@@ -259,7 +242,6 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 | `01_tumor_dashboard.png / .svg` | 治療下多次試驗的負荷、有效基因型數與抗藥比例；標示治療開始時已存在的抗藥細胞 |
 | `02_death_rate_heterogeneity.png / .svg` | 三種死亡率下 5,000 細胞樣本的 Shannon 多樣性，以及長到 5,000 細胞所需代數 |
 | `03_one_hit_vs_two_hit.png / .svg` | 無 TSG 優勢對照組、one-hit、two-hit：線性生長、TSG 達標比例與第 18 代各次試驗負荷 |
-| `04_il11_shared_fitness.png / .svg` | IL11 開／關的生長、生產者比例，以及標出實際生產者範圍的效益曲線 |
 | `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | 逐代比較資料與終點中位數 |
 | `trajectory.csv` | 多次試驗逐代統計：n、平均、樣本 SD、中位數、p10、p90 |
 | `therapy_trajectories.csv` | 彙整圖使用的各次治療試驗逐代資料 |
@@ -277,37 +259,19 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 
 此圖呈現生長試驗每種情境的同一批 30 次試驗，並加入無 TSG 優勢的對照組（灰色點線；TSG 失活以 two-hit 規則計數，但沒有生長優勢），不施加治療。第 18 代負荷中位數為 76,446（對照）、94,618（one-hit）、73,879（two-hit），達到 TSG 門檻的細胞分別占 0.05%／27.9%／0.07%。A 面板以線性座標顯示細胞數，B 面板顯示各情境達到 TSG 失活門檻的細胞百分比（symlog，0.01% 以下為線性），C 面板顯示第 18 代每次試驗的負荷與中位數橫線。兩情境的門檻定義不同，B 比較的是功能表型，而非完全相同的突變狀態。陰影表示試驗間變異，不是信賴區間；保留重疊與隨機反轉，不挑選有利種子。
 
-### IL11+ 族群與共享生長優勢
-
-用 `Config(il11_enabled=True)` 或以下指令開啟 IL11 功能：
-
-```bash
-.venv/bin/python main.py --only results --il11
-```
-
-預設為關閉。開啟時將 passenger 索引 6（Gene 7）改為 IL11；關閉時保留為中性 passenger，維持 20 個位點與相同突變機會。因此開啟時為 13 個 passengers 加 IL11，關閉時為 14 個 passengers 且沒有功能性 IL11 位點。突變後標記為 IL11+ 生產者；這是教學假設，並非經校準的 IL11 活化機制。同基因型可能來自不同祖先，因此這裡的「IL11+ clone」指生產者族群，不是重建出的家系。
-
-每代以生產者比例 `f` 計算共享死亡率降低量：`b = il11_max_death_reduction * f / (il11_half_fraction + f)`。預設最大降低量為 0.06、半飽和比例為 0.02。所有細胞（包含 IL11 陰性細胞）都在治療前獲得同樣降低量，死亡率最低為零；新生產者從下一次轉移開始提供效果。假設環境均勻混合、沒有分泌成本、空間效應或細胞因子殘留。無生產者或開關關閉時，效果為零。
-
-![IL11 共享生長優勢比較](outputs/04_il11_shared_fitness.png)
-
-每次正常執行都會生成不施加治療、觀察 18 代的 ON／OFF 比較，預設每組 30 次試驗。A 面板為整體生長，B 面板為生產者比例，C 面板為效益公式（0–10% 放大），並標出 ON 試驗實際出現的生產者比例 10–90 百分位範圍與第 18 代中位數。共享死亡率降低量與未突變非生產者的預期子代數都是生產者比例的確定性轉換，因此寫在註腳與 CSV，不另畫面板。第 18 代 1.6% 的生產者讓所有細胞死亡率降低 2.7 個百分點（非生產者子代數 1.428 → 1.482），腫瘤中位數多 52%。相同 seed 方便重現，但族群分歧後不代表逐細胞配對。逐代資料與終點中位數存於 `il11_comparison.csv`、`il11_comparison_summary.csv`；`il11_benefit_curve.csv` 保存曲線。
-
-IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上限 6 個百分點的一半：基準死亡率從 30% 降至 27%。這是絕對降低量，不是相對降低 3%。曲線是教學假設，不是實驗擬合。
-
 ### 重複試驗與不確定性
 
 `--replicates` 統一控制**所有隨機實驗組**，包含主治療圖，預設 30 次。例如：`.venv/bin/python main.py --only results --replicates 100`。主圖改用多次試驗彙整，不再只展示一條軌跡。細胞數與多樣性將滅絕試驗延續為零；達計算上限後的後續值視為缺失，不使用最後數量補值；註腳寫出所有試驗都有觀察的最後世代（預設第 31 代）。抗藥比例只針對仍存活且有觀察值的腫瘤，空族群不定義比例。逐基因突變頻率見 `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`。
 
 試驗依絕對世代對齊，治療各自在達到大小門檻後開始，因此主圖以淡色區間標出治療起點的範圍，而不是單一條線；C 面板標出各試驗在自己治療起點的抗藥比例中位數。`therapy_replicates.csv` 保留每次起點與結果。`trajectory.csv` 現為多次試驗摘要，`therapy_trajectories.csv` 保留各次軌跡。仍可自行呼叫 `plot_dashboard(result, ...)` 查看明確指定的單次案例。
 
-生長與 IL11 比較顯示中位數及 10–90% 試驗區間；終點負荷與多樣性散點保留個別試驗及中位數。增加次數能穩定摘要估計，但不會消除生物隨機性；百分位帶代表試驗間變異，**不是信賴區間或標準誤**。IL11 效益公式是確定性曲線，沒有抽樣變異，因此不加誤差帶。
+生長比較顯示中位數及 10–90% 試驗區間；終點負荷與多樣性散點保留個別試驗及中位數。增加次數能穩定摘要估計，但不會消除生物隨機性；百分位帶代表試驗間變異，**不是信賴區間或標準誤**。
 
 ### 相平面圖
 
 執行 `.venv/bin/python main.py --only phase`，即可在 `outputs/phase_plots/` 生成一張 300 dpi PNG／向量 SVG：`01_phase_portrait`，不修改簡報。圖中以 `log10(count+1)` 座標呈現敏感／抗藥細胞數。灰線保留所有實際觀察軌跡；突出一條實際試驗，先選最接近復發中位代數，再選谷底最接近中位數的案例，並依治療前、治療至復發、復發後上色，標示治療啟動、最低負荷與復發。黑色箭頭的端點是由突出案例完整基因型快照算出的下一代條件期望，包含敏感細胞突變成抗藥細胞的精確貢獻；箭頭頭端到下一個實際點的距離就是該代的隨機偏差。右欄列出治療啟動與谷底時的期望與實際下一代。重現案例會逐代核對記錄的 CSV 計數。箭頭端點是原始計數期望的對數轉換，並非對數計數的期望；公式見圖 07。
 
-這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver、TSG 或 IL11 組成。計算終點不是平衡點。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可用 `.venv/bin/python main.py --only phase --replicate 0` 突出另一條實際試驗（會覆寫相圖檔案）。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。負荷 × 抗藥比例的視角改看下方的 `05_phase_field_burden_logit`，它用 logit 軸取代線性百分比。
+這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver 或 TSG 組成。計算終點不是平衡點。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可用 `.venv/bin/python main.py --only phase --replicate 0` 突出另一條實際試驗（會覆寫相圖檔案）。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。負荷 × 抗藥比例的視角改看下方的 `05_phase_field_burden_logit`，它用 logit 軸取代線性百分比。
 
 同一步驟也計算網格向量場資料（圖 07 使用相同公式）：`phase_vector_grid.csv` 與 `phase_vector_assumptions.json`。每個網格點都指定完整父代族群：S 的基因型為 0，R 只有抗藥位元為 1；全部 1,604 點（線性與對數網格）的一步投影期望均與完整模型核對。子代仍可發生其他突變，後續狀態可能離開此截面。治療在每面板固定，不依大小門檻切換。原本獨立的線性與對數向量場圖已併入圖 07 或刪除。
 
@@ -357,6 +321,8 @@ P 與 Q 每列加總為 1；M 記錄期望子代數，不是機率轉移矩陣�
 程式教學採用 `simulation.py` 的節錄（重複試驗部分取自 `experiments.py`），搭配變數意義、數值例子及詳細講者備註，涵蓋 Config、稀疏基因型計數、bitmask、TSG 等位基因、IL11、更新時序、二項繁殖抽樣、突變守恆、P／Q／M、復發判讀、多次試驗統計、取樣及測試。節錄依行號選取；`simulation.py` 或 `experiments.py` 改動後必須重新檢查 `presentations/teach_model.mjs` 的行號範圍（v10 已全部對應到目前的原始碼）。公式以 LaTeX 數學語法及 Computer Modern 字型高解析度排版，是圖片物件，並非 PowerPoint 原生公式物件。文字、矩陣、狀態圖、表格與圖表均可編輯。
 
 v10 依照與圖表相同的合併原則：可用試驗數圖改為註腳，兩張基因頻率熱圖改為一張以治療開始對齊、含 passenger 對照的基因頻率圖，刪除 IL11 全範圍曲線，TSG 達標比例與終點投影片加入無 TSG 優勢對照組。另有四張治療延伸分析投影片（Goldie–Coldman 治癒曲線、復發時間預測、k_R × μ 治癒表、適應性與持續治療比較）。主要治療曲線顯示 0–30 代的共同完整窗口，每代皆有 30 次存活且觀察中的試驗。所有對數轉換均明確標示。
+
+IL11 模組之後已從程式中刪除。既有簡報（v3–v10）仍保留 IL11 投影片；簡報建置腳本（`presentations/prepare_results.py`、`prepare_extended_results.py`、`teach_model.mjs`、`tell_results.mjs`）仍引用已刪除的 IL11 輸出與舊的 `simulation.py` 行號，重建新簡報前必須先更新。
 
 資料準備會重現治療族群與無 TSG 優勢對照組，核對 CSV 計數，並讀取 `genotype` 與 `therapy` 步驟已核對的輸出。重建資料與簡報：
 

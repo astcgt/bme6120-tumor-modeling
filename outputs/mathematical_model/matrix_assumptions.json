@@ -1,6 +1,6 @@
 {
   "P": "One-type chain, no mutation, no therapy, d=0.30, q=0.04; first N>=4 is absorbing bookkeeping overflow.",
-  "Q_and_M": "Only resistance is retained; no oncogene/TSG advantage or IL11; mu=0.001.",
+  "Q_and_M": "Only resistance is retained; no oncogene/TSG advantage; mu=0.001.",
   "orientation": "Rows=current/parent, columns=next/offspring; probability distributions are row vectors.",
   "verification": "Exact convolution probabilities, P/Q row sums, and M expected row sums checked."
 }

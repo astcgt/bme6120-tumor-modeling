@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-10-14T18:15:51.159812</dc:date>
+    <dc:date>2026-10-14T23:43:30.949681</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -61,33 +61,20 @@ z
     </g>
    </g>
    <g id="text_5">
-    <!-- $b(\mathbf{N})=0.06\,f/(0.02+f),\qquad f=\sum_{g:\,g_6=1}N_g/\sum_gN_g$ -->
+    <!-- $\delta_g=1-(1-d_g)(1-\alpha k_g),\qquad u_g(\mathbf{z})=\sum_hQ_{gh}z_h$ -->
     <g style="fill: #182634" transform="translate(36.504 251.966012)">
      <text>
-      <tspan style="font: italic 15px 'STIXGeneral'" x="0 70.981908 125.173781 161.914714 218.019076 250.073726" y="-0.5625">bfffNN</tspan>
-      <tspan style="font: 15px 'STIXGeneral'" x="7.499985 23.324966 30.485959 42.926935 50.42692 54.176904 61.676889 75.151891 79.321873 84.316869 91.816853 95.566838 103.066823 112.732805 129.343764 134.338759 168.250694 193.69167 233.934993 238.104976" y="-0.5625">()=0.06/(0.02+),=∑/∑</tspan>
-      <tspan style="font: 700 15px 'STIXGeneral'" x="12.49498" y="-0.5625">N</tspan>
-      <tspan style="font: italic 10.5px 'STIXGeneral'" x="180.69167 193.156568 228.024066 242.104976 260.078715" y="13.2390625 13.2390625 1.4203124999999996 10.767187499999999 1.4203124999999996">ggggg</tspan>
-      <tspan style="font: 10.5px 'STIXGeneral'" x="187.457858 204.060404 212.769087" y="13.2390625">:=1</tspan>
-      <tspan style="font: 7.35px 'STIXGeneral'" x="198.406557" y="14.627031249999998">6</tspan>
+      <tspan style="font: italic 15px 'STIXGeneral'" x="0 76.626805 122.134665 130.414648 175.556514 232.193127 254.18403" y="-0.5625">δdαkuQz</tspan>
+      <tspan style="font: italic 10.5px 'STIXGeneral'" x="6.899994 84.12679 137.074637 183.056499 224.224377 243.023114 248.273103 260.019022" y="1.4203124999999996 1.4203124999999996 1.4203124999999996 1.4203124999999996 13.315625 1.4203124999999996 1.4203124999999996 1.4203124999999996">gggghghh</tspan>
+      <tspan style="font: 15px 'STIXGeneral'" x="14.976918 27.417894 37.083876 49.524852 54.519847 64.185829 90.037717 95.032712 100.027707 109.693689 142.985564 147.980559 188.967426 200.622409 207.783401 220.224377" y="-0.5625">=1−(1−)(1−),()=∑</tspan>
+      <tspan style="font: 700 15px 'STIXGeneral'" x="193.962421" y="-0.5625">z</tspan>
      </text>
     </g>
    </g>
    <g id="text_6">
-    <!-- $\delta_g=1-(1-d_g(\mathbf{N}))(1-\alpha k_g),\qquad u_g(\mathbf{z})=\sum_hQ_{gh}z_h$ -->
-    <g style="fill: #182634" transform="translate(36.504 302.769212)">
-     <text>
-      <tspan style="font: italic 15px 'STIXGeneral'" x="0 76.626805 142.954642 151.234625 196.376491 253.013104 275.004007" y="-0.5625">δdαkuQz</tspan>
-      <tspan style="font: italic 10.5px 'STIXGeneral'" x="6.899994 84.12679 157.894614 203.876476 245.044354 263.843091 269.09308 280.838998" y="1.4203124999999996 1.4203124999999996 1.4203124999999996 1.4203124999999996 13.315625 1.4203124999999996 1.4203124999999996 1.4203124999999996">gggghghh</tspan>
-      <tspan style="font: 15px 'STIXGeneral'" x="14.976918 27.417894 37.083876 49.524852 54.519847 64.185829 90.037717 105.862698 110.857693 115.852689 120.847684 130.513666 163.80554 168.800536 209.787402 221.442386 228.603378 241.044354" y="-0.5625">=1−(1−())(1−),()=∑</tspan>
-      <tspan style="font: 700 15px 'STIXGeneral'" x="95.032712 214.782397" y="-0.5625">Nz</tspan>
-     </text>
-    </g>
+    <text style="fill: #66717a; font: 11px 'DejaVu Sans'; text-anchor: start" x="36.504" y="299.577494" transform="rotate(-0 36.504 299.577494)">Fixed Config; kernel applies before stopping.</text>
    </g>
    <g id="text_7">
-    <text style="fill: #66717a; font: 11px 'DejaVu Sans'; text-anchor: start" x="36.504" y="353.203094" transform="rotate(-0 36.504 353.203094)">IL11 OFF: b = 0. Empty population: b = 0. Fixed Config; kernel applies before stopping.</text>
-   </g>
-   <g id="text_8">
     <!-- $F_g(\mathbf{z}\mid S)=\delta_g+(1-\delta_g)\left[(1-q_g)u_g^2+q_gu_g^3\right]$ -->
     <g style="fill: #182634" transform="translate(587.952 154.082012)">
      <text>
@@ -100,7 +87,7 @@ z
      </text>
     </g>
    </g>
-   <g id="text_9">
+   <g id="text_8">
     <!-- $P_{S,S'}=\mathbf{1}\{A'=\alpha\}\,[\mathbf{z}^{\mathbf{N}'}]\prod_gF_g(\mathbf{z}\mid S)^{N_g}$ -->
     <g style="fill: #182634" transform="translate(587.952 215.942412)">
      <text>
@@ -115,7 +102,7 @@ z
      </text>
     </g>
    </g>
-   <g id="text_10">
+   <g id="text_9">
     <!-- $Q_{gh}=\mu^{|h|-|g|}(1-\mu)^{22-|h|}\quad\mathrm{if}\ g\subseteq h;\quad 0\ \mathrm{otherwise}$ -->
     <g style="fill: #182634" transform="translate(587.952 274.755212)">
      <text>
@@ -126,7 +113,7 @@ z
      </text>
     </g>
    </g>
-   <g id="text_11">
+   <g id="text_10">
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(587.952 327.801494)">Coefficient extraction gives the exact next-population probability.</text>
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(587.952 340.119087)">Q is inherited, irreversible, independent-bit mutation; mu = 0.001.</text>
    </g>
@@ -143,7 +130,7 @@ Q 171.5472 463.829132 171.5472 471.691532
 L 171.5472 511.527692 
 Q 171.5472 519.390092 179.9712 519.390092 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
     <path d="M 132.2352 595.393292 
@@ -156,17 +143,17 @@ Q 123.8112 534.590732 123.8112 542.453132
 L 123.8112 587.530892 
 Q 123.8112 595.393292 132.2352 595.393292 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
     <path d="M 302.4 518.772131 
 Q 302.4 526.46777 302.4 532.821767 
-" clip-path="url(#p11c4d71dc0)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 304.8 528.021767 
 L 302.4 532.821767 
 L 300 528.021767 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_5">
     <path d="M 157.5072 692.362892 
@@ -179,17 +166,17 @@ Q 149.0832 636.801932 149.0832 644.664332
 L 149.0832 684.500492 
 Q 149.0832 692.362892 157.5072 692.362892 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
     <path d="M 302.4 595.822884 
 Q 302.4 615.837443 302.4 634.510362 
-" clip-path="url(#p11c4d71dc0)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 304.8 629.710362 
 L 302.4 634.510362 
 L 300 629.710362 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_7">
     <path d="M 115.3872 812.919692 
@@ -202,17 +189,17 @@ Q 106.9632 746.875532 106.9632 754.737932
 L 106.9632 805.057292 
 Q 106.9632 812.919692 115.3872 812.919692 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
    </g>
    <g id="patch_8">
     <path d="M 302.4 692.26554 
 Q 302.4 719.357192 302.4 745.107203 
-" clip-path="url(#p11c4d71dc0)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 304.8 740.307203 
 L 302.4 745.107203 
 L 300 740.307203 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_9">
     <path d="M 115.3872 905.958092 
@@ -225,37 +212,37 @@ Q 106.9632 842.534732 106.9632 850.397132
 L 106.9632 898.095692 
 Q 106.9632 905.958092 115.3872 905.958092 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #f3f6f8; stroke: #21658b; stroke-width: 1.1; stroke-linejoin: miter"/>
    </g>
    <g id="patch_10">
     <path d="M 302.4 813.350627 
 Q 302.4 827.858442 302.4 841.024615 
-" clip-path="url(#p11c4d71dc0)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 304.8 836.224615 
 L 302.4 841.024615 
 L 300 836.224615 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_11">
     <path d="M 104.404019 874.246412 
 Q 78.042366 874.246412 53.022354 874.246412 
-" clip-path="url(#p11c4d71dc0)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 57.822354 876.646412 
 L 53.022354 874.246412 
 L 57.822354 871.846412 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_12">
     <path d="M 51.680769 564.992012 
 Q 86.185412 564.992012 119.348414 564.992012 
-" clip-path="url(#p11c4d71dc0)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 114.548414 562.592012 
 L 119.348414 564.992012 
 L 114.548414 567.392012 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #66717a; stroke: #66717a; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="patch_13">
     <path d="M 469.1952 641.257292 
@@ -268,42 +255,42 @@ Q 460.7712 604.041932 460.7712 611.904332
 L 460.7712 633.394892 
 Q 460.7712 641.257292 469.1952 641.257292 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #f3f6f8; stroke: #a54c38; stroke-width: 1.1; stroke-linejoin: miter"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #f3f6f8; stroke: #a54c38; stroke-width: 1.1; stroke-linejoin: miter"/>
    </g>
    <g id="patch_14">
     <path d="M 480.407479 566.100756 
 Q 501.66474 580.509557 514.113034 601.424091 
-" clip-path="url(#p11c4d71dc0)" style="fill: none; stroke: #a54c38; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: none; stroke: #a54c38; stroke-width: 1.2; stroke-linecap: round"/>
     <path d="M 513.720372 596.071912 
 L 514.113034 601.424091 
 L 509.595694 598.526914 
 z
-" clip-path="url(#p11c4d71dc0)" style="fill: #a54c38; stroke: #a54c38; stroke-width: 1.2; stroke-linecap: round"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: #a54c38; stroke: #a54c38; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="line2d_1">
     <path d="M 49.68 874.246412 
 L 49.68 564.992012 
-" clip-path="url(#p11c4d71dc0)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: square"/>
+" clip-path="url(#p87dd35c1e1)" style="fill: none; stroke: #66717a; stroke-width: 1.2; stroke-linecap: square"/>
    </g>
-   <g id="text_12">
+   <g id="text_11">
     <text style="fill: #21658b; font: 700 17px 'DejaVu Sans'; text-anchor: start" x="21.6" y="436.386156" transform="rotate(-0 21.6 436.386156)">B</text>
    </g>
-   <g id="text_13">
+   <g id="text_12">
     <text style="fill: #182634; font: 700 13px 'DejaVu Sans'; text-anchor: start" x="52.488" y="435.967581" transform="rotate(-0 52.488 435.967581)">Execution state machine</text>
    </g>
-   <g id="text_14">
+   <g id="text_13">
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(279.3825 488.486128)">Initialize</text>
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(260.82 500.803722)">N = 100, A = 0</text>
    </g>
-   <g id="text_15">
+   <g id="text_14">
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(246.129844 561.868528)">Record current state</text>
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(229.814609 574.186122)">Check stopping conditions</text>
    </g>
-   <g id="text_16">
+   <g id="text_15">
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(277.668906 661.458928)">Continue</text>
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(237.632344 673.776522)">No stop condition holds</text>
    </g>
-   <g id="text_17">
+   <g id="text_16">
     <g id="patch_15">
      <path d="M 273.492344 621.041861 
 L 331.307656 621.041861 
@@ -314,18 +301,18 @@ z
     </g>
     <text style="fill: #182634; font: 11px 'DejaVu Sans'; text-anchor: middle" x="302.4" y="616.774205" transform="rotate(-0 302.4 616.774205)">otherwise</text>
    </g>
-   <g id="text_18">
+   <g id="text_17">
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(253.144922 776.774128)">Update treatment</text>
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(223.274766 789.091722)">alpha = A OR (N &gt;= 20,000)</text>
    </g>
-   <g id="text_19">
+   <g id="text_18">
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(226.052266 871.122928)">Draw offspring + mutations</text>
     <text style="fill: #182634; font: 11px 'DejaVu Sans'" transform="translate(223.866016 883.440522)">N &lt;- N', A &lt;- alpha; t &lt;- t+1</text>
    </g>
-   <g id="text_20">
+   <g id="text_19">
     <text style="fill: #182634; font: 11px 'DejaVu Sans'; text-anchor: middle" x="515.808" y="625.684925" transform="rotate(-0 515.808 625.684925)">STOP</text>
    </g>
-   <g id="text_21">
+   <g id="text_20">
     <g id="patch_16">
      <path d="M 70.164 727.357612 
 L 323.244781 727.357612 
@@ -338,35 +325,35 @@ z
    </g>
   </g>
   <g id="axes_3">
-   <g id="text_22">
+   <g id="text_21">
     <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 505.969337)">Stop priority:</text>
     <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 519.406712)">extinction &gt; target_size &gt; max_cells &gt; final generation.</text>
    </g>
-   <g id="text_23">
+   <g id="text_22">
     <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 589.834937)">Treatment update is shown for therapy=True;</text>
     <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 603.272312)">otherwise alpha = A.</text>
    </g>
-   <g id="text_24">
+   <g id="text_23">
     <text style="fill: #182634; font: 12px 'DejaVu Sans'; text-anchor: start" x="648" y="673.700537" transform="rotate(-0 648 673.700537)">Therapy never switches off once started (A is absorbing).</text>
    </g>
-   <g id="text_25">
+   <g id="text_24">
     <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 757.566137)">N in the controller is total burden; the transition</text>
     <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 771.003512)">draws use the full genotype vector.</text>
    </g>
-   <g id="text_26">
+   <g id="text_25">
     <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 841.431737)">Relapse is a trajectory classification made after the</text>
     <text style="fill: #182634; font: 12px 'DejaVu Sans'" transform="translate(648 854.869112)">run, not a controller state.</text>
    </g>
   </g>
-  <g id="text_27">
+  <g id="text_26">
    <text style="fill: #182634; font: 700 22px 'DejaVu Sans'; text-anchor: start" x="21.6" y="38.412812" transform="rotate(-0 21.6 38.412812)">Appendix A1 | Full Markov kernel and execution controller</text>
   </g>
-  <g id="text_28">
+  <g id="text_27">
    <text style="fill: #66717a; font: 12px 'DejaVu Sans'; text-anchor: start" x="21.6" y="62.604812" transform="rotate(-0 21.6 62.604812)">Exact population transition kernel; the controller decides when to record, stop and start therapy</text>
   </g>
  </g>
  <defs>
-  <clipPath id="p11c4d71dc0">
+  <clipPath id="p87dd35c1e1">
    <rect x="21.6" y="423.468812" width="561.6" height="524.16"/>
   </clipPath>
  </defs>

@@ -32,11 +32,6 @@ class Config:
     suppressor_hits: int = 2  # 同一抑癌基因需要失活的等位基因數
     suppressor_death_reduction: float = 0.08
     suppressor_triple_bonus: float = 0.12
-    # IL11 開關：啟用時將第 7 個基因座由 passenger 改為 IL11；關閉時保留中性位點。
-    il11_enabled: bool = False
-    il11_gene: int = 6
-    il11_max_death_reduction: float = 0.06
-    il11_half_fraction: float = 0.02  # IL11+ 占 2% 時達最大共享效果的一半
     # 突變與生長設定：driver 達標後同時影響自然死亡率和三子細胞機率。
     mutation_rate: float = 0.001  # 每個子細胞、每個未突變位元、每代；TSG 為每等位基因
     death_rate: float = 0.30
@@ -73,13 +68,6 @@ class Config:
             raise ValueError("driver_hits 超出可用 driver 數目")
         if not self.suppressor_genes or self.suppressor_hits not in (1, 2):
             raise ValueError("需要至少一個抑癌基因，suppressor_hits 必須為 1 或 2")
-        # 保留 20 個基因座及相同突變機會，避免有無 IL11 比較混入基因組大小差異。
-        if not isinstance(self.il11_enabled, bool):
-            raise ValueError("il11_enabled 必須為 bool")
-        if self.il11_gene in genes or not 0 <= self.il11_gene < self.n_genes:
-            raise ValueError("IL11 必須是獨立且有效的基因座")
-        if not 0 < self.il11_half_fraction <= 1:
-            raise ValueError("il11_half_fraction 必須介於 0（不含）與 1")
         # 逐一檢查機率參數，避免傳入二項分布時出現無效機率。
         for name in (
             "mutation_rate",
@@ -89,7 +77,6 @@ class Config:
             "driver_triple_bonus",
             "suppressor_death_reduction",
             "suppressor_triple_bonus",
-            "il11_max_death_reduction",
             "sensitive_therapy_kill",
             "resistant_therapy_kill",
             "resistance_cost",
@@ -156,9 +143,7 @@ def suppressor_loss(genotype: int, config: Config) -> bool:
     )
 
 
-def growth_probabilities(
-    genotype: int, config: Config, shared_benefit: float = 0.0
-) -> tuple[float, float]:
+def growth_probabilities(genotype: int, config: Config) -> tuple[float, float]:
     """分開計算 oncogene 活化及抑癌功能喪失的生長優勢，可相加。"""
     oncogene = driver_count(genotype, config) >= config.driver_hits
     suppressor = suppressor_loss(genotype, config)
@@ -167,8 +152,7 @@ def growth_probabilities(
         0,
         config.death_rate
         - config.driver_death_reduction * oncogene
-        - config.suppressor_death_reduction * suppressor
-        - shared_benefit,
+        - config.suppressor_death_reduction * suppressor,
     )
     # 抗藥代價只在明確設定時加上，預設為 0 時完全不改變計算。
     if config.resistance_cost and genotype & (1 << config.resistance_gene):
@@ -179,24 +163,6 @@ def growth_probabilities(
         + config.suppressor_triple_bonus * suppressor
     )
     return death, triple
-
-
-def il11_environment(population: dict[int, int], config: Config) -> tuple[float, float]:
-    """由當前 IL11+ 細胞比例計算下一次轉移的共享死亡率降低量。"""
-    # 關閉時此位點只是 passenger，不產生 IL11，也不提供共享優勢。
-    total = sum(population.values())
-    if not config.il11_enabled or total == 0:
-        return 0.0, 0.0
-    fraction = (
-        sum(n for g, n in population.items() if g & (1 << config.il11_gene)) / total
-    )
-    # 飽和函數是教學假設；均勻混合環境中所有細胞（含非生產者）皆受益。
-    benefit = (
-        config.il11_max_death_reduction
-        * fraction
-        / (config.il11_half_fraction + fraction)
-    )
-    return fraction, benefit
 
 
 def crowding_death(total: int, config: Config) -> float:
@@ -242,7 +208,6 @@ def summarize(population: dict[int, int], generation: int, config: Config) -> di
     resistant = sum(
         n for g, n in population.items() if g & (1 << config.resistance_gene)
     )
-    il11_fraction, shared_benefit = il11_environment(population, config)
     # 彙整多樣性：richness 是基因型數；Shannon 用自然對數；Simpson 為 1−Σp²。
     # driver_fraction 只計 oncogene 達標；suppressor_fraction 計 TSG 達標。
     # suppressor_biallelic_fraction 計至少一個 TSG 雙等位基因失活；滅絕時皆為零。
@@ -250,8 +215,6 @@ def summarize(population: dict[int, int], generation: int, config: Config) -> di
         generation=generation,
         total=total,
         resistant=resistant,
-        il11_fraction=il11_fraction,
-        il11_shared_benefit=shared_benefit,
         sensitive=total - resistant,
         richness=len(population),
         shannon=float(-np.sum(fractions * np.log(fractions))),
@@ -339,12 +302,10 @@ def simulate(
         active.append(therapy_on)
         crowding = crowding_death(row["total"], config)
         # 依基因型批次處理所有父細胞；新世代完全由 offspring 取代。
-        # 每代只計算一次共享環境；本代新突變會從下一次轉移開始提供 IL11。
-        _, shared_benefit = il11_environment(population, config)
         offspring = {}
         for genotype, count in population.items():
             # 將 oncogene 與抑癌基因的效果合併，再套用治療殺傷。
-            death, triple = growth_probabilities(genotype, config, shared_benefit)
+            death, triple = growth_probabilities(genotype, config)
             if crowding:
                 death = min(1.0, death + crowding)
             # 治療殺傷作用於自然存活者，因此用兩個存活機率相乘計算總死亡率。

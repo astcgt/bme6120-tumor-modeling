@@ -5,7 +5,7 @@
     .venv/bin/python main.py --only therapy --analyses 08 09
 
 步驟（後面的步驟讀取 results 寫出的 CSV，所以第一次要先跑 results）：
-    results   主實驗（治療與復發）與對照實驗：圖 01–04
+    results   主實驗（治療與復發）與對照實驗：圖 01–03
     model     數學圖：06 單細胞規則、07 矩陣與流向、A1 附錄
     phase     相圖：01、05、06
     genotype  Muller 圖與基因頻率
@@ -66,7 +66,6 @@ def parse_args():
         default=2,
         help="主實驗的 TSG 失活門檻（one-hit 或 two-hit）",
     )
-    parser.add_argument("--il11", action="store_true", help="主實驗啟用 IL11 共享效益")
     parser.add_argument("--replicate", type=int, help="相圖 01 要突出的試驗編號")
     parser.add_argument(
         "--analyses", choices=ANALYSES, nargs="+", help="只跑部分治療分析"
@@ -91,10 +90,10 @@ def reproduced_trials():
 
 
 def run_results(args):
-    """主實驗與三組對照實驗：圖 01–04 與對應的 CSV。"""
+    """主實驗與兩組對照實驗：圖 01–03 與對應的 CSV。"""
     out = exp.OUTPUTS
     out.mkdir(parents=True, exist_ok=True)
-    config = Config(suppressor_hits=args.suppressor_hits, il11_enabled=args.il11)
+    config = Config(suppressor_hits=args.suppressor_hits)
 
     # 主實驗：30 次治療試驗。
     trials = exp.run_therapy_trials(config, args.replicates, args.seed)
@@ -120,13 +119,6 @@ def run_results(args):
     plot_results.plot_hit_comparison(hits, config, out)
     exp.write_csv(out / "one_hit_vs_two_hit.csv", tsg_rows)
     exp.write_csv(out / "one_hit_vs_two_hit_summary.csv", hits["summaries"])
-
-    # 對照實驗：IL11 共享生長優勢。
-    il11 = exp.run_il11_comparison(config, args.replicates, args.seed)
-    plot_results.plot_il11(il11, config, out)
-    exp.write_csv(out / "il11_comparison.csv", il11["rows"])
-    exp.write_csv(out / "il11_comparison_summary.csv", il11["summaries"])
-    exp.write_csv(out / "il11_benefit_curve.csv", exp.il11_benefit_rows(config))
 
     # 每次試驗的結果與本次執行的完整設定。
     outcomes = exp.therapy_events(trials)

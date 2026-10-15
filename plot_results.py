@@ -1,4 +1,4 @@
-"""主結果圖：01 治療反應、02 死亡率與異質性、03 one-hit vs two-hit、04 IL11。
+"""主結果圖：01 治療反應、02 死亡率與異質性、03 one-hit vs two-hit。
 
 資料由 experiments.py 計算；這裡只負責畫圖與存檔。
 """
@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 
-from analysis import il11_benefit_curve
 from experiments import HIT_SCENARIOS
 from plot_style import COLORS, save_figure, set_plot_style
 from simulation import Config, Result, suppressor_alleles
@@ -290,114 +289,6 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
     save_figure(fig, output, "03_one_hit_vs_two_hit")
 
 
-def plot_il11(il11: dict, config: Config, output: Path):
-    """圖 04：IL11 開／關的生長、生產者比例，以及實際生產者在效益曲線上的位置。"""
-    horizon, repeats = il11["horizon"], il11["repeats"]
-    producer = il11["producer"]
-    set_plot_style()
-    fig, axes = plt.subplots(1, 3, figsize=(18.5, 6.2), layout="constrained")
-    fig.suptitle(
-        "IL11+ producers | a few cells speed up the whole tumor",
-        fontsize=21,
-        fontweight="bold",
-    )
-    for label, color in (("IL11 OFF", COLORS[0]), ("IL11 ON", COLORS[1])):
-        for ax, key in zip(axes[:2], ("total", "il11_percent")):
-            values = il11["series"][label][key]
-            low, med, high = np.percentile(values, [10, 50, 90], axis=0)
-            ax.plot(range(horizon + 1), med, label=label, color=color)
-            ax.fill_between(range(horizon + 1), low, high, color=color, alpha=0.15)
-    for ax, title, ylabel in zip(
-        axes[:2],
-        ("A  Whole-tumor growth", "B  IL11+ producer cells"),
-        ("Total cells", "IL11+ cells (%)"),
-    ):
-        ax.set(title=title, xlabel="Generation", ylabel=ylabel)
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.legend(frameon=False, loc="upper left")
-    off, on = il11["summaries"]
-    axes[0].annotate(
-        f"Gen {horizon}: {on['median_total']:,.0f} vs {off['median_total']:,.0f}\n"
-        f"(+{100 * (on['median_total'] / off['median_total'] - 1):.0f}% with IL11)",
-        xy=(horizon, on["median_total"]),
-        xytext=(0.30, 0.55),
-        textcoords="axes fraction",
-        arrowprops=dict(arrowstyle="->", color=COLORS[1]),
-        fontsize=10.5,
-        color=COLORS[1],
-    )
-    # C：公式曲線（放大 0–10%），並把 IL11 ON 試驗實際出現的生產者比例範圍疊上去。
-    ax = axes[2]
-    maximum, half = config.il11_max_death_reduction, config.il11_half_fraction
-    fraction, benefit = il11_benefit_curve(config)
-    zoom = min(1.0, max(0.10, 3 * half))
-    lo, hi = np.percentile(producer[:, 1:], [10, 90])
-    ax.axvspan(
-        lo,
-        hi,
-        color=COLORS[1],
-        alpha=0.13,
-        lw=0,
-        label=f"Observed producers, gen 1–{horizon} (10–90%)",
-    )
-    ax.plot(
-        100 * fraction, 100 * benefit, color=COLORS[1], label=r"$b(f)=B_{max}\,f/(K+f)$"
-    )
-    ax.axhline(
-        100 * maximum,
-        color="#64748B",
-        ls="--",
-        lw=1.4,
-        label=f"Cap {100 * maximum:g} pp",
-    )
-    ax.plot(
-        [100 * half, 100 * half, 0],
-        [0, 50 * maximum, 50 * maximum],
-        color=COLORS[2],
-        ls=":",
-        lw=1.5,
-    )
-    ax.scatter([100 * half], [50 * maximum], color=COLORS[2], s=55, zorder=5)
-    ax.annotate(
-        f"Half-saturation K = {100 * half:g}%",
-        xy=(100 * half, 50 * maximum),
-        xytext=(4.2, 1.6),
-        arrowprops=dict(arrowstyle="->", color=COLORS[2]),
-        fontsize=10.5,
-        color=COLORS[2],
-    )
-    end = float(np.median(producer[:, -1]))
-    ax.scatter(
-        [end],
-        [100 * maximum * end / 100 / (half + end / 100)],
-        marker="D",
-        color="#172B42",
-        s=45,
-        zorder=6,
-        label=f"Median at gen {horizon}: {end:.1f}%",
-    )
-    ax.set(
-        xlim=(0, 100 * zoom),
-        ylim=(-0.2, 115 * maximum),
-        title="C  Where the tumor sits on the benefit curve",
-        xlabel="IL11+ cells (% of tumor)",
-        ylabel="Shared reduction in death probability (pp)",
-    )
-    ax.legend(frameon=False, loc="lower right", fontsize=9)
-    fig.supxlabel(
-        f"No therapy · {repeats} trials/condition · median and 10–90% interval (not"
-        " CI). OFF: neutral passenger at the same locus; ON: IL11 mutation creates"
-        f" producers and ALL cells benefit.\nAt gen {horizon}: shared death reduction"
-        f" {100 * on['median_shared_death_reduction']:.1f} pp; a mutation-free"
-        " nonproducer's expected offspring"
-        f" {off['median_nonproducer_expected_offspring']:.3f} →"
-        f" {on['median_nonproducer_expected_offspring']:.3f}. Benefit formula is a"
-        " teaching assumption, not fitted data.",
-        fontsize=10,
-    )
-    save_figure(fig, Path(output), "04_il11_shared_fitness")
-
-
 def plot_dashboard(result: Result, output: Path):
     """輸出生長、基因型組成、多樣性與突變頻率四面板圖。"""
     # 建立 2×2 面板，使用自動排版協調標題、座標標籤與色條的空間。
@@ -503,8 +394,6 @@ def plot_dashboard(result: Result, output: Path):
             return " · resistance"
         if g in config.suppressor_genes:
             return " · TSG (any hit)"
-        if config.il11_enabled and g == config.il11_gene:
-            return " · IL11"
         return ""
 
     labels = [f"Gene {g + 1}{role(g)}" for g in range(config.n_genes)]

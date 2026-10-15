@@ -2,7 +2,7 @@
 
 每個函數只做計算或讀寫，回傳資料給 main.py；畫圖在 plot_*.py。
 主實驗與對照實驗的 seed 區段：治療 +100000、TSG 對照 +0／+10000／+20000、
-死亡率 +50000、IL11 +300000、治療時機 +400000、敏感度 +500000、適應性治療 +600000。
+死亡率 +50000、治療時機 +400000、敏感度 +500000、適應性治療 +600000。
 """
 
 from __future__ import annotations
@@ -27,7 +27,6 @@ from analysis import (
     fitness,
     genotype_label,
     goldie_coldman_theory,
-    il11_benefit_curve,
     muller_layout,
     spearman,
     TOP_K,
@@ -77,8 +76,6 @@ def load_config(directory: Path) -> tuple[Config, dict]:
         settings[key] = tuple(settings[key])
     config = Config(**settings)
     config.validate()
-    if config.il11_enabled:
-        raise ValueError("相圖只分析基礎模型；請用 IL11 關閉的輸出重新執行。")
     return config, metadata
 
 
@@ -435,89 +432,6 @@ def run_death_rate_comparison(
     }
 
 
-def run_il11_comparison(
-    config: Config, repeats: int, seed: int, horizon: int = 18
-) -> dict:
-    """相同 20 個基因座下，IL11 功能開／關的生長、生產者比例與共享效益（不治療）。
-
-    共享死亡率降低量與非生產者適應度都是生產者比例的確定性轉換，只寫進 CSV 與註腳。
-    """
-    if repeats < 1 or horizon < 1:
-        raise ValueError("repeats 與 horizon 必須為正")
-    config.validate()
-    rows, summaries, series, producer = [], [], {}, None
-    keys = (
-        "total",
-        "il11_percent",
-        "shared_death_reduction",
-        "nonproducer_expected_offspring",
-    )
-    for enabled, label in ((False, "IL11 OFF"), (True, "IL11 ON")):
-        # 固定時間窗與其餘參數；同一 replicate 用同一 seed，但分歧後不視為逐細胞配對。
-        cfg = replace(
-            config, il11_enabled=enabled, generations=horizon, max_cells=10**12
-        )
-        trials = []
-        for rep in range(repeats):
-            run_seed = seed + 300000 + rep
-            result = simulate(cfg, seed=run_seed, therapy=False)
-            if result.stop_reason == "cell_limit":
-                raise RuntimeError("IL11 comparison hit safety limit; shorten horizon")
-            trial = []
-            for generation in range(horizon + 1):
-                state = result.history[min(generation, len(result.history) - 1)]
-                # 非生產者本身沒有 IL11 突變；其 fitness 為基因型 0 的期望子代數。
-                benefit = state["il11_shared_benefit"]
-                death, triple = growth_probabilities(0, cfg, benefit)
-                row = dict(
-                    condition=label,
-                    replicate=rep,
-                    seed=run_seed,
-                    generation=generation,
-                    total=state["total"],
-                    il11_percent=100 * state["il11_fraction"],
-                    shared_death_reduction=benefit,
-                    nonproducer_expected_offspring=(1 - death) * (2 + triple),
-                )
-                rows.append(row)
-                trial.append(row)
-            trials.append(trial)
-        series[label] = {
-            key: np.array([[r[key] for r in trial] for trial in trials])
-            for key in keys[:2]
-        }
-        if enabled:
-            producer = series[label]["il11_percent"]
-        summaries.append(
-            dict(
-                condition=label,
-                generation=horizon,
-                replicates=repeats,
-                **{
-                    f"median_{key}": float(np.median([t[-1][key] for t in trials]))
-                    for key in keys
-                },
-            )
-        )
-    return {
-        "rows": rows,
-        "summaries": summaries,
-        "series": series,
-        "producer": producer,
-        "horizon": horizon,
-        "repeats": repeats,
-    }
-
-
-def il11_benefit_rows(config: Config) -> list[dict]:
-    """效益曲線的資料表，方便自行重畫或核對圖中數值。"""
-    fraction, benefit = il11_benefit_curve(config)
-    return [
-        dict(il11_percent=100 * f, benefit_percentage_points=100 * b)
-        for f, b in zip(fraction, benefit)
-    ]
-
-
 # ---------------------------------------------------------------- 數學圖與相圖資料 --
 def write_markov_data(output: Path, markov: dict):
     """矩陣 P、Q、M 的 CSV（列＝目前／父代，欄＝下一步／子代）與假設說明。"""
@@ -539,8 +453,7 @@ def write_markov_data(output: Path, markov: dict):
                 " N>=4 is absorbing bookkeeping overflow."
             ),
             "Q_and_M": (
-                "Only resistance is retained; no oncogene/TSG advantage or IL11;"
-                " mu=0.001."
+                "Only resistance is retained; no oncogene/TSG advantage; mu=0.001."
             ),
             "orientation": (
                 "Rows=current/parent, columns=next/offspring; probability"
