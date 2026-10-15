@@ -8,6 +8,7 @@ Muller 圖以「基因型巢狀」排列：子基因型畫在已呈現的最大�
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import to_rgb
 from matplotlib.patches import Patch
 import numpy as np
 
@@ -22,24 +23,33 @@ from analysis import (
 from plot_style import GRAY, INK
 from simulation import suppressor_alleles, suppressor_loss
 
-# 依功能配色（CIE LCh 色相角）：oncogene 暖色、TSG 冷色、兩者皆有為紫色、無功能突變為灰；
-# 抗藥另加白色斜線。同一色組內再以明度與小幅色相差區分不同基因型。
-ONCOGENE_HUES = (25, 55, 85)  # ONC1 紅、ONC2 橘、ONC3 金
-TSG_HUES = (250, 205)  # TSG1 藍、TSG2 青
-BOTH_HUE = 315  # oncogene + TSG：紫
-NEUTRAL_HUE = 250  # 灰色帶一點冷調，與暖色 oncogene 分開
-GROUP_LIGHTNESS = (60, 74, 47, 84, 40, 67, 53)  # 同色組內依序使用，相鄰兩者明暗差大
-NEUTRAL_LIGHTNESS = (72, 56, 84, 44, 64, 50)
-HUE_OFFSETS = (0, 7, -7, 12, -12)
-HATCH = "////"
-# CIE XYZ（D65）→ 線性 sRGB 的標準矩陣。
-XYZ_TO_LINEAR_RGB = np.array(
-    [
-        [3.2406, -1.5372, -0.4986],
-        [-0.9689, 1.8758, 0.0415],
-        [0.0557, -0.2040, 1.0570],
-    ]
+# 依功能配色（Tableau 10 系列，論文常用、色盲與灰階下仍可分辨）：
+# oncogene 暖色、TSG 綠色、兩者皆有為紫色、無功能突變為淺灰；抗藥另加斑點。
+# 同一色組內依序混白或混黑，讓同類但不同的基因型仍好分辨。
+ONCOGENE_COLORS = ("#E15759", "#F28E2B", "#EDC948")  # ONC1 珊瑚紅、ONC2 橘、ONC3 金黃
+TSG_COLORS = ("#59A14F", "#2E9C84")  # TSG1 綠、TSG2 青綠
+BOTH_COLOR = "#A374B5"  # oncogene + TSG：紫
+NEUTRAL_COLOR = "#C3C9CF"  # 無功能突變：淺灰
+SINGLE_ALLELE_PALE = 0.5  # TSG 只有一個等位基因突變：與白色混合的比例
+SHADES = (
+    (None, 0),
+    ("white", 0.4),
+    ("black", 0.28),
+    ("white", 0.65),
+    ("black", 0.45),
+    ("white", 0.2),
+    ("black", 0.15),
 )
+# 灰色組先變深：起始基因型 WT 淺灰，第二個（通常是只有 RES）明顯較深，兩者不靠斑點也分得開。
+NEUTRAL_SHADES = (
+    (None, 0),
+    ("black", 0.3),
+    ("white", 0.55),
+    ("black", 0.5),
+    ("white", 0.3),
+    ("black", 0.15),
+)
+SPOTS = "."
 TEXT = {
     "zh": {
         "title": "基因型組成的演變：治療篩選出預先存在的抗藥基因型",
@@ -56,12 +66,12 @@ TEXT = {
         "genotypes": "基因型（主圖，縮排 = 巢狀層級）",
         "key_title": "顏色規則",
         "key": {
-            "onc": "暖色：oncogene\n（ONC1 紅、ONC2 橘、ONC3 金）",
-            "tsg": "冷色：TSG 失去功能\n（TSG1 藍、TSG2 青）",
-            "tsg_one": "淡冷色：TSG 只有一個等位基因突變",
+            "onc": "暖色：oncogene\n（ONC1 珊瑚紅、ONC2 橘、ONC3 金黃）",
+            "tsg": "綠色：TSG 失去功能\n（TSG1 綠、TSG2 青綠）",
+            "tsg_one": "淡綠：TSG 只有一個等位基因突變",
             "both": "紫色：oncogene + TSG",
             "neutral": "灰色：無功能突變（WT、passenger）",
-            "res": "斜線：帶抗藥突變（RES）",
+            "res": "斑點：帶抗藥突變（RES）",
         },
         "small": "其他試驗（顏色規則同主圖）",
         "rep": "rep {r}：復發 t={g}",
@@ -113,12 +123,12 @@ TEXT = {
         "genotypes": "Genotypes (main panel; indent = nesting)",
         "key_title": "Color code",
         "key": {
-            "onc": "Warm: oncogene\n(ONC1 red, ONC2 orange, ONC3 gold)",
-            "tsg": "Cool: TSG loss of function\n(TSG1 blue, TSG2 teal)",
-            "tsg_one": "Pale cool: one TSG allele hit",
+            "onc": "Warm: oncogene\n(ONC1 coral, ONC2 orange, ONC3 gold)",
+            "tsg": "Green: TSG loss of function\n(TSG1 green, TSG2 teal green)",
+            "tsg_one": "Pale green: one TSG allele hit",
             "both": "Purple: oncogene + TSG",
             "neutral": "Gray: no functional hit (WT, passengers)",
-            "res": "Hatched: carries resistance (RES)",
+            "res": "Spotted: carries resistance (RES)",
         },
         "small": "Other trials (same color code as the main panel)",
         "rep": "rep {r}: relapse t={g}",
@@ -159,86 +169,82 @@ TEXT = {
 }
 
 
-def lch_to_rgb(lightness, chroma, hue):
-    """CIE LCh（D65）→ sRGB；同明度的顏色看起來一樣亮，避免黃色特別刺眼。"""
-    h = np.radians(hue)
-    a, b = chroma * np.cos(h), chroma * np.sin(h)
-    fy = (lightness + 16) / 116
-    fx, fz = fy + a / 500, fy - b / 200
-
-    def inverse(f):
-        return f**3 if f**3 > 0.008856 else (f - 16 / 116) / 7.787
-
-    xyz = np.array([0.95047 * inverse(fx), inverse(fy), 1.08883 * inverse(fz)])
-    linear = np.clip(XYZ_TO_LINEAR_RGB @ xyz, 0, 1)
-    rgb = np.where(
-        linear <= 0.0031308, 12.92 * linear, 1.055 * linear ** (1 / 2.4) - 0.055
-    )
-    return tuple(np.clip(rgb, 0, 1))
-
-
-def mean_hue(hues):
-    angles = np.radians(hues)
-    return float(np.degrees(np.arctan2(np.sin(angles).mean(), np.cos(angles).mean())))
+def mix(color, target, amount):
+    rgb = np.array(to_rgb(color))
+    end = np.ones(3) if target == "white" else np.zeros(3)
+    return tuple(rgb + (end - rgb) * amount)
 
 
 def color_group(genotype, config):
-    """(色組, 色相, 彩度)：只看 oncogene 與 TSG；抗藥與 passenger 不影響色組。"""
+    """(色組, 基準色)：只看 oncogene 與 TSG；抗藥與 passenger 不影響色組。"""
     oncogenes = [
-        ONCOGENE_HUES[i]
+        ONCOGENE_COLORS[i]
         for i, gene in enumerate(config.driver_genes)
         if genotype & (1 << gene)
     ]
     alleles = [
         suppressor_alleles(genotype, gene, config) for gene in config.suppressor_genes
     ]
-    tsg = [TSG_HUES[i] for i, n in enumerate(alleles) if n]
+    tsg = [TSG_COLORS[i] for i, n in enumerate(alleles) if n]
     lost = suppressor_loss(genotype, config)
     if oncogenes and tsg:
-        return ("both", tuple(oncogenes + tsg)), BOTH_HUE, 50
+        return ("both", tuple(oncogenes + tsg)), to_rgb(BOTH_COLOR)
     if oncogenes:
-        return ("onc", tuple(oncogenes)), mean_hue(oncogenes), 62
+        # 多個 oncogene 取平均色（例如 ONC2+ONC3 介於橘與金黃之間）。
+        return ("onc", tuple(oncogenes)), tuple(
+            np.mean([to_rgb(c) for c in oncogenes], axis=0)
+        )
     if tsg:
-        # 失去功能（達 suppressor_hits）用飽和冷色；只有單一等位基因突變用淡冷色。
-        return ("tsg", tuple(tsg), lost), mean_hue(tsg), 50 if lost else 24
-    return ("neutral",), NEUTRAL_HUE, 6
+        base = tuple(np.mean([to_rgb(c) for c in tsg], axis=0))
+        # 失去功能（達 suppressor_hits）用原色；只有單一等位基因突變用淡綠。
+        if not lost:
+            base = mix(base, "white", SINGLE_ALLELE_PALE)
+        return ("tsg", tuple(tsg), lost), base
+    return ("neutral",), to_rgb(NEUTRAL_COLOR)
 
 
 def genotype_colors(shown, config):
-    """依功能決定色相；同一色組內依出現順序換明度並微調色相，讓相鄰色帶好分辨。"""
+    """依功能決定基準色；同一色組內依出現順序混白或混黑，讓相鄰色帶好分辨。"""
     used, colors = {}, {}
     for g in shown:
-        group, hue, chroma = color_group(g, config)
+        group, base = color_group(g, config)
         i = used.get(group, 0)
         used[group] = i + 1
-        levels = NEUTRAL_LIGHTNESS if group == ("neutral",) else GROUP_LIGHTNESS
-        lightness = levels[i % len(levels)]
-        hue = (hue + HUE_OFFSETS[i % len(HUE_OFFSETS)]) % 360
-        if 60 <= hue <= 110:
-            lightness = max(lightness, 70)  # 中低明度的黃色會變成橄欖綠
-        colors[g] = lch_to_rgb(lightness, chroma, hue)
+        shades = NEUTRAL_SHADES if group == ("neutral",) else SHADES
+        target, amount = shades[i % len(shades)]
+        colors[g] = mix(base, target, amount) if target else base
     return colors
+
+
+def spot_color(color):
+    """深色帶用白點、淺色帶用深色點，斑點在任何底色上都看得見。"""
+    r, g, b = color[:3]
+    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return (1, 1, 1, 0.8) if luminance < 0.6 else (0.1, 0.13, 0.17, 0.55)
 
 
 def color_key(t):
     """顏色規則的圖例：每一類取代表色。"""
     samples = (
-        ("onc", lch_to_rgb(62, 62, ONCOGENE_HUES[1]), None),
-        ("tsg", lch_to_rgb(60, 50, TSG_HUES[0]), None),
-        ("tsg_one", lch_to_rgb(74, 24, TSG_HUES[0]), None),
-        ("both", lch_to_rgb(60, 50, BOTH_HUE), None),
-        ("neutral", lch_to_rgb(72, 6, NEUTRAL_HUE), None),
-        ("res", lch_to_rgb(56, 6, NEUTRAL_HUE), HATCH),
+        ("onc", ONCOGENE_COLORS[0], None),
+        ("tsg", TSG_COLORS[0], None),
+        ("tsg_one", mix(TSG_COLORS[0], "white", SINGLE_ALLELE_PALE), None),
+        ("both", BOTH_COLOR, None),
+        ("neutral", NEUTRAL_COLOR, None),
+        ("res", mix(NEUTRAL_COLOR, "black", 0.3), SPOTS),
     )
-    return [
-        Patch(
-            facecolor=color,
-            edgecolor="white" if hatch else color,
-            hatch=hatch,
-            label=t["key"][name],
-        )
-        for name, color, hatch in samples
-    ]
+    return [spot_patch(color, spots, t["key"][name]) for name, color, spots in samples]
+
+
+def spot_patch(color, spots, label):
+    color = to_rgb(color)
+    return Patch(
+        facecolor=color,
+        edgecolor=spot_color(color) if spots else color,
+        hatch=spots,
+        linewidth=0,  # 只留斑點，不畫外框
+        label=label,
+    )
 
 
 def resistant(genotype, config):
@@ -254,16 +260,15 @@ def draw_muller(ax, result, config, label=True, k=TOP_K):
         low, high = bands[g]
         ax.fill_between(t, low, high, color=colors[g], linewidth=0.4, edgecolor="white")
         if resistant(g, config):
-            with plt.rc_context({"hatch.linewidth": 0.5}):
-                ax.fill_between(
-                    t,
-                    low,
-                    high,
-                    facecolor="none",
-                    edgecolor=(1, 1, 1, 0.55),
-                    hatch=HATCH,
-                    linewidth=0,
-                )
+            ax.fill_between(
+                t,
+                low,
+                high,
+                facecolor="none",
+                edgecolor=spot_color(colors[g]),
+                hatch=SPOTS,
+                linewidth=0,
+            )
     if label:
         for g in shown:
             low, high = bands[g]
@@ -352,13 +357,12 @@ def plot_muller(config, results, events, lang):
     muller.set_ylabel(t["freq"], fontsize=12)
     muller.set_xlabel(t["gen"], fontsize=12)
     muller.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
-    # 主圖：依巢狀（深度優先）逐一列出 Top-k 基因型，縮排表示層級；抗藥者畫斜線。
+    # 主圖：依巢狀（深度優先）逐一列出 Top-k 基因型，縮排表示層級；抗藥者加斑點。
     handles = [
-        Patch(
-            facecolor=colors[g],
-            edgecolor=(1, 1, 1, 0.8) if resistant(g, config) else colors[g],
-            hatch=HATCH if resistant(g, config) else None,
-            label="    " * depth(g, parent) + genotype_label(g, config),
+        spot_patch(
+            colors[g],
+            SPOTS if resistant(g, config) else None,
+            "    " * depth(g, parent) + genotype_label(g, config),
         )
         for g in shown
     ]
@@ -371,6 +375,8 @@ def plot_muller(config, results, events, lang):
         fontsize=11,
         title_fontsize=12,
         alignment="left",
+        handlelength=2.6,
+        handleheight=1.3,
     )
     fig.legend(
         handles=color_key(t),
@@ -381,6 +387,8 @@ def plot_muller(config, results, events, lang):
         fontsize=11,
         title_fontsize=12,
         alignment="left",
+        handlelength=2.6,
+        handleheight=1.3,
     )
     fig.add_artist(first)
     # 小分圖：最早與最晚復發，加上復發時間的 4 個分位數代表。
