@@ -7,10 +7,7 @@ Muller 圖以「基因型巢狀」排列：子基因型畫在已呈現的最大�
 
 from __future__ import annotations
 
-import colorsys
-
 import matplotlib.pyplot as plt
-from matplotlib.colors import to_rgb
 from matplotlib.patches import Patch
 import numpy as np
 
@@ -18,24 +15,27 @@ from analysis import (
     TOP_K,
     choose_exemplar,
     depth,
-    family,
     genotype_label,
     muller_bands,
     muller_layout,
 )
 from plot_style import GRAY, INK
 
-# 功能類別決定色相，類別內以明度區分；身分另有直接標籤，不只靠顏色。
-FAMILY = {
-    "wt": "#9AA5AD",
-    "onc": "#2a78d6",
-    "tsg": "#1baf7a",
-    "onc_tsg": "#4a3aa7",
-    "res": "#eda100",
-    "res_onc": "#eb6834",
-    "res_tsg": "#e87ba4",
-    "res_onc_tsg": "#e34948",
-}
+# 樹狀配色（Tennekes & de Jonge 2014 的 tree colors）：根的子代平分色環，每個後代在
+# 父代的色相區間內再細分，所以巢狀越近顏色越近；兄弟之間明暗交錯，相鄰色帶仍好分辨。
+# 起始基因型固定為中性灰；抗藥基因型另加白色斜線，抗藥與否不必靠色相判斷。
+ROOT_GRAY = "#A7B0B8"
+HUE_START = 150  # 讓第一個分支落在藍色、第二個分支落在橘色附近（CIE LCh 色相角）
+HUE_SHARE = 0.9  # 每個子代只用分到區間的 90%，兄弟子樹之間留空隙
+HATCH = "////"
+# CIE XYZ（D65）→ 線性 sRGB 的標準矩陣。
+XYZ_TO_LINEAR_RGB = np.array(
+    [
+        [3.2406, -1.5372, -0.4986],
+        [-0.9689, 1.8758, 0.0415],
+        [0.0557, -0.2040, 1.0570],
+    ]
+)
 TEXT = {
     "zh": {
         "title": "基因型組成的演變：治療篩選出預先存在的抗藥基因型",
@@ -49,27 +49,19 @@ TEXT = {
         "therapy": "治療開始",
         "nadir": "谷底",
         "relapse": "復發",
-        "families": {
-            "wt": "無功能突變",
-            "onc": "oncogene",
-            "tsg": "TSG 失活",
-            "onc_tsg": "oncogene+TSG",
-            "res": "抗藥",
-            "res_onc": "抗藥+oncogene",
-            "res_tsg": "抗藥+TSG",
-            "res_onc_tsg": "抗藥+onc+TSG",
-        },
-        "genotypes": "基因型（主圖）",
-        "family_title": "功能類別（色相）",
-        "small": "其他試驗（顏色依功能類別，相同類別不代表相同基因型）",
+        "genotypes": "基因型（主圖，縮排 = 巢狀層級）",
+        "hatch": "斜線 = 帶抗藥突變（RES）",
+        "small": (
+            "其他試驗（各自的巢狀樹配色；不同試驗的同色不代表同基因型；斜線 = 抗藥）"
+        ),
         "rep": "rep {r}：復發 t={g}",
         "norelapse": "rep {r}：未復發",
         "foot": (
-            "巢狀規則：子基因型位於「已呈現且位元為其子集的最大基因型」內；這是基因型包含關係，"
-            "不是重建的細胞譜系。"
+            "巢狀規則：子基因型位於「已呈現且位元為其子集的最大基因型」內（同大小時取該基因型出現時"
+            "細胞較多者）；這是基因型包含關係，不是重建的細胞譜系。"
         ),
         "foot2": (
-            "標籤：ONC=oncogene，TSGa/b=同一抑癌基因的兩個等位基因，RES=抗藥，"
+            "顏色：巢狀越近色相越近（tree colors）；標籤：ONC=oncogene，TSGa/b=同一抑癌基因的兩個等位基因，RES=抗藥，"
             "P=passenger（基因編號由 1 起算）。"
         ),
         "freq_title": "每個基因的突變細胞比例（{n} 次試驗，以治療開始對齊）",
@@ -108,30 +100,23 @@ TEXT = {
         "therapy": "Therapy start",
         "nadir": "Nadir",
         "relapse": "Relapse",
-        "families": {
-            "wt": "No functional hit",
-            "onc": "Oncogene",
-            "tsg": "TSG loss",
-            "onc_tsg": "Oncogene+TSG",
-            "res": "Resistant",
-            "res_onc": "Resistant+oncogene",
-            "res_tsg": "Resistant+TSG",
-            "res_onc_tsg": "Resistant+onc+TSG",
-        },
-        "genotypes": "Genotypes (main panel)",
-        "family_title": "Functional class (hue)",
+        "genotypes": "Genotypes (main panel; indent = nesting)",
+        "hatch": "Hatched = carries resistance (RES)",
         "small": (
-            "Other trials (colors by functional class; same class ≠ same genotype)"
+            "Other trials (colored by each trial's own nesting tree; same color ≠ same"
+            " genotype across trials; hatched = resistant)"
         ),
         "rep": "rep {r}: relapse t={g}",
         "norelapse": "rep {r}: no relapse",
         "foot": (
             "Nesting: each genotype sits inside the largest shown genotype whose"
-            " mutations are a subset of its own. This is genotype containment, not a"
-            " reconstructed cell lineage."
+            " mutations are a subset of its own (ties: the larger one when it first"
+            " appeared). This is genotype containment, not a reconstructed cell"
+            " lineage."
         ),
         "foot2": (
-            "Labels: ONC = oncogene, TSGa/b = two alleles of one tumor suppressor, RES"
+            "Colors: closer in the nesting tree, closer in hue (tree colors). Labels:"
+            " ONC = oncogene, TSGa/b = two alleles of one tumor suppressor, RES"
             " = resistance, P = passenger (genes numbered from 1)."
         ),
         "freq_title": (
@@ -160,28 +145,81 @@ TEXT = {
 }
 
 
-def colors_for(shown, config):
-    """同一功能類別內依出現順序變化明度。"""
-    counts, colors = {}, {}
-    for g in shown:
-        fam = family(g, config)
-        i = counts.get(fam, 0)
-        counts[fam] = i + 1
-        h, l, s = colorsys.rgb_to_hls(*to_rgb(FAMILY[fam]))
-        shift = (0, 0.16, -0.12, 0.28, -0.2, 0.36)[i % 6]
-        colors[g] = colorsys.hls_to_rgb(h, float(np.clip(l + shift, 0.25, 0.88)), s)
+def lch_to_rgb(lightness, chroma, hue):
+    """CIE LCh（D65）→ sRGB；同明度的顏色看起來一樣亮，避免黃色特別刺眼。"""
+    h = np.radians(hue)
+    a, b = chroma * np.cos(h), chroma * np.sin(h)
+    fy = (lightness + 16) / 116
+    fx, fz = fy + a / 500, fy - b / 200
+
+    def inverse(f):
+        return f**3 if f**3 > 0.008856 else (f - 16 / 116) / 7.787
+
+    xyz = np.array([0.95047 * inverse(fx), inverse(fy), 1.08883 * inverse(fz)])
+    linear = np.clip(XYZ_TO_LINEAR_RGB @ xyz, 0, 1)
+    rgb = np.where(
+        linear <= 0.0031308, 12.92 * linear, 1.055 * linear ** (1 / 2.4) - 0.055
+    )
+    return tuple(np.clip(rgb, 0, 1))
+
+
+def tree_colors(children):
+    """根的子代平分色環，後代在父代的色相區間內細分；兄弟交替比父代亮或暗。"""
+    colors = {0: ROOT_GRAY}
+
+    def assign(g, low, high, lightness, chroma):
+        kids = children[g]
+        part = (high - low) / max(len(kids), 1)
+        # 奇數個子代時，中間那個會與父代同色相：三個以上整體錯開半格，獨子只微調色相。
+        shift = 0
+        if g != 0 and len(kids) % 2:
+            shift = 0.5 * part if len(kids) >= 3 else min(15, 0.15 * part)
+        for i, c in enumerate(kids):
+            center = low + (i + 0.5) * part + shift
+            if g == 0:
+                light, chr_ = 55, 62
+            else:
+                # 交替比父代亮／暗：與父代、與相鄰兄弟都有明度差。
+                lighter = i % 2 == 0
+                if lightness >= 66:
+                    lighter = not lighter  # 父代已經很淺時，第一個子代改為變暗
+                light = lightness + (14 if lighter else -14)
+                chr_ = max(chroma - 6, 32)
+            hue = center % 360
+            if 60 <= hue <= 120:
+                light = max(light, 72)  # 中低明度的黃色會變成橄欖綠，提高明度
+            light = float(np.clip(light, 36, 84))
+            colors[c] = lch_to_rgb(light, chr_, hue)
+            half = part * HUE_SHARE / 2
+            assign(c, center - half, center + half, light, chr_)
+
+    assign(0, HUE_START, HUE_START + 360, 55, 62)
     return colors
+
+
+def resistant(genotype, config):
+    return bool(genotype & (1 << config.resistance_gene))
 
 
 def draw_muller(ax, result, config, label=True, k=TOP_K):
     shown, parent, children, own = muller_layout(result, k)
     bands = muller_bands(shown, children, own)
-    colors = colors_for(shown, config)
+    colors = tree_colors(children)
     t = np.arange(len(own[0]))
-    order = sorted(shown, key=lambda g: (depth(g, parent), g))
-    for g in order:
+    for g in shown:  # 深度優先：父帶先畫，子帶疊在上面
         low, high = bands[g]
         ax.fill_between(t, low, high, color=colors[g], linewidth=0.4, edgecolor="white")
+        if resistant(g, config):
+            with plt.rc_context({"hatch.linewidth": 0.5}):
+                ax.fill_between(
+                    t,
+                    low,
+                    high,
+                    facecolor="none",
+                    edgecolor=(1, 1, 1, 0.55),
+                    hatch=HATCH,
+                    linewidth=0,
+                )
     if label:
         for g in shown:
             low, high = bands[g]
@@ -201,14 +239,14 @@ def draw_muller(ax, result, config, label=True, k=TOP_K):
                     color=INK,
                     bbox={
                         "facecolor": "white",
-                        "alpha": 0.75,
+                        "alpha": 0.8,
                         "edgecolor": "none",
                         "pad": 1.2,
                     },
                 )
     ax.set_xlim(0, len(t) - 1)
     ax.set_ylim(0, 1)
-    return shown, own
+    return shown, parent, colors
 
 
 def event_lines(ax, event, t, labels=True):
@@ -265,17 +303,26 @@ def plot_muller(config, results, events, lang):
             textcoords="offset points",
             fontsize=10.5,
         )
-    shown, _ = draw_muller(muller, result, config)
+    shown, parent, colors = draw_muller(muller, result, config)
     event_lines(muller, event, t, labels=False)
     muller.set_ylabel(t["freq"], fontsize=12)
     muller.set_xlabel(t["gen"], fontsize=12)
     muller.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
-    # 主圖：逐一列出 Top-k 基因型（色塊＋名稱），不只靠顏色辨識。
-    colors = colors_for(shown, config)
-    first = fig.legend(
-        handles=[
-            Patch(color=colors[g], label=genotype_label(g, config)) for g in shown
-        ],
+    # 主圖：依巢狀（深度優先）逐一列出 Top-k 基因型，縮排表示層級；抗藥者畫斜線。
+    handles = [
+        Patch(
+            facecolor=colors[g],
+            edgecolor=(1, 1, 1, 0.8) if resistant(g, config) else colors[g],
+            hatch=HATCH if resistant(g, config) else None,
+            label="    " * depth(g, parent) + genotype_label(g, config),
+        )
+        for g in shown
+    ]
+    handles.append(
+        Patch(facecolor="#5C6670", edgecolor="white", hatch=HATCH, label=t["hatch"])
+    )
+    fig.legend(
+        handles=handles,
         title=t["genotypes"],
         loc="upper left",
         bbox_to_anchor=(0.73, 0.87),
@@ -284,22 +331,6 @@ def plot_muller(config, results, events, lang):
         title_fontsize=12,
         alignment="left",
     )
-    families = [
-        f
-        for f in FAMILY
-        if any(family(g, config) == f for r in results for g in muller_layout(r)[0])
-    ]
-    fig.legend(
-        handles=[Patch(color=FAMILY[f], label=t["families"][f]) for f in families],
-        title=t["family_title"],
-        loc="upper left",
-        bbox_to_anchor=(0.86, 0.87),
-        frameon=False,
-        fontsize=11,
-        title_fontsize=12,
-        alignment="left",
-    )
-    fig.add_artist(first)
     # 小分圖：最早與最晚復發，加上復發時間的 4 個分位數代表。
     relapsing = sorted(
         (

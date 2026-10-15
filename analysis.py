@@ -765,36 +765,63 @@ def genotype_label(genotype: int, config: Config) -> str:
 TOP_K = 10
 
 
-def family(genotype: int, config: Config) -> str:
-    res = bool(genotype & (1 << config.resistance_gene))
-    onc = driver_count(genotype, config) >= config.driver_hits
-    tsg = suppressor_loss(genotype, config)
-    name = "_".join(n for n, flag in (("onc", onc), ("tsg", tsg)) if flag) or "wt"
-    return ("res_" + name if name != "wt" else "res") if res else name
-
-
 def is_subset(a: int, b: int) -> bool:
     return a & b == a
 
 
+def added_class(child: int, parent: int, config: Config) -> int:
+    """子基因型比父基因型多出的突變屬於哪一類：0 oncogene、1 TSG、2 抗藥、3 只有 passenger。"""
+    added = child & ~parent
+    if any(added & (1 << g) for g in config.driver_genes):
+        return 0
+    tsg_bits = config.suppressor_genes + tuple(
+        config.n_genes + i for i in range(len(config.suppressor_genes))
+    )
+    if any(added & (1 << b) for b in tsg_bits):
+        return 1
+    if added & (1 << config.resistance_gene):
+        return 2
+    return 3
+
+
 def muller_layout(result: Result, k: int = TOP_K):
-    """選 Top-k 基因型並建立巢狀樹；未選者併入最大的已選子集祖先，因此頻率總和恆為 1。"""
-    peak = {}
-    for population in result.populations:
+    """選 Top-k 基因型並建立巢狀樹；未選者併入最大的已選子集祖先，因此頻率總和恆為 1。
+
+    同樣大小的候選祖先，取該基因型首次出現那一代細胞數較多者（突變來源較多）。
+    兄弟基因型依新增突變的類別（oncogene → TSG → 抗藥 → passenger）再依出現順序排列，
+    讓相近的基因型在圖上相鄰。回傳的 shown 為深度優先順序，與圖中由下而上的巢狀一致。
+    """
+    config = result.config
+    peak, first = {}, {}
+    for t, population in enumerate(result.populations):
         total = sum(population.values())
         for g, n in population.items():
             peak[g] = max(peak.get(g, 0), n / total)
+            first.setdefault(g, t)
     # 基因型 0（起始狀態）永遠是根，確保每個細胞都有可併入的祖先。
     shown = set(sorted(peak, key=lambda g: (-peak[g], g))[:k]) | {0}
-    shown = sorted(shown, key=lambda g: (bin(g).count("1"), g))
 
     def ancestor(g):
         """已呈現、位元為 g 子集的最大基因型（不含 g 本身）。"""
+        at_birth = result.populations[first[g]]
         candidates = [a for a in shown if a != g and is_subset(a, g)]
-        return max(candidates, key=lambda a: (bin(a).count("1"), -a))
+        return max(
+            candidates, key=lambda a: (bin(a).count("1"), at_birth.get(a, 0), -a)
+        )
 
     parent = {g: None if g == 0 else ancestor(g) for g in shown}
-    children = {g: [c for c in shown if parent[c] == g] for g in shown}
+    children = {
+        g: sorted(
+            (c for c in shown if parent[c] == g),
+            key=lambda c: (added_class(c, g, config), first[c], c),
+        )
+        for g in shown
+    }
+
+    def walk(g):
+        return [g] + [d for c in children[g] for d in walk(c)]
+
+    shown = walk(0)
     own = {g: np.zeros(len(result.populations)) for g in shown}
     for t, population in enumerate(result.populations):
         total = sum(population.values())
