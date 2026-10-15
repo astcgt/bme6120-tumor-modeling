@@ -154,7 +154,7 @@ The builder uses the installed bundled Artifact Tool and validators. Equation re
 
 ### Discussion guide
 
-`outputs/discussion_guide/` holds a 20-minute cue sheet for the one-on-one discussion, as a web page (`discussion_guide.html`, with downscaled figures in `figs/`) and a Word file (`腫瘤模擬_20分鐘討論提示卡.docx`). It is not a script: each timed segment lists the figure to open, where to point, the code lines to show, key English sentences with Traditional Chinese glosses, concept anchors, the numbers to cite and a transition line. Likely questions and a number cheat sheet follow. The web page has a talk timer that highlights the current segment.
+`outputs/discussion_guide/` holds a 20-minute cue sheet for the one-on-one discussion, as a web page (`discussion_guide.html`, with downscaled figures in `figs/`) and a Word file (`腫瘤模擬_20分鐘討論提示卡.docx`). A read-first code walkthrough opens it: a layer strip from `main.py` down to the plotting modules, UML-style class cards (`Config` and `Result` as dataclasses, each module as a card with its responsibility, attributes and public methods), the step-by-step flow of one `main.py` run, and talking points for architecture questions. The rest is not a script: each timed segment lists the figure to open, where to point, the code lines to show, key English sentences with Traditional Chinese glosses, concept anchors, the numbers to cite and a transition line. Likely questions and a number cheat sheet follow. The web page has a talk timer that highlights the current segment.
 
 Both files come from one script, so they stay consistent. Code excerpts are read from the source files by line range; recheck the ranges in `SEGMENTS` after editing `simulation.py` or `analysis.py`.
 
@@ -336,7 +336,7 @@ PRESENTATION_BUILD_DIR=.presentation-build/code-v11 PRESENTATION_FILENAME=tumor_
 
 ### 討論提示卡
 
-`outputs/discussion_guide/` 是一對一討論用的 20 分鐘提示卡，有網頁（`discussion_guide.html`，縮小的圖在 `figs/`）與 Word（`腫瘤模擬_20分鐘討論提示卡.docx`）兩種版本。內容不是逐字稿：每個時段列出要打開的圖、指圖順序、要對照的程式行、可直接說出口的英文關鍵句（附繁體中文意思）、概念錨點、要引用的數字與銜接句；最後附老師可能問的問題與數字小抄。網頁有計時器，會標出目前該講的段落。
+`outputs/discussion_guide/` 是一對一討論用的 20 分鐘提示卡，有網頁（`discussion_guide.html`，縮小的圖在 `figs/`）與 Word（`腫瘤模擬_20分鐘討論提示卡.docx`）兩種版本。開頭是「講前先讀」的程式導覽：從 `main.py` 到繪圖模組的分層、UML 風格的類別卡（`Config` 與 `Result` 為 dataclass，每個模組一張卡，列出職責、屬性與對外方法）、執行一次 `main.py` 的逐步流程，以及被問到程式架構時可用的關鍵句。其餘內容不是逐字稿：每個時段列出要打開的圖、指圖順序、要對照的程式行、可直接說出口的英文關鍵句（附繁體中文意思）、概念錨點、要引用的數字與銜接句；最後附老師可能問的問題與數字小抄。網頁有計時器，會標出目前該講的段落。
 
 兩個檔案由同一個腳本產生，內容一致。程式節錄依行號從原始檔讀取；修改 `simulation.py` 或 `analysis.py` 後，須重新檢查 `SEGMENTS` 內的行號。
 
