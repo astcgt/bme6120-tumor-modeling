@@ -23,19 +23,21 @@ from analysis import (
 from plot_style import GRAY, INK
 from simulation import suppressor_alleles
 
-# 依突變組成配色（CIELAB，感知均勻）：WT 為淺灰；每個功能基因朝自己的色向推一段固定距離，
-# 五個色向在色環上平均分開，passenger 只推一小段；每多一個突變就變暗一些。
-# 所以突變組成越相近，顏色越接近；差越多突變，顏色差越大。抗藥不影響顏色，只加斜線。
+# 依功能分色系（CIELAB 色相角，感知均勻）：只有 oncogene 為暖色系、只有 TSG 為綠色系、
+# 兩者皆有為紫色系、沒有功能突變為灰。同一色系內，色相依帶哪幾個基因小幅偏移、
+# passenger 再微調，突變越多越深：所以突變組成越相近顏色越接近。抗藥不影響顏色，只加斜線。
 WT_LIGHTNESS = 84
-DARKEN_PER_HIT = 11  # 每個功能突變降低的明度（passenger 與單一 TSG 等位基因按權重）
-FUNCTIONAL_PUSH = 42  # 功能基因在 a*b* 平面上的推移距離
-PASSENGER_PUSH = 14
+DARKEN_PER_HIT = 9  # 每個功能突變降低的明度（passenger 與單一 TSG 等位基因按權重）
 PASSENGER_WEIGHT = 0.35
-# CIELAB 色相角；避開中明度會變橄欖色的純黃（約 90–110°）。
-ONCOGENE_DIRECTIONS = (28, 72, 160)  # ONC1 珊瑚紅、ONC2 琥珀橘、ONC3 青綠
-TSG_DIRECTIONS = (250, 318)  # TSG1 藍、TSG2 紫
-AMBER_LIFT = 6  # 帶 ONC2 時略提高明度，橘色才不會發灰
-GOLDEN_ANGLE = 137.5  # passenger 色向依基因編號以黃金角分散，彼此不重疊
+FAMILY_HUE = {"onc": 45, "tsg": 150, "both": 320, "neutral": 250}
+FAMILY_CHROMA = {"onc": 52, "tsg": 44, "both": 40, "neutral": 4}
+ONCOGENE_SHIFTS = (-24, 0, 24)  # ONC1 珊瑚紅、ONC2 橘、ONC3 琥珀
+TSG_SHIFTS = (-18, 18)  # TSG1 綠、TSG2 青綠
+BOTH_SHIFT_SCALE = 0.6  # 紫色系內，oncogene 與 TSG 的偏移各取一部分
+SINGLE_ALLELE_CHROMA = 0.6  # 只有單一 TSG 等位基因突變：彩度較低（淡綠）
+PASSENGER_HUE_STEP = 5
+PASSENGER_TINT = 6  # 灰色系中每個 passenger 加的彩度，讓不同 passenger 仍略有色差
+GOLDEN_ANGLE = 137.5  # passenger 依基因編號以黃金角分散方向，彼此不重疊
 STRIPES = "///"
 # CIE XYZ（D65）→ 線性 sRGB 的標準矩陣。
 XYZ_TO_LINEAR_RGB = np.array(
@@ -59,9 +61,13 @@ TEXT = {
         "nadir": "谷底",
         "relapse": "復發",
         "genotypes": "基因型（主圖，縮排 = 巢狀層級）",
-        "key_title": "顏色規則：每個突變一個色向，\n突變組成越近顏色越近、突變越多越深",
+        "key_title": (
+            "顏色規則：oncogene 暖色、TSG 綠色、兩者紫色\n"
+            "同色系內越相近越近色；突變越多越深"
+        ),
+        "key_tsg_one": "TSG1（單一等位基因）",
         "key_tsg": "TSG{i}（兩個等位基因）",
-        "key_passenger": "passenger（只稍微偏移）",
+        "key_passenger": "passenger（灰色微帶色調）",
         "key_res": "斜線：帶抗藥突變（RES）",
         "small": "其他試驗（顏色規則同主圖）",
         "rep": "rep {r}：復發 t={g}",
@@ -112,11 +118,12 @@ TEXT = {
         "relapse": "Relapse",
         "genotypes": "Genotypes (main panel; indent = nesting)",
         "key_title": (
-            "Color code: one direction per mutation;\nsimilar genotypes, similar"
-            " colors; more hits, darker"
+            "Color code: oncogene warm, TSG green, both purple\n"
+            "similar genotypes look alike; more hits, darker"
         ),
         "key_tsg": "TSG{i} (both alleles)",
-        "key_passenger": "passenger (small shift)",
+        "key_passenger": "passenger (gray with a slight tint)",
+        "key_tsg_one": "TSG1 (one allele)",
         "key_res": "Hatched: carries resistance (RES)",
         "small": "Other trials (same color code as the main panel)",
         "rep": "rep {r}: relapse t={g}",
@@ -177,32 +184,53 @@ def lab_to_rgb(lightness, a, b):
     return tuple(float(x) for x in np.clip(rgb, 0, 1))
 
 
-def push(angle, distance):
-    radians = np.radians(angle)
-    return np.array([np.cos(radians), np.sin(radians)]) * distance
-
-
 def genotype_color(genotype, config):
-    """WT 淺灰 + 每個突變的色向推移；突變越多越暗。抗藥位元不計入。"""
-    ab, hits = np.zeros(2), 0.0
-    for i, gene in enumerate(config.driver_genes):
-        if genotype & (1 << gene):
-            ab += push(ONCOGENE_DIRECTIONS[i], FUNCTIONAL_PUSH)
-            hits += 1 - (AMBER_LIFT / DARKEN_PER_HIT if i == 1 else 0)
+    """色系由 oncogene／TSG 決定；色系內依基因小幅偏移色相，突變越多越暗。抗藥位元不計入。"""
+    onc = [
+        ONCOGENE_SHIFTS[i]
+        for i, gene in enumerate(config.driver_genes)
+        if genotype & (1 << gene)
+    ]
+    tsg, tsg_weight, hits = [], 0.0, float(len(onc))
     for i, gene in enumerate(config.suppressor_genes):
-        # 每個等位基因各推一半：單一等位基因突變時顏色介於 WT 與完全失活之間。
         alleles = suppressor_alleles(genotype, gene, config)
-        ab += push(TSG_DIRECTIONS[i], FUNCTIONAL_PUSH * alleles / 2)
-        hits += alleles / 2
+        if alleles:
+            tsg.append(TSG_SHIFTS[i])
+            tsg_weight = max(tsg_weight, alleles / 2)
+            hits += alleles / 2  # 每個等位基因算半個突變
     functional = set(config.driver_genes + config.suppressor_genes)
-    for gene in range(config.n_genes):
-        if gene in functional or gene == config.resistance_gene:
-            continue
-        if genotype & (1 << gene):
-            ab += push(gene * GOLDEN_ANGLE, PASSENGER_PUSH)
-            hits += PASSENGER_WEIGHT
+    passengers = [
+        gene
+        for gene in range(config.n_genes)
+        if gene not in functional
+        and gene != config.resistance_gene
+        and genotype & (1 << gene)
+    ]
+    hits += PASSENGER_WEIGHT * len(passengers)
+    family = "both" if onc and tsg else "onc" if onc else "tsg" if tsg else "neutral"
+    shift = {
+        "onc": np.mean(onc) if onc else 0,
+        "tsg": np.mean(tsg) if tsg else 0,
+        "both": BOTH_SHIFT_SCALE * (np.mean(onc or [0]) + np.mean(tsg or [0])),
+        "neutral": 0,
+    }[family]
+    turns = [np.sin(np.radians(g * GOLDEN_ANGLE)) for g in passengers]
+    hue = FAMILY_HUE[family] + shift + PASSENGER_HUE_STEP * sum(turns)
+    chroma = FAMILY_CHROMA[family]
+    if family == "tsg" and tsg_weight < 1:
+        chroma *= SINGLE_ALLELE_CHROMA
+    if family == "neutral" and passengers:
+        # 灰色系：passenger 給一點淡色調，方向依基因編號。
+        hue = np.degrees(
+            np.arctan2(
+                sum(np.sin(np.radians(g * GOLDEN_ANGLE)) for g in passengers),
+                sum(np.cos(np.radians(g * GOLDEN_ANGLE)) for g in passengers),
+            )
+        )
+        chroma = min(4 + PASSENGER_TINT * len(passengers), 16)
     lightness = max(WT_LIGHTNESS - DARKEN_PER_HIT * hits, 36)
-    return lab_to_rgb(lightness, *ab)
+    h = np.radians(hue)
+    return lab_to_rgb(lightness, chroma * np.cos(h), chroma * np.sin(h))
 
 
 def stripe_color(color):
@@ -224,20 +252,31 @@ def swatch(color, stripes, label):
 
 
 def color_key(config, t):
-    """各單一突變的顏色，加上一個抗藥（斜線）範例。"""
-    examples = [
-        (1 << gene, f"ONC{i + 1}") for i, gene in enumerate(config.driver_genes)
+    """三個色系的代表：各單一基因、單一 TSG 等位基因、oncogene+TSG、passenger、抗藥。"""
+    onc = [(1 << gene, f"ONC{i + 1}") for i, gene in enumerate(config.driver_genes)]
+    tsg = [
+        (
+            (1 << gene) | (1 << (config.n_genes + i)),
+            t["key_tsg"].format(i=i + 1),
+        )
+        for i, gene in enumerate(config.suppressor_genes)
     ]
-    for i, gene in enumerate(config.suppressor_genes):
-        both = (1 << gene) | (1 << (config.n_genes + i))
-        examples.append((both, t["key_tsg"].format(i=i + 1)))
+    first_tsg = config.suppressor_genes[0]
     passenger = next(
         g
         for g in range(config.n_genes)
         if g not in config.driver_genes + config.suppressor_genes
         and g != config.resistance_gene
     )
-    examples.append((1 << passenger, t["key_passenger"]))
+    examples = (
+        onc
+        + tsg
+        + [
+            (1 << first_tsg, t["key_tsg_one"]),
+            ((1 << config.driver_genes[0]) | tsg[0][0], "ONC1+TSG1"),
+            (1 << passenger, t["key_passenger"]),
+        ]
+    )
     handles = [swatch(genotype_color(g, config), None, name) for g, name in examples]
     handles.append(swatch(genotype_color(0, config), STRIPES, t["key_res"]))
     return handles
@@ -379,13 +418,14 @@ def plot_muller(config, results, events, lang):
         handles=color_key(config, t),
         title=t["key_title"],
         loc="upper left",
-        bbox_to_anchor=(0.73, 0.5),
+        bbox_to_anchor=(0.73, 0.6),
         frameon=False,
-        fontsize=11,
-        title_fontsize=12,
+        fontsize=10,
+        title_fontsize=10.5,
         alignment="left",
-        handlelength=2.6,
-        handleheight=1.3,
+        handlelength=2.4,
+        handleheight=1.0,
+        labelspacing=0.35,
     )
     fig.add_artist(first)
     # 小分圖：最早與最晚復發，加上復發時間的 4 個分位數代表。
