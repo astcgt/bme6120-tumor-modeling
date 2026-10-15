@@ -34,13 +34,32 @@ FIGURES = {
         "outputs/genotype_evolution/01_muller_top_genotypes_en.png",
         "Muller 圖 基因型組成隨時間",
     ),
-    "07": ("outputs/mathematical_model/07_matrices_to_flow.png", "圖 07 期望矩陣 M → 向量場"),
-    "09": ("outputs/therapy_analysis/09_relapse_time_prediction.png", "圖 09 復發時間預測"),
-    "08": ("outputs/therapy_analysis/08_goldie_coldman.png", "圖 08 Goldie–Coldman 治癒曲線"),
-    "10": ("outputs/therapy_analysis/10_parameter_sensitivity.png", "圖 10 k_R × μ 敏感度"),
+    "07": (
+        "outputs/mathematical_model/07_matrices_to_flow.png",
+        "圖 07 期望矩陣 M → 向量場",
+    ),
+    "p05": (
+        "outputs/phase_plots/05_phase_field_burden_logit_en.png",
+        "相圖 05 負荷 × 抗藥比例：理論 vs 實際",
+    ),
+    "p06": (
+        "outputs/phase_plots/06_phase_field_fitness_logit_en.png",
+        "相圖 06 適應度 × 抗藥比例：演化與篩選的分工",
+    ),
+    "09": (
+        "outputs/therapy_analysis/09_relapse_time_prediction.png",
+        "圖 09 復發時間預測",
+    ),
+    "08": (
+        "outputs/therapy_analysis/08_goldie_coldman.png",
+        "圖 08 Goldie–Coldman 治癒曲線",
+    ),
+    "10": (
+        "outputs/therapy_analysis/10_parameter_sensitivity.png",
+        "圖 10 k_R × μ 敏感度",
+    ),
     "03": ("outputs/03_one_hit_vs_two_hit.png", "圖 03 One-hit vs two-hit"),
     "02": ("outputs/02_death_rate_heterogeneity.png", "圖 02 死亡率與異質性"),
-    "04": ("outputs/04_il11_shared_fitness.png", "圖 04 IL11 共享優勢"),
     "11": ("outputs/therapy_analysis/11_adaptive_therapy.png", "圖 11 適應性治療"),
 }
 
@@ -64,19 +83,36 @@ SEGMENTS = [
                 says=[
                     THESIS,
                     (
-                        "I built a discrete-generation branching process: each cell dies, or makes two or three daughters.",
+                        (
+                            "I built a discrete-generation branching process: each cell"
+                            " dies, or makes two or three daughters."
+                        ),
                         "離散世代分枝過程：每個細胞死亡，或產生 2／3 個子細胞。",
                     ),
                     (
-                        "Twenty genes: three oncogenes, two tumor suppressors with two alleles each, one resistance gene, fourteen passengers.",
-                        "20 個基因：3 oncogene、2 TSG（各兩個等位基因）、1 抗藥基因、14 passenger。",
+                        (
+                            "Twenty genes: three oncogenes, two tumor suppressors with"
+                            " two alleles each, one resistance gene, fourteen"
+                            " passengers."
+                        ),
+                        (
+                            "20 個基因：3 oncogene、2 TSG（各兩個等位基因）、1"
+                            " 抗藥基因、14 passenger。"
+                        ),
                     ),
                     (
-                        "Parameters are teaching assumptions, not clinical fits — I care about mechanisms and trends.",
+                        (
+                            "Parameters are teaching assumptions, not clinical fits — I"
+                            " care about mechanisms and trends."
+                        ),
                         "參數是教學假設，重點是機制與趨勢，不是臨床預測。",
                     ),
                 ],
-                concepts=["branching process", "selection vs. induction", "教學假設 ≠ 校準"],
+                concepts=[
+                    "branching process",
+                    "selection vs. induction",
+                    "教學假設 ≠ 校準",
+                ],
                 numbers=["初始 100 細胞", "20,000 細胞開始治療", "每組 30 次試驗"],
             )
         ],
@@ -90,7 +126,9 @@ SEGMENTS = [
         start=1.5,
         end=5.5,
         title="模型與程式：一個細胞、一代",
-        goal="用圖 06 講規則，用三段程式說明規則怎麼變成模擬；強調設計選擇（計數字典、二項抽樣）。",
+        goal=(
+            "用圖 06 講規則，用三段程式說明規則怎麼變成模擬；強調設計選擇（計數字典、二項抽樣）。"
+        ),
         beats=[
             dict(
                 fig="06",
@@ -102,19 +140,31 @@ SEGMENTS = [
                 ],
                 says=[
                     (
-                        "Everything starts from one offspring law: f(z) = 0.3 + 0.672 z² + 0.028 z³.",
+                        (
+                            "Everything starts from one offspring law: f(z) = 0.3 +"
+                            " 0.672 z² + 0.028 z³."
+                        ),
                         "所有結果都由同一個子代分布 f(z) 推出。",
                     ),
                     (
-                        "The mean m = 1.428 tells growth; the fixed point of f tells extinction.",
+                        (
+                            "The mean m = 1.428 tells growth; the fixed point of f"
+                            " tells extinction."
+                        ),
                         "平均 m 決定成長；f 的不動點決定滅絕機率。",
                     ),
                     (
-                        "Look at the last row: a resistant cell is neutral without therapy, m = 1.428, but keeps 1.371 on therapy.",
+                        (
+                            "Look at the last row: a resistant cell is neutral without"
+                            " therapy, m = 1.428, but keeps 1.371 on therapy."
+                        ),
                         "抗藥細胞沒治療時是中性（m 相同），治療下仍 m = 1.371 > 1。",
                     ),
                     (
-                        "A sensitive cell on therapy has m = 0.14, so its lineage dies with probability one.",
+                        (
+                            "A sensitive cell on therapy has m = 0.14, so its lineage"
+                            " dies with probability one."
+                        ),
                         "敏感細胞治療下 m = 0.14，家系必然滅絕。",
                     ),
                 ],
@@ -124,15 +174,28 @@ SEGMENTS = [
                     "extinction probability = smallest root of s = f(s)",
                     "resistance is neutral off-therapy",
                 ],
-                numbers=["m_OFF = 1.428", "m_ON(敏感) = 0.143", "m_ON(抗藥) = 1.371", "家系滅絕 0.421／治療下抗藥 0.479"],
+                numbers=[
+                    "m_OFF = 1.428",
+                    "m_ON(敏感) = 0.143",
+                    "m_ON(抗藥) = 1.371",
+                    "家系滅絕 0.421／治療下抗藥 0.479",
+                ],
             ),
             dict(
                 fig=None,
-                code=("simulation.py", 163, 181, [166, 167, 168, 169, 170, 176, 177, 178, 179]),
+                code=(
+                    "simulation.py",
+                    148,
+                    165,
+                    [151, 152, 153, 154, 155, 160, 161, 162, 163],
+                ),
                 code_title="基因型 → 表型：oncogene 與 TSG 各自降低死亡率、提高三子機率",
                 says=[
                     (
-                        "Genotype maps to just two numbers, death d and triple-division probability q.",
+                        (
+                            "Genotype maps to just two numbers, death d and"
+                            " triple-division probability q."
+                        ),
                         "基因型最後只變成兩個數字：死亡率 d 與三子細胞機率 q。",
                     ),
                     (
@@ -141,36 +204,60 @@ SEGMENTS = [
                     ),
                 ],
                 concepts=["genotype → phenotype map", "additive fitness effects"],
-                numbers=["d：0.30 → 0.22（oncogene）→ 0.14（+TSG）", "q：0.04 → 0.16 → 0.28"],
+                numbers=[
+                    "d：0.30 → 0.22（oncogene）→ 0.14（+TSG）",
+                    "q：0.04 → 0.16 → 0.28",
+                ],
             ),
             dict(
                 fig=None,
-                code=("simulation.py", 345, 365, [351, 352, 353, 354, 355, 356, 358, 359, 361, 365]),
+                code=(
+                    "simulation.py",
+                    306,
+                    326,
+                    [312, 313, 314, 315, 316, 317, 319, 320, 322, 326],
+                ),
                 code_title="一代更新：治療殺傷 → 二項抽樣存活與三子 → 子代突變",
                 says=[
                     (
-                        "I store the tumor as genotype → count, not as individual cells.",
+                        (
+                            "I store the tumor as genotype → count, not as individual"
+                            " cells."
+                        ),
                         "腫瘤以「基因型 → 細胞數」儲存，不逐一追蹤細胞。",
                     ),
                     (
-                        "Two binomial draws per genotype are exactly equivalent to flipping a coin for every cell — just faster.",
+                        (
+                            "Two binomial draws per genotype are exactly equivalent to"
+                            " flipping a coin for every cell — just faster."
+                        ),
                         "每個基因型抽兩次二項分布，與逐細胞擲硬幣等價，只是更快。",
                     ),
                     (
-                        "Therapy acts on natural survivors, so total death is 1 − (1−d)(1−k).",
+                        (
+                            "Therapy acts on natural survivors, so total death is 1 −"
+                            " (1−d)(1−k)."
+                        ),
                         "治療作用在自然存活者上，總死亡率 1 − (1−d)(1−k)。",
                     ),
                     (
-                        "Mutations happen in daughters after division; their effect starts next generation.",
+                        (
+                            "Mutations happen in daughters after division; their effect"
+                            " starts next generation."
+                        ),
                         "突變發生在分裂後的子細胞，效果下一代才生效。",
                     ),
                 ],
-                concepts=["binomial thinning", "synchronous generations", "timing: select → divide → mutate"],
+                concepts=[
+                    "binomial thinning",
+                    "synchronous generations",
+                    "timing: select → divide → mutate",
+                ],
                 numbers=["殺傷 k：敏感 0.90、抗藥 0.04"],
             ),
             dict(
                 fig=None,
-                code=("simulation.py", 222, 233, [227, 230, 231]),
+                code=("simulation.py", 188, 199, [193, 196, 197]),
                 code_title="突變：逐位元二項抽樣，以 bitmask OR 設定新突變",
                 says=[
                     (
@@ -178,16 +265,26 @@ SEGMENTS = [
                         "基因型是 22 位元整數（20 基因 + 2 個 TSG 第二等位基因）；突變就是 OR。",
                     ),
                     (
-                        "Mutation only relabels cells — the total count is conserved, and that is unit-tested.",
+                        (
+                            "Mutation only relabels cells — the total count is"
+                            " conserved, and that is unit-tested."
+                        ),
                         "突變只重新分類細胞，總數守恆，並有單元測試。",
                     ),
                 ],
-                concepts=["bitmask genotype", "irreversible mutations", "μ = 10⁻³ per locus per daughter"],
+                concepts=[
+                    "bitmask genotype",
+                    "irreversible mutations",
+                    "μ = 10⁻³ per locus per daughter",
+                ],
                 numbers=["22 bits = 20 loci + 2 extra TSG alleles"],
             ),
         ],
         transition=(
-            "With that rule, here is what continuous therapy does across thirty independent tumors.",
+            (
+                "With that rule, here is what continuous therapy does across thirty"
+                " independent tumors."
+            ),
             "有了規則，來看 30 個獨立腫瘤在持續治療下的結果。",
         ),
     ),
@@ -208,23 +305,40 @@ SEGMENTS = [
                 ],
                 says=[
                     (
-                        "In all thirty trials, resistant cells were already present when therapy started — median 1.2 percent.",
+                        (
+                            "In all thirty trials, resistant cells were already present"
+                            " when therapy started — median 1.2 percent."
+                        ),
                         "30 次試驗全部在治療前就有抗藥細胞，中位數 1.2%。",
                     ),
                     (
-                        "Therapy removes the sensitive majority within about six generations; the resistant minority keeps growing at 1.37 per generation.",
+                        (
+                            "Therapy removes the sensitive majority within about six"
+                            " generations; the resistant minority keeps growing at 1.37"
+                            " per generation."
+                        ),
                         "敏感多數約六代內被清除；抗藥少數以每代 ×1.37 持續成長。",
                     ),
                     (
-                        "So the nadir is not a cure — it is the moment the resistant clone becomes the majority.",
+                        (
+                            "So the nadir is not a cure — it is the moment the"
+                            " resistant clone becomes the majority."
+                        ),
                         "谷底不是治癒，而是抗藥族群變成多數的時刻。",
                     ),
                     (
-                        "Diversity drops sharply — a selective bottleneck — then rebuilds on the resistant background.",
+                        (
+                            "Diversity drops sharply — a selective bottleneck — then"
+                            " rebuilds on the resistant background."
+                        ),
                         "多樣性急降（選擇瓶頸），之後在抗藥背景上重新累積。",
                     ),
                 ],
-                concepts=["pre-existing resistance", "selective sweep / bottleneck", "nadir → relapse"],
+                concepts=[
+                    "pre-existing resistance",
+                    "selective sweep / bottleneck",
+                    "nadir → relapse",
+                ],
                 numbers=[
                     "治療開始：第 14–16 代",
                     "谷底中位數 ≈ 814 細胞（416–2,003）",
@@ -233,15 +347,21 @@ SEGMENTS = [
             ),
             dict(
                 fig=None,
-                code=("simulation.py", 380, 389, [386, 387, 388]),
+                code=("simulation.py", 341, 350, [347, 348, 349]),
                 code_title="復發定義：先低於治療起點負荷，再回到該負荷",
                 says=[
                     (
-                        "Relapse is defined operationally: first drop below the starting burden, then return to it.",
+                        (
+                            "Relapse is defined operationally: first drop below the"
+                            " starting burden, then return to it."
+                        ),
                         "復發是操作型定義：先降到起始負荷以下，再回到起始負荷。",
                     ),
                     (
-                        "No relapse within the window is reported separately — it is not called a cure.",
+                        (
+                            "No relapse within the window is reported separately — it"
+                            " is not called a cure."
+                        ),
                         "觀察期內未復發另外標記，不等同治癒。",
                     ),
                 ],
@@ -258,33 +378,52 @@ SEGMENTS = [
                 ],
                 says=[
                     (
-                        "The winners after therapy are resistant genotypes that also carry an oncogene.",
+                        (
+                            "The winners after therapy are resistant genotypes that"
+                            " also carry an oncogene."
+                        ),
                         "治療後的贏家是同時帶 oncogene 的抗藥基因型。",
                     ),
                     (
-                        "Same outcome in every trial, different genotypes each time — convergent phenotype, divergent genotype.",
+                        (
+                            "Same outcome in every trial, different genotypes each time"
+                            " — convergent phenotype, divergent genotype."
+                        ),
                         "每次結果相同、接手的基因型不同：表型趨同、基因型分歧。",
                     ),
                     (
-                        "Passengers hitchhike along with whichever resistant clone happens to win.",
+                        (
+                            "Passengers hitchhike along with whichever resistant clone"
+                            " happens to win."
+                        ),
                         "Passenger 突變搭便車，跟著勝出的抗藥 clone 一起擴張。",
                     ),
                 ],
-                concepts=["clonal replacement", "hitchhiking passengers", "genotype containment ≠ lineage"],
+                concepts=[
+                    "clonal replacement",
+                    "hitchhiking passengers",
+                    "genotype containment ≠ lineage",
+                ],
                 numbers=["代表試驗 rep 4：治療 15 代、復發 28 代"],
             ),
         ],
         transition=(
-            "That was descriptive. Next I tried to make it predictive — with theory that has no fitted parameters.",
+            (
+                "That was descriptive. Next I tried to make it predictive — with theory"
+                " that has no fitted parameters."
+            ),
             "以上是描述；接著用不擬合參數的理論讓它變成可預測。",
         ),
     ),
     dict(
         id="theory",
         start=9.5,
-        end=13.5,
+        end=14.0,
         title="從描述到預測：理論對照模擬",
-        goal="用 M 矩陣、復發預測與 Goldie–Coldman 說明結果可由第一原理推出；這段最能展現深度。",
+        goal=(
+            "用 M 矩陣、相圖 05／06、復發預測與 Goldie–Coldman"
+            " 說明結果可由第一原理推出；這段最能展現深度。"
+        ),
         beats=[
             dict(
                 fig="07",
@@ -296,20 +435,149 @@ SEGMENTS = [
                 ],
                 says=[
                     (
-                        "M is not a probability matrix; its rows sum to the mean offspring m.",
+                        (
+                            "M is not a probability matrix; its rows sum to the mean"
+                            " offspring m."
+                        ),
                         "M 不是機率矩陣；列和是平均子代數 m。",
                     ),
                     (
-                        "On therapy: ΔS = −0.857 S and ΔR = 0.371 R — the arrows are just these two lines.",
+                        (
+                            "On therapy: ΔS = −0.857 S and ΔR = 0.371 R — the arrows"
+                            " are just these two lines."
+                        ),
                         "治療下 ΔS = −0.857S、ΔR = 0.371R，箭頭就是這兩條式子。",
                     ),
                     (
-                        "The stochastic trajectories follow the expected flow — the noise matters mostly when numbers are small.",
+                        (
+                            "The stochastic trajectories follow the expected flow — the"
+                            " noise matters mostly when numbers are small."
+                        ),
                         "隨機軌跡順著期望流場走；隨機性主要在數量很小時才重要。",
                     ),
                 ],
-                concepts=["P vs Q vs M", "expected one-step drift", "deterministic skeleton + noise"],
+                concepts=[
+                    "P vs Q vs M",
+                    "expected one-step drift",
+                    "deterministic skeleton + noise",
+                ],
                 numbers=["ΔS = −0.8573 S", "ΔR = 0.0001428 S + 0.3709 R"],
+            ),
+            dict(
+                fig="p05",
+                point=[
+                    "上排 = 理論（藍）、下排 = 實際平均一步（橘，顏色 = 轉移數）；左無治療、右持續治療",
+                    (
+                        "x = log10(N+1)；y = 抗藥比例的 logit（刻度標成百分比）；虛線 S"
+                        " = 0、點線 R = 0"
+                    ),
+                    "左：ρ 幾乎水平，抗藥中性，只有新突變讓它緩慢上升",
+                    (
+                        "右：灰色軌跡呈 C 形，先往左上（N 降、ρ 急升），再沿 S = 0 邊界往右上 = 復發"
+                    ),
+                ],
+                says=[
+                    (
+                        (
+                            "On logit coordinates the whole therapy response is one"
+                            " C-shaped turn: burden falls while resistance takes over,"
+                            " then burden climbs on an almost fully resistant tumor."
+                        ),
+                        (
+                            "在 logit 座標下，治療反應是一個 C 形轉彎：負荷下降、"
+                            "抗藥接手，之後幾乎全抗藥的腫瘤重新長大。"
+                        ),
+                    ),
+                    (
+                        (
+                            "Theory says the resistant fraction rises about one decade"
+                            " in logit per generation — log10 of w_R over w_S is 0.98."
+                        ),
+                        (
+                            "理論：治療下 logit ρ 每代約上升一個 10 倍（log10 w_R/w_S ="
+                            " 0.98）。"
+                        ),
+                    ),
+                    (
+                        (
+                            "ρ → 1 is the stable direction in composition, but burden"
+                            " has no fixed point; the one-million cap is computational,"
+                            " not an equilibrium."
+                        ),
+                        "ρ → 1 是組成上的穩定方向，但負荷沒有不動點；一百萬上限是計算門檻，不是平衡。",
+                    ),
+                    (
+                        (
+                            "Where the theory and empirical rows differ, that is the"
+                            " hidden genotype information and noise this 2-D projection"
+                            " throws away."
+                        ),
+                        "上下排的差異來自被投影掉的基因型資訊與隨機性。",
+                    ),
+                ],
+                concepts=[
+                    "logit transform",
+                    "2-D projection of a high-dimensional state",
+                    "φ(E[X′]) vs E[φ(X′)]",
+                ],
+                numbers=[
+                    "治療下 logit ρ +0.98／代",
+                    "30 次試驗、1,089 次一步轉移",
+                    "經驗箭頭：每格 ≥ 5 次轉移、≥ 2 次試驗",
+                ],
+            ),
+            dict(
+                fig="p06",
+                point=[
+                    "x 換成無治療平均適應度 w̄_off（oncogene 累積 → 往右），y 同相圖 05",
+                    "左（無治療）：箭頭水平往右 = 演化；ρ 停在約 1%",
+                    "右（持續治療）：箭頭幾乎垂直往上 = 篩選",
+                    "右下實際：先垂直衝到 > 99.99%，之後才沿頂端往右",
+                ],
+                says=[
+                    (
+                        (
+                            "This plot separates two processes: horizontal motion is"
+                            " evolution — oncogenes accumulating; vertical motion is"
+                            " selection for resistance."
+                        ),
+                        "這張圖把兩件事分開：水平移動是演化（oncogene 累積），垂直移動是抗藥篩選。",
+                    ),
+                    (
+                        (
+                            "Without therapy the tumor drifts right — fitness rises"
+                            " while the resistant fraction stays near one percent."
+                        ),
+                        "無治療時腫瘤往右漂：適應度上升，抗藥比例維持約 1%。",
+                    ),
+                    (
+                        (
+                            "Therapy turns the flow vertical; only after the tumor is"
+                            " almost fully resistant does fitness evolution resume."
+                        ),
+                        "治療讓流向變垂直；幾乎全抗藥之後，適應度演化才繼續。",
+                    ),
+                    (
+                        (
+                            "That is why relapsed tumors are both resistant and fitter"
+                            " — the Muller plot showed resistant clones carrying an"
+                            " oncogene winning."
+                        ),
+                        (
+                            "所以復發腫瘤既抗藥又更適應，對應 Muller 圖中帶 oncogene"
+                            " 的抗藥 clone 勝出。"
+                        ),
+                    ),
+                ],
+                concepts=[
+                    "evolution vs selection",
+                    "orthogonal axes",
+                    "mean fitness w̄",
+                ],
+                numbers=[
+                    "w̄_off ≈ 1.43 → 1.65",
+                    "理論截面：N = 20,000、oncogene 比例與抗藥獨立",
+                ],
             ),
             dict(
                 fig="09",
@@ -320,52 +588,98 @@ SEGMENTS = [
                 ],
                 says=[
                     (
-                        "Knowing only the composition at therapy start, I can predict the relapse generation.",
+                        (
+                            "Knowing only the composition at therapy start, I can"
+                            " predict the relapse generation."
+                        ),
                         "只知道治療開始時的組成，就能預測復發世代。",
                     ),
                     (
-                        "A single growth rate gives a mean error of two generations; letting each resistant genotype grow at its own rate cuts it to 0.2.",
+                        (
+                            "A single growth rate gives a mean error of two"
+                            " generations; letting each resistant genotype grow at its"
+                            " own rate cuts it to 0.2."
+                        ),
                         "單一成長率誤差 2 代；依各基因型自身成長率，誤差降到 0.2 代。",
                     ),
                     (
-                        "The nadir happens exactly when the resistant fraction crosses ρ* = (1 − m_S)/(m_R − m_S), about seventy percent.",
+                        (
+                            "The nadir happens exactly when the resistant fraction"
+                            " crosses ρ* = (1 − m_S)/(m_R − m_S), about seventy"
+                            " percent."
+                        ),
                         "抗藥比例越過 ρ* ≈ 70% 的那一代就是谷底。",
                     ),
                 ],
-                concepts=["mixture growth model", "ρ* threshold", "Spearman rank correlation"],
-                numbers=["MAE 2.0 → 0.2 代", "30 次中 24 次預測到正確世代", "oncogene 抗藥細胞 ×1.62/代"],
+                concepts=[
+                    "mixture growth model",
+                    "ρ* threshold",
+                    "Spearman rank correlation",
+                ],
+                numbers=[
+                    "MAE 2.0 → 0.2 代",
+                    "30 次中 24 次預測到正確世代",
+                    "oncogene 抗藥細胞 ×1.62/代",
+                ],
             ),
             dict(
                 fig="08",
                 point=[
-                    "A：x = 開始治療時的大小（對數），y = 治癒機率；黑色階梯 = 理論，橘點 = 模擬（200 次、Wilson 95% CI）",
+                    (
+                        "A：x = 開始治療時的大小（對數），y = 治癒機率；黑色階梯 ="
+                        " 理論，橘點 = 模擬（200 次、Wilson 95% CI）"
+                    ),
                     "50% 治癒點 ≈ 416 細胞",
                     "B：已存在的抗藥細胞；平均 > 中位數 → Luria–Delbrück jackpot",
                 ],
                 says=[
                     (
-                        "This is the Goldie–Coldman result: the probability of cure falls steeply with tumor size at treatment.",
+                        (
+                            "This is the Goldie–Coldman result: the probability of cure"
+                            " falls steeply with tumor size at treatment."
+                        ),
                         "Goldie–Coldman：治療時腫瘤越大，治癒機率急降。",
                     ),
                     (
-                        "The theory has no fitted parameters — Poisson arrival of mutant clones, each surviving with 1 − f⁽ˢ⁾(q_on).",
-                        "理論不擬合參數：突變 clone 以 Poisson 出現，各自以 1 − f⁽ˢ⁾(q_on) 存活。",
+                        (
+                            "The theory has no fitted parameters — Poisson arrival of"
+                            " mutant clones, each surviving with 1 − f⁽ˢ⁾(q_on)."
+                        ),
+                        (
+                            "理論不擬合參數：突變 clone 以 Poisson 出現，各自以 1 −"
+                            " f⁽ˢ⁾(q_on) 存活。"
+                        ),
                     ),
                     (
-                        "The mean number of resistant cells is driven by rare early jackpots, exactly as in Luria–Delbrück.",
+                        (
+                            "The mean number of resistant cells is driven by rare early"
+                            " jackpots, exactly as in Luria–Delbrück."
+                        ),
                         "抗藥細胞平均數由少數早期 jackpot 主導，正如 Luria–Delbrück。",
                     ),
                 ],
-                concepts=["Goldie–Coldman hypothesis", "Poisson mutation process", "Luria–Delbrück fluctuation"],
-                numbers=["100 細胞 → 99.5% 治癒", "1,000 → 10%", "5,000 → 0%", "q_on = 0.479"],
+                concepts=[
+                    "Goldie–Coldman hypothesis",
+                    "Poisson mutation process",
+                    "Luria–Delbrück fluctuation",
+                ],
+                numbers=[
+                    "100 細胞 → 99.5% 治癒",
+                    "1,000 → 10%",
+                    "5,000 → 0%",
+                    "q_on = 0.479",
+                ],
             ),
             dict(
                 fig=None,
-                code=("analysis.py", 206, 214, [210, 211]),
+                code=("analysis.py", 197, 205, [201, 202]),
                 code_title="家系滅絕機率：由 0 迭代 s ← f(s) 到最小不動點",
                 says=[
                     (
-                        "The theory reuses the same offspring law as the simulation — iterate s ← f(s) from zero.",
+                        (
+                            "The theory reuses the same offspring law as the simulation"
+                            " — iterate s ← f(s) from zero."
+                        ),
                         "理論重用模擬的同一個子代分布：從 0 迭代 s ← f(s)。",
                     ),
                 ],
@@ -377,11 +691,17 @@ SEGMENTS = [
                 optional=True,
                 point=[
                     "A：x = 抗藥細胞殺傷率 k_R，y = 突變率 μ；顏色 = 治癒機率",
-                    "實線 k = 0.30：單純抗藥細胞停止成長；虛線 k = 0.41：帶 oncogene 的抗藥細胞也停止",
+                    (
+                        "實線 k = 0.30：單純抗藥細胞停止成長；虛線 k = 0.41：帶"
+                        " oncogene 的抗藥細胞也停止"
+                    ),
                 ],
                 says=[
                     (
-                        "Stopping the average resistant cell is not enough; you have to stop the fittest one.",
+                        (
+                            "Stopping the average resistant cell is not enough; you"
+                            " have to stop the fittest one."
+                        ),
                         "讓一般抗藥細胞停止成長不夠，必須壓住最適應的那一種。",
                     ),
                 ],
@@ -390,15 +710,18 @@ SEGMENTS = [
             ),
         ],
         transition=(
-            "Now the scenarios from the assignment: one-hit versus two-hit, and death rate versus heterogeneity.",
+            (
+                "Now the scenarios from the assignment: one-hit versus two-hit, and"
+                " death rate versus heterogeneity."
+            ),
             "接著是作業建議的情境：one-hit vs two-hit，以及死亡率與異質性。",
         ),
     ),
     dict(
         id="scenarios",
-        start=13.5,
+        start=14.0,
         end=17.0,
-        title="作業情境：Two-hit、死亡率、IL11",
+        title="作業情境：Two-hit、死亡率",
         goal="每張圖只講一個結論與一個機制；保留對照組，避免過度解讀。",
         beats=[
             dict(
@@ -410,28 +733,48 @@ SEGMENTS = [
                 ],
                 says=[
                     (
-                        "With one hit, TSG loss spreads within a few generations; with two hits it barely appears in eighteen.",
+                        (
+                            "With one hit, TSG loss spreads within a few generations;"
+                            " with two hits it barely appears in eighteen."
+                        ),
                         "One-hit 幾代內擴散；two-hit 18 代內幾乎沒出現。",
                     ),
                     (
-                        "Two-hit needs both alleles of the same gene — roughly μ squared unless the first hit expands first.",
+                        (
+                            "Two-hit needs both alleles of the same gene — roughly μ"
+                            " squared unless the first hit expands first."
+                        ),
                         "Two-hit 需要同一基因兩個等位基因，機率約 μ²，除非第一擊先擴張。",
                     ),
                     (
-                        "That is Knudson's two-hit logic: recessive suppressors delay the selective advantage.",
+                        (
+                            "That is Knudson's two-hit logic: recessive suppressors"
+                            " delay the selective advantage."
+                        ),
                         "這就是 Knudson two-hit：隱性抑癌基因延遲選擇優勢。",
                     ),
                 ],
-                concepts=["Knudson two-hit", "haploinsufficiency（one-hit 的簡化）", "no-advantage control"],
-                numbers=["第 18 代中位數：對照 76,446／one-hit 94,618／two-hit 73,879", "TSG 達標 0.05%／27.9%／0.07%"],
+                concepts=[
+                    "Knudson two-hit",
+                    "haploinsufficiency（one-hit 的簡化）",
+                    "no-advantage control",
+                ],
+                numbers=[
+                    "第 18 代中位數：對照 76,446／one-hit 94,618／two-hit 73,879",
+                    "TSG 達標 0.05%／27.9%／0.07%",
+                ],
             ),
             dict(
                 fig=None,
-                code=("simulation.py", 144, 156, [147, 148, 154]),
+                code=("simulation.py", 131, 143, [134, 135, 141]),
                 code_title="Two-hit：同一 TSG 的兩個等位基因位元都要失活",
                 says=[
                     (
-                        "The second allele lives in an extra bit beyond the twenty loci, so two different genes with one hit each do not count.",
+                        (
+                            "The second allele lives in an extra bit beyond the twenty"
+                            " loci, so two different genes with one hit each do not"
+                            " count."
+                        ),
                         "第二等位基因放在 20 個位點之外的額外位元；兩個不同基因各一擊不算。",
                     ),
                 ],
@@ -447,35 +790,29 @@ SEGMENTS = [
                 ],
                 says=[
                     (
-                        "Higher death rate means more turnover: more divisions to reach the same size, so more mutations.",
+                        (
+                            "Higher death rate means more turnover: more divisions to"
+                            " reach the same size, so more mutations."
+                        ),
                         "死亡率高 = 周轉高：長到同樣大小需要更多分裂，累積更多突變。",
                     ),
                     (
-                        "Same size, very different history — tumor size alone does not tell you its diversity.",
+                        (
+                            "Same size, very different history — tumor size alone does"
+                            " not tell you its diversity."
+                        ),
                         "同樣大小、歷史不同；只看大小無法知道異質性。",
                     ),
                 ],
                 concepts=["cell turnover", "equal-size sampling", "Shannon diversity"],
                 numbers=["H：1.06／1.80／2.83", "代數：8／14／26.5"],
             ),
-            dict(
-                fig="04",
-                optional=True,
-                point=[
-                    "A：IL11 ON 長得較快；B：生產者只占約 1.6%；C：飽和曲線與實際範圍",
-                ],
-                says=[
-                    (
-                        "A small producer population benefits everyone — a public good, not a cell-autonomous driver.",
-                        "少量生產者讓所有細胞受益：公共財，不是細胞自主的 driver。",
-                    ),
-                ],
-                concepts=["non-cell-autonomous fitness", "public good", "saturating benefit"],
-                numbers=["1.6% 生產者 → 死亡率 −2.7 百分點 → 負荷 +52%"],
-            ),
         ],
         transition=(
-            "If resistance is selected, could we select less? That is the idea behind adaptive therapy.",
+            (
+                "If resistance is selected, could we select less? That is the idea"
+                " behind adaptive therapy."
+            ),
             "如果抗藥性是被篩選出來的，能否少篩選一點？這就是適應性治療。",
         ),
     ),
@@ -494,24 +831,42 @@ SEGMENTS = [
                 ],
                 says=[
                     (
-                        "Without competition, pausing therapy only gives resistant cells a head start — adaptive is worse.",
+                        (
+                            "Without competition, pausing therapy only gives resistant"
+                            " cells a head start — adaptive is worse."
+                        ),
                         "沒有競爭時，暫停治療只是讓抗藥細胞先跑，間歇治療反而較差。",
                     ),
                     (
-                        "With a carrying capacity, sensitive cells hold resistant ones back; adaptive delays progression with about half the drug.",
+                        (
+                            "With a carrying capacity, sensitive cells hold resistant"
+                            " ones back; adaptive delays progression with about half"
+                            " the drug."
+                        ),
                         "有承載量競爭時，敏感細胞壓制抗藥細胞；間歇治療延後惡化，藥量約減半。",
                     ),
                 ],
-                concepts=["competitive release", "carrying capacity K", "cost of resistance"],
-                numbers=["無競爭 ×0.85", "K = 30,000：14 → 16 代（×1.14）", "加抗藥代價：17.5 → 20 代"],
+                concepts=[
+                    "competitive release",
+                    "carrying capacity K",
+                    "cost of resistance",
+                ],
+                numbers=[
+                    "無競爭 ×0.85",
+                    "K = 30,000：14 → 16 代（×1.14）",
+                    "加抗藥代價：17.5 → 20 代",
+                ],
             ),
             dict(
                 fig=None,
-                code=("simulation.py", 202, 207, [206, 207]),
+                code=("simulation.py", 168, 173, [172, 173]),
                 code_title="承載量競爭：額外死亡 c·N/K，使無突變細胞在 N = K 時 m = 1",
                 says=[
                     (
-                        "Competition is one extra death term, scaled so a mutation-free cell exactly replaces itself at N = K.",
+                        (
+                            "Competition is one extra death term, scaled so a"
+                            " mutation-free cell exactly replaces itself at N = K."
+                        ),
                         "競爭只是一項額外死亡率，讓無突變細胞在 N = K 時剛好自我替換。",
                     ),
                 ],
@@ -535,38 +890,65 @@ SEGMENTS = [
                 fig=None,
                 says=[
                     (
-                        "Limitations: no space, no immune system, no quiescent cells, and the mutation rate is inflated for a short demo.",
+                        (
+                            "Limitations: no space, no immune system, no quiescent"
+                            " cells, and the mutation rate is inflated for a short"
+                            " demo."
+                        ),
                         "限制：無空間、無免疫、無靜止細胞；突變率為短時間演示而放大。",
                     ),
                     (
-                        "Bands are ten-to-ninety percent ranges across trials, not confidence intervals, and I did not pick seeds.",
+                        (
+                            "Bands are ten-to-ninety percent ranges across trials, not"
+                            " confidence intervals, and I did not pick seeds."
+                        ),
                         "陰影是 10–90% 試驗間範圍，不是信賴區間；沒有挑選 seed。",
                     ),
                     (
-                        "A genotype in my model is not a lineage — the same genotype can arise independently.",
+                        (
+                            "A genotype in my model is not a lineage — the same"
+                            " genotype can arise independently."
+                        ),
                         "模型中的基因型不等於家系，同一基因型可獨立出現多次。",
                     ),
                     (
-                        "Three take-homes: resistance is pre-existing; its amount at treatment predicts relapse; size and turnover set the odds of cure.",
+                        (
+                            "Three take-homes: resistance is pre-existing; its amount"
+                            " at treatment predicts relapse; size and turnover set the"
+                            " odds of cure."
+                        ),
                         "三個重點：抗藥性預先存在；治療時的量可預測復發；大小與周轉決定治癒機會。",
                     ),
                 ],
-                concepts=["model scope", "variability ≠ uncertainty", "next steps: two-drug therapy (μ²), space, quiescence"],
+                concepts=[
+                    "model scope",
+                    "variability ≠ uncertainty",
+                    "next steps: two-drug therapy (μ²), space, quiescence",
+                ],
                 numbers=["1,000,000 細胞是計算上限，不是承載量"],
             ),
         ],
-        transition=("I'm happy to run any scenario live if you'd like to see it.", "如果您想看，我可以現場跑任何情境。"),
+        transition=(
+            "I'm happy to run any scenario live if you'd like to see it.",
+            "如果您想看，我可以現場跑任何情境。",
+        ),
     ),
 ]
 
 QA = [
     (
         "Why sample by genotype counts instead of simulating each cell?",
-        "每個細胞獨立 → 同基因型的存活數就是 Binomial(n, 1−d)；與逐細胞完全等價，速度快很多（simulation.py:358–361）。",
+        (
+            "每個細胞獨立 → 同基因型的存活數就是 Binomial(n, 1−d)；與逐細胞完全等價，"
+            "速度快很多（simulation.py:319–322）。"
+        ),
     ),
     (
         "Isn't μ = 10⁻³ per gene far too high?",
-        "是。真實約 10⁻⁶／基因／分裂；放大是為了在 ~30 代內看到現象。圖 10 顯示 μ 越高治癒越難；趨勢不變，時間尺度會變。",
+        (
+            "是。真實約 10⁻⁶／基因／分裂；放大是為了在 ~30 代內看到現象。圖 10 顯示 μ"
+            " 越高治癒越難；趨勢不變，時間尺度會變。"
+        ),
     ),
     (
         "Why can a cell only make 0, 2 or 3 daughters — no 1?",
@@ -574,15 +956,24 @@ QA = [
     ),
     (
         "Does therapy cause resistance mutations in your model?",
-        "不會。突變率不受治療影響；抗藥在治療前就以 Poisson 出現（圖 01-C：30/30 > 0；圖 08-B）。",
+        (
+            "不會。突變率不受治療影響；抗藥在治療前就以 Poisson 出現（圖 01-C：30/30 >"
+            " 0；圖 08-B）。"
+        ),
     ),
     (
         "Why does relapse timing vary between trials?",
-        "R₀ 的 jackpot 分布（Luria–Delbrück）以及抗藥細胞是否帶 oncogene（圖 09-B：Spearman −0.70、−0.51）。",
+        (
+            "R₀ 的 jackpot 分布（Luria–Delbrück）以及抗藥細胞是否帶 oncogene（圖"
+            " 09-B：Spearman −0.70、−0.51）。"
+        ),
     ),
     (
         "How do you know the code is correct?",
-        "單元測試（突變守恆、等位基因、可重現性）；理論與模擬吻合（圖 08）；1,604 個網格點的期望值與完整模型核對。",
+        (
+            "單元測試（突變守恆、等位基因、可重現性）；理論與模擬吻合（圖 08）；1,604"
+            " 個網格點的期望值與完整模型核對。"
+        ),
     ),
     (
         "What is the difference between P and M?",
@@ -590,7 +981,10 @@ QA = [
     ),
     (
         "Would combination therapy help?",
-        "需同時對兩藥抗藥 → 約 μ² 的事件；預期讓 50% 治癒點大幅右移。可加第二個抗藥基因驗證，是下一步。",
+        (
+            "需同時對兩藥抗藥 → 約 μ² 的事件；預期讓 50% 治癒點大幅右移。"
+            "可加第二個抗藥基因驗證，是下一步。"
+        ),
     ),
     (
         "Why compare diversity at a fixed size instead of fixed time?",
@@ -756,8 +1150,9 @@ def html_code(code, title) -> str:
         for n, line in code_lines(file, start, end)
     )
     return (
-        f'<div class="code"><div class="ct">{esc(title)}</div>'
-        f'<div class="cf">{esc(file)}:{start}–{end}　黃底 = 要指的行</div><pre>{rows}</pre></div>'
+        f'<div class="code"><div class="ct">{esc(title)}</div><div'
+        f' class="cf">{esc(file)}:{start}–{end}　黃底 ='
+        f" 要指的行</div><pre>{rows}</pre></div>"
     )
 
 
@@ -765,7 +1160,9 @@ def html_cues(beat) -> str:
     parts = []
     if beat.get("point"):
         items = "".join(f"<li>{esc(p)}</li>" for p in beat["point"])
-        parts.append(f'<div><p class="lbl">指圖順序</p><ol class="point">{items}</ol></div>')
+        parts.append(
+            f'<div><p class="lbl">指圖順序</p><ol class="point">{items}</ol></div>'
+        )
     says = "".join(
         f'<li><span class="en">{esc(en)}</span><span class="zh">{esc(zh)}</span></li>'
         for en, zh in beat["says"]
@@ -773,10 +1170,14 @@ def html_cues(beat) -> str:
     parts.append(f'<div><p class="lbl">關鍵句</p><ul class="says">{says}</ul></div>')
     if beat.get("concepts"):
         chips = "".join(f'<span class="chip">{esc(c)}</span>' for c in beat["concepts"])
-        parts.append(f'<div><p class="lbl">概念錨點</p><div class="chips">{chips}</div></div>')
+        parts.append(
+            f'<div><p class="lbl">概念錨點</p><div class="chips">{chips}</div></div>'
+        )
     if beat.get("numbers"):
         nums = "".join(f'<span class="num">{esc(n)}</span>' for n in beat["numbers"])
-        parts.append(f'<div><p class="lbl">要引用的數字</p><div class="chips">{nums}</div></div>')
+        parts.append(
+            f'<div><p class="lbl">要引用的數字</p><div class="chips">{nums}</div></div>'
+        )
     return f'<div class="cues">{"".join(parts)}</div>'
 
 
@@ -786,19 +1187,22 @@ def html_beat(beat) -> str:
         _, caption = FIGURES[beat["fig"]]
         opt = '<span class="optional">時間夠才講</span>' if beat.get("optional") else ""
         fig = (
-            f'<figure><img src="figs/{beat["fig"]}.png" alt="{esc(caption)}" loading="lazy">'
-            f"<figcaption>{esc(caption)}{opt}</figcaption></figure>"
+            f'<figure><img src="figs/{beat["fig"]}.png" alt="{esc(caption)}"'
+            f' loading="lazy"><figcaption>{esc(caption)}{opt}</figcaption></figure>'
         )
         return f'<div class="beat">{fig}{cues}</div>'
     if beat.get("code"):
-        return f'<div class="beat codebeat">{html_code(beat["code"], beat["code_title"])}{cues}</div>'
+        return (
+            '<div class="beat'
+            f' codebeat">{html_code(beat["code"], beat["code_title"])}{cues}</div>'
+        )
     return f'<div class="beat nofig">{cues}</div>'
 
 
 def build_html() -> str:
     ribbon = "".join(
-        f'<a href="#{s["id"]}" data-id="{s["id"]}" style="flex:{s["end"] - s["start"]}" '
-        f'title="{esc(s["title"])}">{fmt_time(s["start"])}</a>'
+        f'<a href="#{s["id"]}" data-id="{s["id"]}" style="flex:{s["end"] - s["start"]}"'
+        f' title="{esc(s["title"])}">{fmt_time(s["start"])}</a>'
         for s in SEGMENTS
     )
     sections = []
@@ -806,19 +1210,23 @@ def build_html() -> str:
         beats = "".join(html_beat(b) for b in s["beats"])
         en, zh = s["transition"]
         sections.append(
-            f'<section class="seg" id="{s["id"]}"><div class="seg-head">'
-            f'<span class="t">{fmt_time(s["start"])}–{fmt_time(s["end"])}・{s["end"] - s["start"]:g} 分</span>'
-            f'<h2>{esc(s["title"])}</h2></div><p class="goal">{esc(s["goal"])}</p>{beats}'
-            f'<div class="transition"><p class="lbl">銜接句</p><span class="en">{esc(en)}</span>'
-            f'<span class="zh">{esc(zh)}</span></div></section>'
+            f'<section class="seg" id="{s["id"]}"><div class="seg-head"><span'
+            f' class="t">{fmt_time(s["start"])}–{fmt_time(s["end"])}・{s["end"] - s["start"]:g}'
+            f' 分</span><h2>{esc(s["title"])}</h2></div><p'
+            f' class="goal">{esc(s["goal"])}</p>{beats}<div class="transition"><p'
+            f' class="lbl">銜接句</p><span class="en">{esc(en)}</span><span'
+            f' class="zh">{esc(zh)}</span></div></section>'
         )
     qa = "".join(
-        f'<div class="qa"><div class="q">{esc(q)}</div><div class="a">{esc(a)}</div></div>' for q, a in QA
+        f'<div class="qa"><div class="q">{esc(q)}</div><div'
+        f' class="a">{esc(a)}</div></div>'
+        for q, a in QA
     )
     cheat = "".join(f"<tr><td>{esc(k)}</td><td>{esc(v)}</td></tr>" for k, v in CHEAT)
-    segs_js = str(
-        [dict(id=s["id"], start=s["start"], end=s["end"], title=s["title"]) for s in SEGMENTS]
-    ).replace("'", '"')
+    segs_js = str([
+        dict(id=s["id"], start=s["start"], end=s["end"], title=s["title"])
+        for s in SEGMENTS
+    ]).replace("'", '"')
     return f"""<title>腫瘤模擬討論提示卡</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -854,7 +1262,15 @@ ACCENT = RGBColor(0xC9, 0x52, 0x2B)
 TEAL = RGBColor(0x13, 0x74, 0x8A)
 
 
-def set_fonts(run, latin="Arial", east="PingFang TC", size=None, bold=None, color=None, italic=None):
+def set_fonts(
+    run,
+    latin="Arial",
+    east="PingFang TC",
+    size=None,
+    bold=None,
+    color=None,
+    italic=None,
+):
     run.font.name = latin
     rpr = run._element.get_or_add_rPr()
     fonts = rpr.find(qn("w:rFonts"))
@@ -888,7 +1304,12 @@ def left_border(paragraph, color="E4683F"):
     ppr = paragraph._p.get_or_add_pPr()
     borders = OxmlElement("w:pBdr")
     left = OxmlElement("w:left")
-    for k, v in (("w:val", "single"), ("w:sz", "18"), ("w:space", "6"), ("w:color", color)):
+    for k, v in (
+        ("w:val", "single"),
+        ("w:sz", "18"),
+        ("w:space", "6"),
+        ("w:color", color),
+    ):
         left.set(qn(k), v)
     borders.append(left)
     ppr.append(borders)
@@ -929,7 +1350,12 @@ def word_cues(doc, beat):
     if beat.get("numbers"):
         label(doc, "要引用的數字")
         p = para(doc, space_after=4)
-        set_fonts(p.add_run("　｜　".join(beat["numbers"])), latin="Menlo", size=9.5, color=ACCENT)
+        set_fonts(
+            p.add_run("　｜　".join(beat["numbers"])),
+            latin="Menlo",
+            size=9.5,
+            color=ACCENT,
+        )
 
 
 def word_code(doc, code, title):
@@ -937,7 +1363,13 @@ def word_code(doc, code, title):
     p = para(doc, space_after=0)
     p.paragraph_format.space_before = Pt(8)
     set_fonts(p.add_run(title), size=10, bold=True)
-    para(doc, f"{file}:{start}–{end}（粗體黃底 = 要指的行）", size=8.5, color=MUTED, space_after=2)
+    para(
+        doc,
+        f"{file}:{start}–{end}（粗體黃底 = 要指的行）",
+        size=8.5,
+        color=MUTED,
+        space_after=2,
+    )
     for n, line in code_lines(file, start, end):
         q = doc.add_paragraph()
         q.paragraph_format.space_after = Pt(0)
@@ -958,7 +1390,12 @@ def build_docx(path: Path):
     normal.font.name = "Arial"
     normal.element.rPr.rFonts.set(qn("w:eastAsia"), "PingFang TC")
 
-    p = para(doc, "BME 6120 · Quantitative tumor modeling · 20-minute discussion", size=9, color=MUTED)
+    p = para(
+        doc,
+        "BME 6120 · Quantitative tumor modeling · 20-minute discussion",
+        size=9,
+        color=MUTED,
+    )
     p = para(doc, space_after=6)
     set_fonts(p.add_run("腫瘤分枝模型：與老師討論的提示卡"), size=22, bold=True)
     p = para(doc, space_after=0)
@@ -966,7 +1403,8 @@ def build_docx(path: Path):
     para(doc, THESIS[1], size=10.5, color=MUTED, space_after=8)
     para(
         doc,
-        "用法：粗體英文是可直接說出口的關鍵句，灰字是意思提醒；「指圖順序」是手指要先指的地方；"
+        "用法：粗體英文是可直接說出口的關鍵句，"
+        "灰字是意思提醒；「指圖順序」是手指要先指的地方；"
         "程式中黃底粗體行是要對照的重點；標「時間夠才講」可跳過。",
         size=9.5,
         color=MUTED,
@@ -981,10 +1419,18 @@ def build_docx(path: Path):
         cell.text = ""
         set_fonts(cell.paragraphs[0].add_run(text), size=9.5, bold=True)
     for s in SEGMENTS:
-        figs = [" ".join(FIGURES[b["fig"]][1].split(" ")[:2]) + (" (選)" if b.get("optional") else "")
-                for b in s["beats"] if b.get("fig")]
+        figs = [
+            " ".join(FIGURES[b["fig"]][1].split(" ")[:2])
+            + (" (選)" if b.get("optional") else "")
+            for b in s["beats"]
+            if b.get("fig")
+        ]
         row = table.add_row().cells
-        values = (f"{fmt_time(s['start'])}–{fmt_time(s['end'])}", s["title"], "、".join(figs) or "—")
+        values = (
+            f"{fmt_time(s['start'])}–{fmt_time(s['end'])}",
+            s["title"],
+            "、".join(figs) or "—",
+        )
         for cell, text in zip(row, values):
             cell.text = ""
             set_fonts(cell.paragraphs[0].add_run(text), size=9.5)
@@ -995,7 +1441,11 @@ def build_docx(path: Path):
     for s in SEGMENTS:
         doc.add_page_break()
         h = doc.add_heading(level=1)
-        set_fonts(h.add_run(f"{fmt_time(s['start'])}–{fmt_time(s['end'])}　"), size=13, color=ACCENT)
+        set_fonts(
+            h.add_run(f"{fmt_time(s['start'])}–{fmt_time(s['end'])}　"),
+            size=13,
+            color=ACCENT,
+        )
         set_fonts(h.add_run(s["title"]), size=16, color=INK)
         para(doc, s["goal"], size=10, color=MUTED, space_after=6)
         for beat in s["beats"]:
@@ -1008,7 +1458,9 @@ def build_docx(path: Path):
                     set_fonts(p.add_run("　時間夠才講"), size=9, color=MUTED)
                 pic = doc.add_paragraph()
                 pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                pic.add_run().add_picture(str(FIG_DIR / f"{beat['fig']}.png"), width=Cm(17.5))
+                pic.add_run().add_picture(
+                    str(FIG_DIR / f"{beat['fig']}.png"), width=Cm(17.5)
+                )
             if beat.get("code"):
                 word_code(doc, beat["code"], beat["code_title"])
             word_cues(doc, beat)
@@ -1039,8 +1491,13 @@ def build_docx(path: Path):
         set_fonts(row[0].paragraphs[0].add_run(k), size=10)
         set_fonts(row[1].paragraphs[0].add_run(v), latin="Menlo", size=10, color=ACCENT)
         row[0].width, row[1].width = Cm(9), Cm(8.8)
-    para(doc, "數字來自 outputs/ 內的 CSV／JSON（預設參數、每組 30 次試驗；圖 08 每點 200 次）。",
-         size=8.5, color=MUTED)
+    para(
+        doc,
+        "數字來自 outputs/ 內的 CSV／JSON（預設參數、每組 30 次試驗；圖 08 每點"
+        " 200 次）。",
+        size=8.5,
+        color=MUTED,
+    )
     doc.save(path)
 
 
