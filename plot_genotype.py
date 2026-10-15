@@ -20,13 +20,17 @@ from analysis import (
     muller_layout,
 )
 from plot_style import GRAY, INK
+from simulation import suppressor_alleles, suppressor_loss
 
-# 樹狀配色（Tennekes & de Jonge 2014 的 tree colors）：根的子代平分色環，每個後代在
-# 父代的色相區間內再細分，所以巢狀越近顏色越近；兄弟之間明暗交錯，相鄰色帶仍好分辨。
-# 起始基因型固定為中性灰；抗藥基因型另加白色斜線，抗藥與否不必靠色相判斷。
-ROOT_GRAY = "#A7B0B8"
-HUE_START = 150  # 讓第一個分支落在藍色、第二個分支落在橘色附近（CIE LCh 色相角）
-HUE_SHARE = 0.9  # 每個子代只用分到區間的 90%，兄弟子樹之間留空隙
+# 依功能配色（CIE LCh 色相角）：oncogene 暖色、TSG 冷色、兩者皆有為紫色、無功能突變為灰；
+# 抗藥另加白色斜線。同一色組內再以明度與小幅色相差區分不同基因型。
+ONCOGENE_HUES = (25, 55, 85)  # ONC1 紅、ONC2 橘、ONC3 金
+TSG_HUES = (250, 205)  # TSG1 藍、TSG2 青
+BOTH_HUE = 315  # oncogene + TSG：紫
+NEUTRAL_HUE = 250  # 灰色帶一點冷調，與暖色 oncogene 分開
+GROUP_LIGHTNESS = (60, 74, 47, 84, 40, 67, 53)  # 同色組內依序使用，相鄰兩者明暗差大
+NEUTRAL_LIGHTNESS = (72, 56, 84, 44, 64, 50)
+HUE_OFFSETS = (0, 7, -7, 12, -12)
 HATCH = "////"
 # CIE XYZ（D65）→ 線性 sRGB 的標準矩陣。
 XYZ_TO_LINEAR_RGB = np.array(
@@ -50,10 +54,16 @@ TEXT = {
         "nadir": "谷底",
         "relapse": "復發",
         "genotypes": "基因型（主圖，縮排 = 巢狀層級）",
-        "hatch": "斜線 = 帶抗藥突變（RES）",
-        "small": (
-            "其他試驗（各自的巢狀樹配色；不同試驗的同色不代表同基因型；斜線 = 抗藥）"
-        ),
+        "key_title": "顏色規則",
+        "key": {
+            "onc": "暖色：oncogene\n（ONC1 紅、ONC2 橘、ONC3 金）",
+            "tsg": "冷色：TSG 失去功能\n（TSG1 藍、TSG2 青）",
+            "tsg_one": "淡冷色：TSG 只有一個等位基因突變",
+            "both": "紫色：oncogene + TSG",
+            "neutral": "灰色：無功能突變（WT、passenger）",
+            "res": "斜線：帶抗藥突變（RES）",
+        },
+        "small": "其他試驗（顏色規則同主圖）",
         "rep": "rep {r}：復發 t={g}",
         "norelapse": "rep {r}：未復發",
         "foot": (
@@ -61,7 +71,7 @@ TEXT = {
             "細胞較多者）；這是基因型包含關係，不是重建的細胞譜系。"
         ),
         "foot2": (
-            "顏色：巢狀越近色相越近（tree colors）；標籤：ONC=oncogene，TSGa/b=同一抑癌基因的兩個等位基因，RES=抗藥，"
+            "標籤：ONC=oncogene，TSGa/b=同一抑癌基因的兩個等位基因，RES=抗藥，"
             "P=passenger（基因編號由 1 起算）。"
         ),
         "freq_title": "每個基因的突變細胞比例（{n} 次試驗，以治療開始對齊）",
@@ -101,11 +111,16 @@ TEXT = {
         "nadir": "Nadir",
         "relapse": "Relapse",
         "genotypes": "Genotypes (main panel; indent = nesting)",
-        "hatch": "Hatched = carries resistance (RES)",
-        "small": (
-            "Other trials (colored by each trial's own nesting tree; same color ≠ same"
-            " genotype across trials; hatched = resistant)"
-        ),
+        "key_title": "Color code",
+        "key": {
+            "onc": "Warm: oncogene\n(ONC1 red, ONC2 orange, ONC3 gold)",
+            "tsg": "Cool: TSG loss of function\n(TSG1 blue, TSG2 teal)",
+            "tsg_one": "Pale cool: one TSG allele hit",
+            "both": "Purple: oncogene + TSG",
+            "neutral": "Gray: no functional hit (WT, passengers)",
+            "res": "Hatched: carries resistance (RES)",
+        },
+        "small": "Other trials (same color code as the main panel)",
         "rep": "rep {r}: relapse t={g}",
         "norelapse": "rep {r}: no relapse",
         "foot": (
@@ -115,8 +130,7 @@ TEXT = {
             " lineage."
         ),
         "foot2": (
-            "Colors: closer in the nesting tree, closer in hue (tree colors). Labels:"
-            " ONC = oncogene, TSGa/b = two alleles of one tumor suppressor, RES"
+            "Labels: ONC = oncogene, TSGa/b = two alleles of one tumor suppressor, RES"
             " = resistance, P = passenger (genes numbered from 1)."
         ),
         "freq_title": (
@@ -163,38 +177,68 @@ def lch_to_rgb(lightness, chroma, hue):
     return tuple(np.clip(rgb, 0, 1))
 
 
-def tree_colors(children):
-    """根的子代平分色環，後代在父代的色相區間內細分；兄弟交替比父代亮或暗。"""
-    colors = {0: ROOT_GRAY}
+def mean_hue(hues):
+    angles = np.radians(hues)
+    return float(np.degrees(np.arctan2(np.sin(angles).mean(), np.cos(angles).mean())))
 
-    def assign(g, low, high, lightness, chroma):
-        kids = children[g]
-        part = (high - low) / max(len(kids), 1)
-        # 奇數個子代時，中間那個會與父代同色相：三個以上整體錯開半格，獨子只微調色相。
-        shift = 0
-        if g != 0 and len(kids) % 2:
-            shift = 0.5 * part if len(kids) >= 3 else min(15, 0.15 * part)
-        for i, c in enumerate(kids):
-            center = low + (i + 0.5) * part + shift
-            if g == 0:
-                light, chr_ = 55, 62
-            else:
-                # 交替比父代亮／暗：與父代、與相鄰兄弟都有明度差。
-                lighter = i % 2 == 0
-                if lightness >= 66:
-                    lighter = not lighter  # 父代已經很淺時，第一個子代改為變暗
-                light = lightness + (14 if lighter else -14)
-                chr_ = max(chroma - 6, 32)
-            hue = center % 360
-            if 60 <= hue <= 120:
-                light = max(light, 72)  # 中低明度的黃色會變成橄欖綠，提高明度
-            light = float(np.clip(light, 36, 84))
-            colors[c] = lch_to_rgb(light, chr_, hue)
-            half = part * HUE_SHARE / 2
-            assign(c, center - half, center + half, light, chr_)
 
-    assign(0, HUE_START, HUE_START + 360, 55, 62)
+def color_group(genotype, config):
+    """(色組, 色相, 彩度)：只看 oncogene 與 TSG；抗藥與 passenger 不影響色組。"""
+    oncogenes = [
+        ONCOGENE_HUES[i]
+        for i, gene in enumerate(config.driver_genes)
+        if genotype & (1 << gene)
+    ]
+    alleles = [
+        suppressor_alleles(genotype, gene, config) for gene in config.suppressor_genes
+    ]
+    tsg = [TSG_HUES[i] for i, n in enumerate(alleles) if n]
+    lost = suppressor_loss(genotype, config)
+    if oncogenes and tsg:
+        return ("both", tuple(oncogenes + tsg)), BOTH_HUE, 50
+    if oncogenes:
+        return ("onc", tuple(oncogenes)), mean_hue(oncogenes), 62
+    if tsg:
+        # 失去功能（達 suppressor_hits）用飽和冷色；只有單一等位基因突變用淡冷色。
+        return ("tsg", tuple(tsg), lost), mean_hue(tsg), 50 if lost else 24
+    return ("neutral",), NEUTRAL_HUE, 6
+
+
+def genotype_colors(shown, config):
+    """依功能決定色相；同一色組內依出現順序換明度並微調色相，讓相鄰色帶好分辨。"""
+    used, colors = {}, {}
+    for g in shown:
+        group, hue, chroma = color_group(g, config)
+        i = used.get(group, 0)
+        used[group] = i + 1
+        levels = NEUTRAL_LIGHTNESS if group == ("neutral",) else GROUP_LIGHTNESS
+        lightness = levels[i % len(levels)]
+        hue = (hue + HUE_OFFSETS[i % len(HUE_OFFSETS)]) % 360
+        if 60 <= hue <= 110:
+            lightness = max(lightness, 70)  # 中低明度的黃色會變成橄欖綠
+        colors[g] = lch_to_rgb(lightness, chroma, hue)
     return colors
+
+
+def color_key(t):
+    """顏色規則的圖例：每一類取代表色。"""
+    samples = (
+        ("onc", lch_to_rgb(62, 62, ONCOGENE_HUES[1]), None),
+        ("tsg", lch_to_rgb(60, 50, TSG_HUES[0]), None),
+        ("tsg_one", lch_to_rgb(74, 24, TSG_HUES[0]), None),
+        ("both", lch_to_rgb(60, 50, BOTH_HUE), None),
+        ("neutral", lch_to_rgb(72, 6, NEUTRAL_HUE), None),
+        ("res", lch_to_rgb(56, 6, NEUTRAL_HUE), HATCH),
+    )
+    return [
+        Patch(
+            facecolor=color,
+            edgecolor="white" if hatch else color,
+            hatch=hatch,
+            label=t["key"][name],
+        )
+        for name, color, hatch in samples
+    ]
 
 
 def resistant(genotype, config):
@@ -204,7 +248,7 @@ def resistant(genotype, config):
 def draw_muller(ax, result, config, label=True, k=TOP_K):
     shown, parent, children, own = muller_layout(result, k)
     bands = muller_bands(shown, children, own)
-    colors = tree_colors(children)
+    colors = genotype_colors(shown, config)
     t = np.arange(len(own[0]))
     for g in shown:  # 深度優先：父帶先畫，子帶疊在上面
         low, high = bands[g]
@@ -318,10 +362,7 @@ def plot_muller(config, results, events, lang):
         )
         for g in shown
     ]
-    handles.append(
-        Patch(facecolor="#5C6670", edgecolor="white", hatch=HATCH, label=t["hatch"])
-    )
-    fig.legend(
+    first = fig.legend(
         handles=handles,
         title=t["genotypes"],
         loc="upper left",
@@ -331,6 +372,17 @@ def plot_muller(config, results, events, lang):
         title_fontsize=12,
         alignment="left",
     )
+    fig.legend(
+        handles=color_key(t),
+        title=t["key_title"],
+        loc="upper left",
+        bbox_to_anchor=(0.73, 0.5),
+        frameon=False,
+        fontsize=11,
+        title_fontsize=12,
+        alignment="left",
+    )
+    fig.add_artist(first)
     # 小分圖：最早與最晚復發，加上復發時間的 4 個分位數代表。
     relapsing = sorted(
         (
