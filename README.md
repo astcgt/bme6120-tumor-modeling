@@ -157,6 +157,8 @@ The builder uses the installed bundled Artifact Tool and validators. Equation re
 
 ### Customize and reuse
 
+Code style: all Python files are formatted with black (settings in `pyproject.toml`; long expressions are split one argument or condition per line). Install it into the project environment with `.venv/bin/python -m pip install black`, then run `.venv/bin/python -m black --unstable *.py presentations/*.py`. A few chained conditionals are kept in a one-condition-per-line layout with `# fmt: off`. Formatting moves lines, so recheck the code-excerpt line ranges in `presentations/teach_model.mjs` before rebuilding the deck.
+
 Edit parameters in `Config`, or call the model from another Python program:
 
 ```python
@@ -328,6 +330,8 @@ PRESENTATION_BUILD_DIR=.presentation-build/code-v11 PRESENTATION_FILENAME=tumor_
 繪製程式使用已安裝的 bundled Artifact Tool 與檢查工具。公式使用專案 Python 排版，不需外部 TeX 安裝。候選檔、公式素材、預覽與檢查紀錄放在 Git 忽略的 `.presentation-build/`，不修改 conda。前版 v3 與 v9 簡報另行保留。
 
 ### 修改與重用
+
+程式風格：所有 Python 檔以 black 排版（設定在 `pyproject.toml`；長運算式拆成每個參數或條件一行）。以 `.venv/bin/python -m pip install black` 安裝到專案環境後，執行 `.venv/bin/python -m black --unstable *.py presentations/*.py`。少數連續條件式以 `# fmt: off` 保留「一個條件一行」的寫法。排版會移動行號，重建簡報前須重新檢查 `presentations/teach_model.mjs` 的程式節錄行號。
 
 修改 `Config` 中的參數，或從其他 Python 程式呼叫：
 

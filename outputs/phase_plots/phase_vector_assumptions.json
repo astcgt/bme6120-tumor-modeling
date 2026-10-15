@@ -30,7 +30,11 @@
     "therapy_start_size": 20000,
     "sensitive_therapy_kill": 0.9,
     "resistant_therapy_kill": 0.04,
-    "max_cells": 1000000
+    "max_cells": 1000000,
+    "therapy_mode": "continuous",
+    "adaptive_pause_fraction": 0.5,
+    "resistance_cost": 0.0,
+    "carrying_capacity": null
   },
   "slice": {
     "sensitive_genotype": 0,

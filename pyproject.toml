@@ -1,0 +1,4 @@
+[tool.black]
+# 統一程式排版：長運算式拆成多行、每個參數一行，提高可讀性。
+line-length = 88
+target-version = ["py39"]
