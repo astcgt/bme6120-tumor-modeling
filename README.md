@@ -11,10 +11,24 @@ A stochastic discrete branching model for classroom discussion. Parameters are t
 Use the project virtual environment directly; activation is unnecessary:
 
 ```bash
-.venv/bin/python modeling_cancer.py
-.venv/bin/python modeling_cancer.py --suppressor-hits 1
-.venv/bin/python modeling_cancer.py --seed 123 --replicates 30 --output outputs_seed123
+.venv/bin/python main.py                                   # every step (about 3 minutes on 12 cores)
+.venv/bin/python main.py --only results                    # main and control experiments only
+.venv/bin/python main.py --only results --suppressor-hits 1
+.venv/bin/python main.py --only therapy --analyses 08 09   # part of the therapy analyses
 ```
+
+Steps run in order: `results` (figures 01–04), `model` (06, 07, A1), `phase` (phase portraits), `genotype` (Muller plot and gene frequencies), `therapy` (08–11). Later steps read the CSVs written by `results`, so run `results` first on a fresh checkout. Outputs always go to `outputs/`; `--seed` and `--replicates` change the main and control experiments.
+
+### Code structure
+
+| File | Contents |
+| --- | --- |
+| `simulation.py` | The model only: `Config`, genotype → phenotype, `growth_probabilities`, `mutate_offspring`, `simulate`, `therapy_outcome`. Start here when explaining the code. |
+| `experiments.py` | Runs the model under different conditions (main experiment, TSG / death-rate / IL11 controls, therapy analyses), summarizes trials, and reads/writes data files. |
+| `analysis.py` | Formulas derived from the model rules: expected offspring and one-step drift, branching-process extinction, Goldie–Coldman theory, phase-plane vector fields, Muller layout and gene frequencies. |
+| `plot_style.py`, `plot_results.py`, `plot_model.py`, `plot_phase.py`, `plot_genotype.py`, `plot_therapy.py` | Figures only, grouped by topic; each takes data computed above. |
+| `main.py` | Entry point: `main()` calls one short function per step. |
+| `test_simulation.py` | Unit tests for the model and the ensemble statistics. |
 
 On a new computer, first create an isolated environment and install dependencies:
 
@@ -69,7 +83,7 @@ The figure shows the same 30 trials per scenario from the growth experiment, inc
 Enable the functional IL11 locus with `Config(il11_enabled=True)` or:
 
 ```bash
-.venv/bin/python modeling_cancer.py --il11
+.venv/bin/python main.py --only results --il11
 ```
 
 The default is OFF. ON repurposes passenger index 6 (Gene 7) as IL11; OFF retains it as a neutral passenger, keeping 20 loci and identical mutation opportunities. Thus ON has 13 passengers plus IL11, while OFF has 14 passengers and no functional IL11 locus. A mutation marks IL11+ producers; this is a teaching assumption, not a calibrated mechanism of IL11 activation. Genotype groups may include multiple independent lineages, so “IL11+ clone” here means the producer population rather than a reconstructed ancestry.
@@ -84,7 +98,7 @@ At 2% IL11+ cells, the shared reduction is 3 **percentage points** (half of the 
 
 ### Replication and uncertainty
 
-`--replicates` controls **all stochastic experiment groups**, including the main treatment dashboard; default 30. For example, `.venv/bin/python modeling_cancer.py --replicates 100`. The main dashboard now uses ensemble statistics instead of one trajectory. Population counts and diversity include extinct trials as zero; after a computational cell limit, later values are missing, never padded with the last population. The footnote states the last generation at which every trial is observed (generation 31 by default). Resistant proportions condition on observed living tumors; empty populations have no defined fraction. Per-gene frequencies are shown in `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`.
+`--replicates` controls **all stochastic experiment groups**, including the main treatment dashboard; default 30. For example, `.venv/bin/python main.py --only results --replicates 100`. The main dashboard now uses ensemble statistics instead of one trajectory. Population counts and diversity include extinct trials as zero; after a computational cell limit, later values are missing, never padded with the last population. The footnote states the last generation at which every trial is observed (generation 31 by default). Resistant proportions condition on observed living tumors; empty populations have no defined fraction. Per-gene frequencies are shown in `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`.
 
 Trials are aligned by absolute generation; treatment starts separately at each trial's size threshold, so the dashboard shades the range of start generations instead of a single line, and panel C annotates the median resistant fraction at each trial's own therapy start. `therapy_replicates.csv` retains each start time and outcome. `trajectory.csv` is now an ensemble summary; `therapy_trajectories.csv` stores individual trajectories. The standalone `plot_dashboard(result, ...)` remains available for explicitly requested single-trial exploration.
 
@@ -92,15 +106,15 @@ Growth and IL11 comparisons show medians and 10–90% trial intervals; endpoint 
 
 ### Phase portraits
 
-Run `.venv/bin/python plot_phase_portraits.py` after generating the simulation outputs. It creates one 300 dpi PNG/vector SVG figure, `outputs/phase_plots/01_phase_portrait`, without modifying the presentation. It shows sensitive vs resistant counts in `log10(count+1)` coordinates. Gray curves retain every observed trial; one actual trial is highlighted, selected first by proximity to the median relapse generation, then to the median nadir, and colored by pre-therapy, therapy-to-relapse and post-relapse. Treatment onset, minimum burden and relapse are marked. Black arrows end at the one-generation conditional mean calculated from the highlighted trial's full genotype snapshot, including the exact S-to-R mutation contribution; the distance from each arrowhead to the next observed point is that generation's stochastic deviation. A side column lists expected and observed next states at therapy start and at the nadir. The reproduced trial is checked against its recorded CSV counts. Arrows end at the log-transformed raw-count expectation, which differs from the expectation of log-transformed counts; the formulas are in figure 07.
+`.venv/bin/python main.py --only phase` creates one 300 dpi PNG/vector SVG figure, `outputs/phase_plots/01_phase_portrait`, without modifying the presentation. It shows sensitive vs resistant counts in `log10(count+1)` coordinates. Gray curves retain every observed trial; one actual trial is highlighted, selected first by proximity to the median relapse generation, then to the median nadir, and colored by pre-therapy, therapy-to-relapse and post-relapse. Treatment onset, minimum burden and relapse are marked. Black arrows end at the one-generation conditional mean calculated from the highlighted trial's full genotype snapshot, including the exact S-to-R mutation contribution; the distance from each arrowhead to the next observed point is that generation's stochastic deviation. A side column lists expected and observed next states at therapy start and at the nadir. The reproduced trial is checked against its recorded CSV counts. Arrows end at the log-transformed raw-count expectation, which differs from the expectation of log-transformed counts; the formulas are in figure 07.
 
-This is a projection of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver, TSG or IL11 composition. Computational endpoints are not equilibria. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `--replicate 0 --output outputs/phase_rep0` to examine another actual trial. Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths. The burden × resistant-fraction view is in `05_phase_field_burden_logit` below, which uses a logit axis instead of a linear percentage.
+This is a projection of the full genotype/therapy state, not an autonomous two-dimensional vector field: the same S/R counts can have different driver, TSG or IL11 composition. Computational endpoints are not equilibria. `conditional_phase_steps.csv` retains the computed means and observed next states; `phase_summary.json` records selection, events and interpretation limits. Use `.venv/bin/python main.py --only phase --replicate 0` to highlight another actual trial (this overwrites the phase-portrait files). Chinese labels require a supported font such as Arial Unicode MS or Noto Sans CJK TC; SVG files preserve glyph paths. The burden × resistant-fraction view is in `05_phase_field_burden_logit` below, which uses a logit axis instead of a linear percentage.
 
-`.venv/bin/python plot_phase_field.py` computes the grid vector-field data used by figure 07: `phase_vector_grid.csv` and `phase_vector_assumptions.json`. Each grid point specifies a full parent population with genotype 0 for S and only the resistance bit for R, and the one-step projected mean is checked against the full model at all 1,604 points (linear and log grids). Other offspring mutations remain enabled and can move later states off this slice. Treatment is fixed within each panel rather than switched at the size threshold. The former standalone linear and log vector-field figures were merged into figure 07 or removed.
+The same step computes the grid vector-field data whose formulas figure 07 uses: `phase_vector_grid.csv` and `phase_vector_assumptions.json`. Each grid point specifies a full parent population with genotype 0 for S and only the resistance bit for R, and the one-step projected mean is checked against the full model at all 1,604 points (linear and log grids). Other offspring mutations remain enabled and can move later states off this slice. Treatment is fixed within each panel rather than switched at the size threshold. The former standalone linear and log vector-field figures were merged into figure 07 or removed.
 
 ### Theory versus empirical phase fields
 
-Run `.venv/bin/python plot_phase_comparison.py` for two coordinate pairs, each shown as theory versus empirical drift with therapy off and on:
+The phase step also draws two coordinate pairs, each shown as theory versus empirical drift with therapy off and on:
 
 - `05_phase_field_burden_logit_{zh,en}`: x = log10(N+1), y = resistant fraction on an empirical-logit axis, log10((R+½)/(S+½)), labeled in percent. It stays finite when ρ is 0 or 1, and the dashed and dotted lines mark S = 0 and R = 0.
 - `06_phase_field_fitness_logit_{zh,en}`: x = mean no-therapy fitness w̄_off, y = the same logit axis. It separates evolution (oncogene accumulation) from selection (resistance).
@@ -109,7 +123,7 @@ Theory arrows use a fixed hidden-genotype slice: sensitive cells are genotype 0 
 
 ### Therapy analyses
 
-Run `.venv/bin/python analyze_therapy.py` (about 2 minutes on 12 cores; `--only 08 09` runs a subset) to write four figures with CSV/JSON data to `outputs/therapy_analysis/`. Analysis 09 reuses the 30 recorded main-experiment trials; the others use separate seed blocks. All parameters are teaching assumptions.
+`.venv/bin/python main.py --only therapy` (about 2 minutes on 12 cores; `--analyses 08 09` runs a subset) writes four figures with CSV/JSON data to `outputs/therapy_analysis/`. Analysis 09 reuses the 30 recorded main-experiment trials; the others use separate seed blocks. All parameters are teaching assumptions.
 
 - `08_goldie_coldman`: cure probability versus burden at the start of continuous therapy (100–5,000 cells, 200 trials each, Wilson 95% intervals), against a branching-process theory with no fitted parameters. Resistant mutant clones arise as a Poisson process; a clone born s generations before therapy survives with 1 − f^(s)(q_on), where f is the untreated offspring generating function and q_on = 0.479 is the extinction probability of one resistant lineage under therapy. Cure ≈ exp(−Λ). Theory and simulation agree; 50% cure falls near 416 cells (99.5% at 100, 10% at 1,000, 0% at 5,000). Panel B shows the resistant cells already present at therapy start, whose mean exceeds the median (Luria–Delbrück jackpots).
 - `09_relapse_time_prediction`: each main trial's relapse delay predicted from its genotypes at therapy start. A baseline prediction ln(N/R₀)/ln 1.371 is off by 2.0 generations on average; letting each resistant genotype grow at its own on-therapy mean (oncogene cells ×1.62) predicts the exact generation in 24/30 trials (mean error 0.2). Relapse is earlier with more resistant cells (Spearman −0.70) and with a larger oncogene share among them (−0.51). Panel C shows expected on-therapy growth versus resistant fraction ρ; it crosses zero at ρ* = (1 − m_S)/(m_R − m_S) ≈ 70%, the nadir.
@@ -120,7 +134,7 @@ The adaptive analysis uses three `Config` options that are off by default and le
 
 ### Genotype distribution over time
 
-Run `.venv/bin/python plot_genotype_evolution.py` to write to `outputs/genotype_evolution/`:
+`.venv/bin/python main.py --only genotype` writes to `outputs/genotype_evolution/`:
 
 - `01_muller_top_genotypes_{zh,en}`: a Muller plot of the representative trial (selected by the same rule as the phase portraits) beneath its burden curve, plus six other trials spanning early to late relapse. For each trial, the 10 genotypes with the highest peak frequency are shown. Each sits inside the largest shown genotype whose mutations are a subset of its own, and unshown cells merge into their nearest shown ancestor, so fractions always sum to 1. This is genotype containment, not a reconstructed lineage. Hue encodes functional class and lightness separates genotypes within a class. The main panel lists every genotype by name.
 - `02_gene_mutation_frequencies_{zh,en}`: mutant-cell fractions per gene across all 30 trials, aligned at therapy start, as median and 10th–90th percentile bands. Panels cover oncogenes, TSGs (any allele and biallelic loss), resistance, and the passenger mean as a neutral control. Only relative generations observed in every trial are shown, on a symlog y-axis.
@@ -129,7 +143,7 @@ Run `.venv/bin/python plot_genotype_evolution.py` to write to `outputs/genotype_
 
 ### Mathematical diagrams
 
-Run `.venv/bin/python plot_markov_model.py` to regenerate the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`:
+`.venv/bin/python main.py --only model` regenerates the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`:
 
 - `06_single_cell_rules`: the offspring distribution of a mutation-free cell, the same rule as an exact five-state matrix (mutations and therapy disabled; the overflow state is imposed bookkeeping absorption, not biological saturation), and a table of d, q, offspring probabilities, mean offspring m with and without therapy, and the probability that one cell's lineage eventually dies out (smallest root of s = f(s)). A baseline resistant lineage survives therapy with probability 0.52; sensitive lineages under therapy always die out.
 - `07_matrices_to_flow`: the reduced sensitive/resistant mutation matrix Q and expected-offspring matrices M, the conditional-mean formulas E[S′ | s] and E[R′ | s], and beside them the linear S–R vector fields with therapy off and on (13×13 grid up to 30,000 cells, shared length scale). The 30 main-experiment trajectories are overlaid: the pre-therapy segment on the untreated panel and the segment from therapy start on the treated panel, with the representative trial highlighted. The actual paths follow the arrows even though the arrows use baseline cells only.
@@ -141,11 +155,11 @@ P and Q are row-stochastic; M contains offspring means and is not a probability 
 
 `outputs/presentations/tumor_markov_code_results_zh_tw_v10.pptx` is a 54-slide Traditional Chinese teaching deck. It opens with treatment response, explains the implementation and its mathematics, then examines population composition, diversity, therapy analyses, control experiments and future tests. Mathematical derivations appear in the relevant content pages, with no appendices.
 
-The code lessons use excerpts from `modeling_cancer.py`, with variable meanings, numerical examples and detailed speaker notes. They cover Config, sparse genotype counts, bitmasks, TSG alleles, IL11, update timing, Binomial reproduction, mutation conservation, P/Q/M, relapse identification, ensemble statistics, sampling and tests. Excerpts are selected by line number; when `modeling_cancer.py` changes, the ranges in `presentations/teach_model.mjs` must be re-checked (v10 re-mapped every range to the current source). Equations use LaTeX math syntax rendered with Computer Modern fonts at high resolution; they are image objects rather than native PowerPoint equation objects. Text, matrices, diagrams, tables and charts remain editable.
+The code lessons use excerpts from `simulation.py` (and `experiments.py` for repeated trials), with variable meanings, numerical examples and detailed speaker notes. They cover Config, sparse genotype counts, bitmasks, TSG alleles, IL11, update timing, Binomial reproduction, mutation conservation, P/Q/M, relapse identification, ensemble statistics, sampling and tests. Excerpts are selected by line number; when `simulation.py` or `experiments.py` changes, the ranges in `presentations/teach_model.mjs` must be re-checked (v10 re-mapped every range to the current source). Equations use LaTeX math syntax rendered with Computer Modern fonts at high resolution; they are image objects rather than native PowerPoint equation objects. Text, matrices, diagrams, tables and charts remain editable.
 
 v10 follows the same merge rules as the figures: the trial-availability chart became a footnote, the two gene-frequency heatmaps became one aligned gene-frequency chart with a passenger control, the full-range IL11 curve was dropped, and the TSG fraction and endpoint slides include the no-TSG-advantage control. Four slides summarize the therapy analyses (Goldie–Coldman cure curve, relapse-time prediction, the k_R × μ cure table, and adaptive versus continuous therapy). Shared treatment curves show generations 0–30, where all 30 trials are observed and alive. Log transformations are labeled explicitly.
 
-The data preparation reproduces the treatment populations and the no-TSG-advantage control, checks recorded CSV counts, and reads the verified outputs of `plot_genotype_evolution.py` and `analyze_therapy.py`. Rebuild the data and deck with:
+The data preparation reproduces the treatment populations and the no-TSG-advantage control, checks recorded CSV counts, and reads the verified outputs of the `genotype` and `therapy` steps. Rebuild the data and deck with:
 
 ```bash
 .venv/bin/python presentations/prepare_results.py
@@ -157,22 +171,23 @@ The builder uses the installed bundled Artifact Tool and validators. Equation re
 
 ### Customize and reuse
 
-Code style: all Python files are formatted with black (settings in `pyproject.toml`; long expressions are split one argument or condition per line). Install it into the project environment with `.venv/bin/python -m pip install black`, then run `.venv/bin/python -m black --unstable *.py presentations/*.py`. A few chained conditionals are kept in a one-condition-per-line layout with `# fmt: off`. Formatting moves lines, so recheck the code-excerpt line ranges in `presentations/teach_model.mjs` before rebuilding the deck.
+Code style: all Python files are formatted with black (settings in `pyproject.toml`; long expressions are split one argument or condition per line). Install it into the project environment with `.venv/bin/python -m pip install black`, then run `.venv/bin/python -m black --unstable *.py presentations/*.py`. Each plotting style function first restores Matplotlib's initial settings, so running every step in one process gives the same figures as running them separately. A few chained conditionals are kept in a one-condition-per-line layout with `# fmt: off`. Formatting moves lines, so recheck the code-excerpt line ranges in `presentations/teach_model.mjs` before rebuilding the deck.
 
 Edit parameters in `Config`, or call the model from another Python program:
 
 ```python
 from pathlib import Path
-from modeling_cancer import Config, simulate, plot_dashboard
+from simulation import Config, simulate
+from plot_results import plot_dashboard
 
 config = Config(suppressor_hits=1, mutation_rate=0.0005)
 result = simulate(config, seed=7, therapy=True)
 plot_dashboard(result, Path("my_figures"))
 ```
 
-Run the allele-state, mutation-conservation, and reproducibility tests with `.venv/bin/python -m unittest -v test_modeling_cancer.py`.
+Run the allele-state, mutation-conservation, reproducibility and ensemble-statistics tests with `.venv/bin/python -m unittest -v test_simulation.py`.
 
-The plotting functions `plot_dashboard`, `run_comparisons`, `set_plot_style`, and `save_figure` can be reused independently. The Agg backend saves figures directly without opening a GUI.
+Experiment functions in `experiments.py` return plain data (lists, dicts, arrays), and the `plot_*` functions take that data, so either side can be reused alone. The Agg backend saves figures directly without opening a GUI.
 
 Discussion topics include how drivers change expected offspring per generation; why requiring loss of both TSG alleles delays selective advantage; how pre-existing resistant cells become dominant during treatment; and how death rate, time to target size, and mutation accumulation relate at a fixed sample size. Interpret trends using the actual outputs rather than treating one random trajectory as a universal result.
 
@@ -185,10 +200,24 @@ Discussion topics include how drivers change expected offspring per generation; 
 直接指定專案虛擬環境，不必 activate：
 
 ```bash
-.venv/bin/python modeling_cancer.py
-.venv/bin/python modeling_cancer.py --suppressor-hits 1
-.venv/bin/python modeling_cancer.py --seed 123 --replicates 30 --output outputs_seed123
+.venv/bin/python main.py                                   # 全部步驟（12 核心約 3 分鐘）
+.venv/bin/python main.py --only results                    # 只跑主實驗與對照實驗
+.venv/bin/python main.py --only results --suppressor-hits 1
+.venv/bin/python main.py --only therapy --analyses 08 09   # 只跑部分治療分析
 ```
+
+步驟依序為：`results`（圖 01–04）、`model`（06、07、A1）、`phase`（相圖）、`genotype`（Muller 圖與基因頻率）、`therapy`（08–11）。後面的步驟讀取 `results` 寫出的 CSV，所以剛取得專案時要先跑 `results`。輸出一律寫到 `outputs/`；`--seed` 與 `--replicates` 改變主實驗與對照實驗。
+
+### 程式架構
+
+| 檔案 | 內容 |
+| --- | --- |
+| `simulation.py` | 只有模型：`Config`、基因型 → 表型、`growth_probabilities`、`mutate_offspring`、`simulate`、`therapy_outcome`。解釋程式時從這裡開始。 |
+| `experiments.py` | 在不同條件下重複執行模型（主實驗、TSG／死亡率／IL11 對照、治療分析），彙整試驗結果並讀寫資料檔。 |
+| `analysis.py` | 由模型規則推出的公式：期望子代與一步漂移、分枝過程滅絕機率、Goldie–Coldman 理論、相平面向量場、Muller 版面與基因頻率。 |
+| `plot_style.py`、`plot_results.py`、`plot_model.py`、`plot_phase.py`、`plot_genotype.py`、`plot_therapy.py` | 只畫圖，依主題分檔；各自使用上面算好的資料。 |
+| `main.py` | 執行入口：`main()` 依序呼叫每個步驟的短函數。 |
+| `test_simulation.py` | 模型與多次試驗統計的單元測試。 |
 
 如果在新電腦上使用，先以你的 Python 建立獨立環境並安裝依賴：
 
@@ -243,7 +272,7 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 用 `Config(il11_enabled=True)` 或以下指令開啟 IL11 功能：
 
 ```bash
-.venv/bin/python modeling_cancer.py --il11
+.venv/bin/python main.py --only results --il11
 ```
 
 預設為關閉。開啟時將 passenger 索引 6（Gene 7）改為 IL11；關閉時保留為中性 passenger，維持 20 個位點與相同突變機會。因此開啟時為 13 個 passengers 加 IL11，關閉時為 14 個 passengers 且沒有功能性 IL11 位點。突變後標記為 IL11+ 生產者；這是教學假設，並非經校準的 IL11 活化機制。同基因型可能來自不同祖先，因此這裡的「IL11+ clone」指生產者族群，不是重建出的家系。
@@ -258,7 +287,7 @@ IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上
 
 ### 重複試驗與不確定性
 
-`--replicates` 統一控制**所有隨機實驗組**，包含主治療圖，預設 30 次。例如：`.venv/bin/python modeling_cancer.py --replicates 100`。主圖改用多次試驗彙整，不再只展示一條軌跡。細胞數與多樣性將滅絕試驗延續為零；達計算上限後的後續值視為缺失，不使用最後數量補值；註腳寫出所有試驗都有觀察的最後世代（預設第 31 代）。抗藥比例只針對仍存活且有觀察值的腫瘤，空族群不定義比例。逐基因突變頻率見 `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`。
+`--replicates` 統一控制**所有隨機實驗組**，包含主治療圖，預設 30 次。例如：`.venv/bin/python main.py --only results --replicates 100`。主圖改用多次試驗彙整，不再只展示一條軌跡。細胞數與多樣性將滅絕試驗延續為零；達計算上限後的後續值視為缺失，不使用最後數量補值；註腳寫出所有試驗都有觀察的最後世代（預設第 31 代）。抗藥比例只針對仍存活且有觀察值的腫瘤，空族群不定義比例。逐基因突變頻率見 `outputs/genotype_evolution/02_gene_mutation_frequencies_{zh,en}`。
 
 試驗依絕對世代對齊，治療各自在達到大小門檻後開始，因此主圖以淡色區間標出治療起點的範圍，而不是單一條線；C 面板標出各試驗在自己治療起點的抗藥比例中位數。`therapy_replicates.csv` 保留每次起點與結果。`trajectory.csv` 現為多次試驗摘要，`therapy_trajectories.csv` 保留各次軌跡。仍可自行呼叫 `plot_dashboard(result, ...)` 查看明確指定的單次案例。
 
@@ -266,15 +295,15 @@ IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上
 
 ### 相平面圖
 
-生成模擬輸出後，執行 `.venv/bin/python plot_phase_portraits.py`，即可在 `outputs/phase_plots/` 生成一張 300 dpi PNG／向量 SVG：`01_phase_portrait`，不修改簡報。圖中以 `log10(count+1)` 座標呈現敏感／抗藥細胞數。灰線保留所有實際觀察軌跡；突出一條實際試驗，先選最接近復發中位代數，再選谷底最接近中位數的案例，並依治療前、治療至復發、復發後上色，標示治療啟動、最低負荷與復發。黑色箭頭的端點是由突出案例完整基因型快照算出的下一代條件期望，包含敏感細胞突變成抗藥細胞的精確貢獻；箭頭頭端到下一個實際點的距離就是該代的隨機偏差。右欄列出治療啟動與谷底時的期望與實際下一代。重現案例會逐代核對記錄的 CSV 計數。箭頭端點是原始計數期望的對數轉換，並非對數計數的期望；公式見圖 07。
+執行 `.venv/bin/python main.py --only phase`，即可在 `outputs/phase_plots/` 生成一張 300 dpi PNG／向量 SVG：`01_phase_portrait`，不修改簡報。圖中以 `log10(count+1)` 座標呈現敏感／抗藥細胞數。灰線保留所有實際觀察軌跡；突出一條實際試驗，先選最接近復發中位代數，再選谷底最接近中位數的案例，並依治療前、治療至復發、復發後上色，標示治療啟動、最低負荷與復發。黑色箭頭的端點是由突出案例完整基因型快照算出的下一代條件期望，包含敏感細胞突變成抗藥細胞的精確貢獻；箭頭頭端到下一個實際點的距離就是該代的隨機偏差。右欄列出治療啟動與谷底時的期望與實際下一代。重現案例會逐代核對記錄的 CSV 計數。箭頭端點是原始計數期望的對數轉換，並非對數計數的期望；公式見圖 07。
 
-這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver、TSG 或 IL11 組成。計算終點不是平衡點。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可加上 `--replicate 0 --output outputs/phase_rep0` 查看另一條實際試驗。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。負荷 × 抗藥比例的視角改看下方的 `05_phase_field_burden_logit`，它用 logit 軸取代線性百分比。
+這是完整基因型／治療狀態的投影，並非封閉的二維自治向量場：相同 S／R 數目仍可能有不同 driver、TSG 或 IL11 組成。計算終點不是平衡點。`conditional_phase_steps.csv` 保留期望及實際下一代計數；`phase_summary.json` 記錄案例選法、事件及解讀限制。可用 `.venv/bin/python main.py --only phase --replicate 0` 突出另一條實際試驗（會覆寫相圖檔案）。中文標籤需要 Arial Unicode MS 或 Noto Sans CJK TC 等支援字型；SVG 保留字形路徑。負荷 × 抗藥比例的視角改看下方的 `05_phase_field_burden_logit`，它用 logit 軸取代線性百分比。
 
-`.venv/bin/python plot_phase_field.py` 計算圖 07 使用的網格向量場資料：`phase_vector_grid.csv` 與 `phase_vector_assumptions.json`。每個網格點都指定完整父代族群：S 的基因型為 0，R 只有抗藥位元為 1；全部 1,604 點（線性與對數網格）的一步投影期望均與完整模型核對。子代仍可發生其他突變，後續狀態可能離開此截面。治療在每面板固定，不依大小門檻切換。原本獨立的線性與對數向量場圖已併入圖 07 或刪除。
+同一步驟也計算網格向量場資料（圖 07 使用相同公式）：`phase_vector_grid.csv` 與 `phase_vector_assumptions.json`。每個網格點都指定完整父代族群：S 的基因型為 0，R 只有抗藥位元為 1；全部 1,604 點（線性與對數網格）的一步投影期望均與完整模型核對。子代仍可發生其他突變，後續狀態可能離開此截面。治療在每面板固定，不依大小門檻切換。原本獨立的線性與對數向量場圖已併入圖 07 或刪除。
 
 ### 理論與經驗相場
 
-執行 `.venv/bin/python plot_phase_comparison.py` 可得兩組座標，每組皆以「理論 vs 經驗」漂移場呈現，並分開治療關閉與持續治療：
+相圖步驟也畫出兩組座標，每組皆以「理論 vs 經驗」漂移場呈現，並分開治療關閉與持續治療：
 
 - `05_phase_field_burden_logit_{zh,en}`：x = log10(N+1)，y = 以經驗 logit log10((R+½)/(S+½)) 呈現的抗藥比例，刻度標為百分比。ρ 為 0 或 1 時仍有限值，虛線與點線分別標示 S = 0 與 R = 0。
 - `06_phase_field_fitness_logit_{zh,en}`：x = 無治療平均適應度 w̄_off，y 軸同上。這張圖把演化（oncogene 累積）和選擇（抗藥）分開。
@@ -283,7 +312,7 @@ IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上
 
 ### 治療延伸分析
 
-執行 `.venv/bin/python analyze_therapy.py`（12 核心約 2 分鐘；`--only 08 09` 只跑部分），會在 `outputs/therapy_analysis/` 輸出四張圖與 CSV／JSON 資料。分析 09 重用主實驗記錄的 30 次試驗，其餘使用獨立的 seed 區段。所有參數都是教學假設。
+執行 `.venv/bin/python main.py --only therapy`（12 核心約 2 分鐘；`--analyses 08 09` 只跑部分），會在 `outputs/therapy_analysis/` 輸出四張圖與 CSV／JSON 資料。分析 09 重用主實驗記錄的 30 次試驗，其餘使用獨立的 seed 區段。所有參數都是教學假設。
 
 - `08_goldie_coldman`：開始持續治療時的負荷（100–5,000 細胞，每個大小 200 次，Wilson 95% 區間）與治癒機率，並與沒有擬合參數的分枝過程理論比較。抗藥突變 clone 以 Poisson 過程出現；在治療前 s 代出生的 clone 最終存活機率為 1 − f^(s)(q_on)，f 是未治療子代生成函數，q_on = 0.479 是一個抗藥家系在治療下的滅絕機率。治癒 ≈ exp(−Λ)。理論與模擬吻合，50% 治癒點約在 416 個細胞（100 個細胞時 99.5%，1,000 時 10%，5,000 時 0%）。B 面板是治療開始時已存在的抗藥細胞，平均數大於中位數（Luria–Delbrück 的 jackpot）。
 - `09_relapse_time_prediction`：用治療開始時的基因型組成預測主實驗每次試驗的復發延遲。基準預測 ln(N/R₀)/ln 1.371 平均誤差 2.0 代；讓每種抗藥基因型以自己的治療中平均子代數成長（oncogene 細胞 ×1.62），30 次中 24 次預測到正確世代（平均誤差 0.2）。抗藥細胞越多（Spearman −0.70）、其中 oncogene 比例越高（−0.51），復發越早。C 面板是治療中期望成長率對抗藥比例 ρ，在 ρ* = (1 − m_S)/(m_R − m_S) ≈ 70% 穿過零，也就是谷底。
@@ -294,7 +323,7 @@ IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上
 
 ### 基因型分布的演變
 
-執行 `.venv/bin/python plot_genotype_evolution.py`，輸出至 `outputs/genotype_evolution/`：
+執行 `.venv/bin/python main.py --only genotype`，輸出至 `outputs/genotype_evolution/`：
 
 - `01_muller_top_genotypes_{zh,en}`：代表試驗（與相平面圖相同的選取規則）的 Muller 圖，上方附負荷曲線；另有 6 個由早到晚復發的其他試驗。每個試驗呈現峰值頻率最高的 10 個基因型。每個基因型位於「已呈現且突變為其子集的最大基因型」內，未呈現的細胞併入最接近的已呈現祖先，因此比例總和恆為 1。這是基因型包含關係，不是重建的譜系。色相表示功能類別，同類別內以明度區分基因型；主圖逐一列出基因型名稱。
 - `02_gene_mutation_frequencies_{zh,en}`：30 次試驗每個基因的突變細胞比例，以治療開始對齊，呈現中位數與 10–90 百分位帶。面板涵蓋 oncogene、TSG（任一等位基因與雙等位基因失活）、抗藥基因，以及作為中性對照的 passenger 平均。只呈現所有試驗都有觀察的相對世代，縱軸為 symlog。
@@ -303,7 +332,7 @@ IL11+ 細胞占 2% 時，共享死亡率降低 **3 個百分點**，即漸近上
 
 ### 數學模型圖
 
-執行 `.venv/bin/python plot_markov_model.py`，可在 `outputs/mathematical_model/` 重新生成論文風格的 300 dpi PNG 與向量 SVG：
+執行 `.venv/bin/python main.py --only model`，可在 `outputs/mathematical_model/` 重新生成論文風格的 300 dpi PNG 與向量 SVG：
 
 - `06_single_cell_rules`：未突變細胞的子代分布、同一規則寫成的精確五狀態矩陣（停用突變與治療；溢出狀態是人為設定的記帳吸收狀態，不是生物飽和），以及 d、q、子代機率、治療前後平均子代數 m 和單一細胞家系最終滅絕機率（s = f(s) 的最小根）的表格。基準抗藥細胞的家系在治療下有 0.52 的機率存活；敏感細胞家系在治療下必定滅絕。
 - `07_matrices_to_flow`：簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M、條件期望公式 E[S′ | s] 與 E[R′ | s]，旁邊是治療關閉與持續治療的線性 S–R 向量場（13×13 網格至 30,000 細胞，共用長度比例）。疊上主實驗 30 次試驗的實際路徑：未治療面板畫治療前那段，治療面板畫治療開始之後那段，並突出代表試驗。雖然箭頭只用基準細胞計算，實際路徑仍順著箭頭走。
@@ -315,11 +344,11 @@ P 與 Q 每列加總為 1；M 記錄期望子代數，不是機率轉移矩陣�
 
 `outputs/presentations/tumor_markov_code_results_zh_tw_v10.pptx` 是 54 張繁體中文教學投影片。以治療反應開場，講解程式與數學，再依序檢查族群組成、多樣性、治療延伸分析、控制實驗與後續驗證方向。數學推導整合於相應主內容頁，沒有附錄。
 
-程式教學採用 `modeling_cancer.py` 的節錄，搭配變數意義、數值例子及詳細講者備註，涵蓋 Config、稀疏基因型計數、bitmask、TSG 等位基因、IL11、更新時序、二項繁殖抽樣、突變守恆、P／Q／M、復發判讀、多次試驗統計、取樣及測試。節錄依行號選取；`modeling_cancer.py` 改動後必須重新檢查 `presentations/teach_model.mjs` 的行號範圍（v10 已全部對應到目前的原始碼）。公式以 LaTeX 數學語法及 Computer Modern 字型高解析度排版，是圖片物件，並非 PowerPoint 原生公式物件。文字、矩陣、狀態圖、表格與圖表均可編輯。
+程式教學採用 `simulation.py` 的節錄（重複試驗部分取自 `experiments.py`），搭配變數意義、數值例子及詳細講者備註，涵蓋 Config、稀疏基因型計數、bitmask、TSG 等位基因、IL11、更新時序、二項繁殖抽樣、突變守恆、P／Q／M、復發判讀、多次試驗統計、取樣及測試。節錄依行號選取；`simulation.py` 或 `experiments.py` 改動後必須重新檢查 `presentations/teach_model.mjs` 的行號範圍（v10 已全部對應到目前的原始碼）。公式以 LaTeX 數學語法及 Computer Modern 字型高解析度排版，是圖片物件，並非 PowerPoint 原生公式物件。文字、矩陣、狀態圖、表格與圖表均可編輯。
 
 v10 依照與圖表相同的合併原則：可用試驗數圖改為註腳，兩張基因頻率熱圖改為一張以治療開始對齊、含 passenger 對照的基因頻率圖，刪除 IL11 全範圍曲線，TSG 達標比例與終點投影片加入無 TSG 優勢對照組。另有四張治療延伸分析投影片（Goldie–Coldman 治癒曲線、復發時間預測、k_R × μ 治癒表、適應性與持續治療比較）。主要治療曲線顯示 0–30 代的共同完整窗口，每代皆有 30 次存活且觀察中的試驗。所有對數轉換均明確標示。
 
-資料準備會重現治療族群與無 TSG 優勢對照組，核對 CSV 計數，並讀取 `plot_genotype_evolution.py` 與 `analyze_therapy.py` 已核對的輸出。重建資料與簡報：
+資料準備會重現治療族群與無 TSG 優勢對照組，核對 CSV 計數，並讀取 `genotype` 與 `therapy` 步驟已核對的輸出。重建資料與簡報：
 
 ```bash
 .venv/bin/python presentations/prepare_results.py
@@ -331,21 +360,22 @@ PRESENTATION_BUILD_DIR=.presentation-build/code-v11 PRESENTATION_FILENAME=tumor_
 
 ### 修改與重用
 
-程式風格：所有 Python 檔以 black 排版（設定在 `pyproject.toml`；長運算式拆成每個參數或條件一行）。以 `.venv/bin/python -m pip install black` 安裝到專案環境後，執行 `.venv/bin/python -m black --unstable *.py presentations/*.py`。少數連續條件式以 `# fmt: off` 保留「一個條件一行」的寫法。排版會移動行號，重建簡報前須重新檢查 `presentations/teach_model.mjs` 的程式節錄行號。
+程式風格：所有 Python 檔以 black 排版（設定在 `pyproject.toml`；長運算式拆成每個參數或條件一行）。以 `.venv/bin/python -m pip install black` 安裝到專案環境後，執行 `.venv/bin/python -m black --unstable *.py presentations/*.py`。每個繪圖樣式函數都先還原 Matplotlib 初始設定，所以在同一個行程跑完所有步驟，圖與分開執行時完全相同。少數連續條件式以 `# fmt: off` 保留「一個條件一行」的寫法。排版會移動行號，重建簡報前須重新檢查 `presentations/teach_model.mjs` 的程式節錄行號。
 
 修改 `Config` 中的參數，或從其他 Python 程式呼叫：
 
 ```python
 from pathlib import Path
-from modeling_cancer import Config, simulate, plot_dashboard
+from simulation import Config, simulate
+from plot_results import plot_dashboard
 
 config = Config(suppressor_hits=1, mutation_rate=0.0005)
 result = simulate(config, seed=7, therapy=True)
 plot_dashboard(result, Path("my_figures"))
 ```
 
-執行 `.venv/bin/python -m unittest -v test_modeling_cancer.py` 可驗證等位基因狀態、突變守恆與可重現性。
+執行 `.venv/bin/python -m unittest -v test_simulation.py` 可驗證等位基因狀態、突變守恆、可重現性與多次試驗統計。
 
-繪圖函數 `plot_dashboard`、`run_comparisons`、`set_plot_style`、`save_figure` 可獨立重用。使用 Agg backend，執行後直接存檔，不彈出 GUI。
+`experiments.py` 的實驗函數回傳一般資料（list、dict、陣列），`plot_*` 函數接收這些資料，兩邊都可以單獨重用。使用 Agg backend，執行後直接存檔，不彈出 GUI。
 
 討論時可著重：driver 如何改變每代期望子代數；TSG 雙等位基因失活條件為何延遲選擇優勢；治療前已存在的抗藥細胞如何在治療後占優；相同樣本大小下，死亡率、達到大小所需代數和突變累積的關係。請以實際輸出數據解釋趨勢，避免將單一隨機案例當成普遍定律。

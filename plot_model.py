@@ -1,42 +1,21 @@
-"""Generate publication-style mathematical diagrams using the project's defaults.
+"""數學圖：06 單細胞規則、07 從 M 矩陣到流向、A1 附錄（完整轉移核與程式流程）。
 
-Figures: 06 single-cell rules, 07 matrices-to-flow (with linear vector fields),
-A1 appendix kernel + controller.
-
-Run: .venv/bin/python plot_markov_model.py
-The finite count chain and two-type matrices are explicitly reduced examples.
+矩陣與向量場由 analysis.py 計算；這裡只負責畫圖與存檔。
 """
 
-from pathlib import Path
-import csv
-import json
+from __future__ import annotations
 
-from modeling_cancer import Config, growth_probabilities
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
-from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+from matplotlib.lines import Line2D
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "outputs" / "mathematical_model"
+from analysis import CELL_UNIT, lineage_extinction
+from experiments import OUTPUTS
+
+OUT = OUTPUTS / "mathematical_model"
 INK, BLUE, RED, GRAY = "#182634", "#21658B", "#A54C38", "#66717A"
-
-
-def finite_count_matrix(death, triple, threshold=4):
-    """Exact stopped one-type chain: 0,...,threshold-1, and overflow dagger.
-
-    No mutations or therapy. Overflow is absorbing by construction, rather
-    than a claim that grouping all large populations preserves Markovity.
-    """
-    offspring = np.array([death, 0.0, (1 - death) * (1 - triple), (1 - death) * triple])
-    matrix = np.zeros((threshold + 1, threshold + 1))
-    for n in range(threshold):
-        law = np.array([1.0])
-        for _ in range(n):
-            law = np.convolve(law, offspring)
-        for j, prob in enumerate(law):
-            matrix[n, min(j, threshold)] += prob
-    matrix[threshold, threshold] = 1
-    return matrix, offspring
 
 
 def panel(ax, letter, title, gap=0.055):
@@ -147,17 +126,6 @@ def save(fig, name):
             pad_inches=0.3,
         )
     plt.close(fig)
-
-
-def lineage_extinction(death, triple):
-    """單一細胞家系最終滅絕機率：f(s)=δ+(1−δ)[(1−q)s²+qs³] 在 [0,1] 的最小不動點。"""
-    s = 0.0
-    for _ in range(100_000):
-        s_next = death + (1 - death) * ((1 - triple) * s**2 + triple * s**3)
-        if abs(s_next - s) < 1e-15:
-            break
-        s = s_next
-    return s_next
 
 
 def single_cell_figure(config, matrix, offspring, phenotypes):
@@ -351,8 +319,6 @@ def matrices_to_flow_figure(
     config, qmatrix, before, during, fields, trials, events, highlight
 ):
     """M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。"""
-    from plot_phase_field import CELL_UNIT
-
     scale = 9.0  # 11×11 網格比原本 19×19 稀疏，箭頭可以畫長一點；兩面板共用。
     fig = plt.figure(figsize=(17, 10.2))
     fig.text(
@@ -460,8 +426,6 @@ def matrices_to_flow_figure(
         fontproperties={"size": 11},
         color=BLUE,
     )
-    from matplotlib.lines import Line2D
-
     axes[1].legend(
         handles=[
             Line2D(
@@ -645,116 +609,3 @@ def appendix_figure(config):
     for i, text in enumerate(notes):
         label(ax, 0, 0.86 - i * 0.16, text, 12)
     save(fig, "A1_markov_kernel_and_controller")
-
-
-def main():
-    OUT.mkdir(parents=True, exist_ok=True)
-    plt.rcParams.update({
-        "font.family": "DejaVu Sans",
-        "mathtext.fontset": "stix",
-        "svg.fonttype": "none",
-        "axes.unicode_minus": False,
-    })
-    c = Config()
-    p, law = finite_count_matrix(c.death_rate, c.triple_probability)
-    q = np.array([[1 - c.mutation_rate, c.mutation_rate], [0, 1.0]])
-    m0 = (1 - c.death_rate) * (2 + c.triple_probability)
-    off = np.diag([m0, m0]) @ q
-    on = (
-        np.diag(
-            [m0 * (1 - c.sensitive_therapy_kill), m0 * (1 - c.resistant_therapy_kill)]
-        )
-        @ q
-    )
-    # Meaningful analytic checks: the exact finite law and row/mean conventions.
-    np.testing.assert_allclose(p.sum(axis=1), 1, atol=1e-14)
-    np.testing.assert_allclose(p[2], [0.09, 0, 0.4032, 0.0168, 0.49])
-    np.testing.assert_allclose(p[3], [0.027, 0, 0.18144, 0.00756, 0.784])
-    np.testing.assert_allclose(q.sum(axis=1), 1)
-    np.testing.assert_allclose(off.sum(axis=1), [1.428, 1.428])
-    np.testing.assert_allclose(on.sum(axis=1), [0.1428, 1.37088])
-    phenotypes = []
-    for name, genotype, resistant in (
-        ("Baseline sensitive", 0, False),
-        ("Oncogene sensitive", 1, False),
-        ("Oncogene + TSG loss", 1 | (1 << 4) | (1 << 20), False),
-        ("Baseline resistant", 1 << 3, True),
-    ):
-        d, triple = growth_probabilities(genotype, c)
-        mean = (1 - d) * (2 + triple)
-        kill = c.resistant_therapy_kill if resistant else c.sensitive_therapy_kill
-        on_death = 1 - (1 - d) * (1 - kill)
-        phenotypes.append([
-            name,
-            f"{d:.2f}",
-            f"{triple:.2f}",
-            f"{d:.3f}",
-            f"{(1-d)*(1-triple):.3f}",
-            f"{(1-d)*triple:.3f}",
-            f"{mean:.4f}",
-            f"{mean*(1-kill):.4f}",
-            f"{lineage_extinction(d,triple):.3f}",
-            f"{lineage_extinction(on_death,triple):.3f}",
-        ])
-    # 子代平均小於 1 時家系必然滅絕；大於 1 時滅絕機率小於 1。
-    assert phenotypes[0][9] == "1.000" and float(phenotypes[3][9]) < 1
-    extinct = lineage_extinction(c.death_rate, c.triple_probability)
-    np.testing.assert_allclose(
-        extinct, law @ extinct ** np.arange(4), rtol=1e-12
-    )  # s = f(s)
-    from plot_phase_field import compute_phase_field, verify_field
-
-    counts = np.rint(np.linspace(0, 30_000, 13)).astype(np.int64)
-    fields = [
-        compute_phase_field(c, active, counts, "linear") for active in (False, True)
-    ]
-    for field in fields:
-        verify_field(field, c)
-    single_cell_figure(c, p, law, phenotypes)
-    # 實際路徑：讀取主實驗的 30 次治療試驗，突出與相圖 01 相同的代表試驗。
-    from plot_phase_portraits import choose_exemplar, load_trials
-
-    _, trials, events = load_trials(OUT.parent)
-    matrices_to_flow_figure(
-        c, q, off, on, fields, trials, events, choose_exemplar(events)
-    )
-    appendix_figure(c)
-    for name, values, names in (
-        ("count_transition_P", p, ["0", "1", "2", "3", "overflow"]),
-        ("mutation_Q", q, ["S", "R"]),
-        ("offspring_M_off", off, ["S", "R"]),
-        ("offspring_M_on", on, ["S", "R"]),
-    ):
-        with (OUT / f"{name}.csv").open("w", newline="") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(["current / next", *names])
-            writer.writerows([[name, *row] for name, row in zip(names, values)])
-    (OUT / "matrix_assumptions.json").write_text(
-        json.dumps(
-            {
-                "P": (
-                    "One-type chain, no mutation, no therapy, d=0.30, q=0.04; first"
-                    " N>=4 is absorbing bookkeeping overflow."
-                ),
-                "Q_and_M": (
-                    "Only resistance is retained; no oncogene/TSG advantage or IL11;"
-                    " mu=0.001."
-                ),
-                "orientation": (
-                    "Rows=current/parent, columns=next/offspring; probability"
-                    " distributions are row vectors."
-                ),
-                "verification": (
-                    "Exact convolution probabilities, P/Q row sums, and M expected row"
-                    " sums checked."
-                ),
-            },
-            indent=2,
-        )
-        + "\n"
-    )
-    print(f"Verified matrices and saved PNG/SVG figures to {OUT}")
-
-
-if __name__ == "__main__":
-    main()

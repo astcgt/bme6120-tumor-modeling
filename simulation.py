@@ -1,0 +1,403 @@
+"""腫瘤分枝模型：只包含模擬本身。
+
+一代的規則：每個細胞死亡，或產生 2 / 3 個子細胞；子細胞每個位元獨立以 μ 發生不可逆突變。
+腫瘤以「基因型 → 細胞數」的字典表示（不是追蹤每個細胞的家系）。
+治療在負荷首次達到門檻後開始，敏感與抗藥細胞有不同的額外殺傷率。
+所有參數均為教學假設，不是臨床估計。
+
+閱讀順序：Config（參數）→ 基因型與表型 → growth_probabilities（表型 → 機率）
+→ mutate_offspring（突變）→ simulate（一代一代更新）→ therapy_outcome（判讀復發）。
+重複試驗、對照實驗與分析在 experiments.py；理論公式在 analysis.py；圖在 plot_*.py。
+"""
+
+# 延後解析型別註記，讓函數與資料類別的型別宣告更容易互相引用。
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+# NumPy 負責隨機抽樣與統計摘要。
+import numpy as np
+
+
+# ---------------------------------------------------------------- 參數與結果 --------
+# 將所有模型參數集中管理；frozen=True 防止執行中意外修改設定。
+@dataclass(frozen=True)
+class Config:
+    # 20 個基因座：一般基因用一個位元；每個抑癌基因另加一個等位基因位元。
+    n_genes: int = 20
+    driver_genes: tuple[int, ...] = (0, 1, 2)
+    resistance_gene: int = 3
+    driver_hits: int = 1  # 保留：不同 oncogene 的突變數門檻
+    suppressor_genes: tuple[int, ...] = (4, 5)
+    suppressor_hits: int = 2  # 同一抑癌基因需要失活的等位基因數
+    suppressor_death_reduction: float = 0.08
+    suppressor_triple_bonus: float = 0.12
+    # IL11 開關：啟用時將第 7 個基因座由 passenger 改為 IL11；關閉時保留中性位點。
+    il11_enabled: bool = False
+    il11_gene: int = 6
+    il11_max_death_reduction: float = 0.06
+    il11_half_fraction: float = 0.02  # IL11+ 占 2% 時達最大共享效果的一半
+    # 突變與生長設定：driver 達標後同時影響自然死亡率和三子細胞機率。
+    mutation_rate: float = 0.001  # 每個子細胞、每個未突變位元、每代；TSG 為每等位基因
+    death_rate: float = 0.30
+    driver_death_reduction: float = 0.08
+    triple_probability: float = 0.04  # 存活後產生三個子細胞的機率
+    driver_triple_bonus: float = 0.12
+    # 模擬規模及治療設定：控制初始負荷、觀察時間、啟動門檻與額外殺傷率。
+    initial_cells: int = 100
+    generations: int = 75
+    therapy_start_size: int = 20_000
+    sensitive_therapy_kill: float = 0.90  # 自然死亡後的額外殺傷機率
+    resistant_therapy_kill: float = 0.04
+    max_cells: int = 1_000_000  # 計算停止門檻，不是環境承載量
+    # 延伸分析用（預設關閉，主結果不受影響）：
+    # adaptive：負荷降到首次治療負荷的 adaptive_pause_fraction 以下就暫停，回到治療門檻再恢復。
+    therapy_mode: str = "continuous"
+    adaptive_pause_fraction: float = 0.5
+    resistance_cost: float = 0.0  # 抗藥細胞額外的自然死亡機率（抗藥代價）
+    # 承載量 K：每個細胞額外死亡 c·N/K，c 使無突變細胞在 N=K 時平均子代剛好為 1。None＝無競爭。
+    carrying_capacity: int | None = None
+
+    def validate(self):
+        # 先檢查基因組大小、基因索引是否有效，以及 driver 門檻是否可達。
+        if not 2 <= self.n_genes <= 20:
+            raise ValueError("n_genes 必須介於 2–20")
+        genes = self.driver_genes + self.suppressor_genes + (self.resistance_gene,)
+        if len(set(genes)) != len(genes) or any(
+            g < 0 or g >= self.n_genes for g in genes
+        ):
+            raise ValueError(
+                "oncogene、suppressor 與 resistance 基因必須互異且位於基因組內"
+            )
+        if not 1 <= self.driver_hits <= len(self.driver_genes):
+            raise ValueError("driver_hits 超出可用 driver 數目")
+        if not self.suppressor_genes or self.suppressor_hits not in (1, 2):
+            raise ValueError("需要至少一個抑癌基因，suppressor_hits 必須為 1 或 2")
+        # 保留 20 個基因座及相同突變機會，避免有無 IL11 比較混入基因組大小差異。
+        if not isinstance(self.il11_enabled, bool):
+            raise ValueError("il11_enabled 必須為 bool")
+        if self.il11_gene in genes or not 0 <= self.il11_gene < self.n_genes:
+            raise ValueError("IL11 必須是獨立且有效的基因座")
+        if not 0 < self.il11_half_fraction <= 1:
+            raise ValueError("il11_half_fraction 必須介於 0（不含）與 1")
+        # 逐一檢查機率參數，避免傳入二項分布時出現無效機率。
+        for name in (
+            "mutation_rate",
+            "death_rate",
+            "driver_death_reduction",
+            "triple_probability",
+            "driver_triple_bonus",
+            "suppressor_death_reduction",
+            "suppressor_triple_bonus",
+            "il11_max_death_reduction",
+            "sensitive_therapy_kill",
+            "resistant_therapy_kill",
+            "resistance_cost",
+        ):
+            if not 0 <= getattr(self, name) <= 1:
+                raise ValueError(f"{name} 必須介於 0–1")
+        # 額外檢查加總後的機率與模擬規模；單個參數有效不代表組合必然有效。
+        if (
+            self.triple_probability
+            + self.driver_triple_bonus
+            + self.suppressor_triple_bonus
+            > 1
+        ):
+            raise ValueError("產生三個子細胞的總機率不能超過 1")
+        if (
+            min(
+                self.initial_cells,
+                self.generations,
+                self.therapy_start_size,
+                self.max_cells,
+            )
+            <= 0
+        ):
+            raise ValueError("細胞數、代數與門檻必須為正")
+        if self.therapy_mode not in ("continuous", "adaptive"):
+            raise ValueError("therapy_mode 必須是 continuous 或 adaptive")
+        if not 0 < self.adaptive_pause_fraction < 1:
+            raise ValueError("adaptive_pause_fraction 必須介於 0 與 1 之間")
+        if self.carrying_capacity is not None and self.carrying_capacity <= 0:
+            raise ValueError("carrying_capacity 必須為正或 None")
+
+
+# 封裝一次試驗的設定、逐代統計、完整基因型計數及停止／治療資訊。
+@dataclass
+class Result:
+    config: Config
+    seed: int
+    history: list[dict]
+    populations: list[dict[int, int]]
+    therapy_generation: int | None
+    stop_reason: str
+    # 每個已推進世代是否施加治療；continuous 時從 therapy_generation 起全為 True。
+    therapy_active: list[bool] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------- 基因型 → 表型 ------
+def driver_count(genotype: int, config: Config) -> int:
+    # 1 << g 選取第 g 個基因；位元 AND 判斷是否突變，再加總 driver 數。
+    return sum(bool(genotype & (1 << g)) for g in config.driver_genes)
+
+
+def suppressor_alleles(genotype: int, gene: int, config: Config) -> int:
+    """回傳同一抑癌基因失活的等位基因數（0、1 或 2）。"""
+    # 第一個位元沿用基因座索引；第二個放在 n_genes 後，不增加基因座數。
+    second = config.n_genes + config.suppressor_genes.index(gene)
+    return int(bool(genotype & (1 << gene))) + int(bool(genotype & (1 << second)))
+
+
+def suppressor_loss(genotype: int, config: Config) -> bool:
+    # 必須是同一基因達到門檻；兩個不同基因各一擊不等於同一基因兩擊。
+    return any(
+        suppressor_alleles(genotype, gene, config) >= config.suppressor_hits
+        for gene in config.suppressor_genes
+    )
+
+
+def growth_probabilities(
+    genotype: int, config: Config, shared_benefit: float = 0.0
+) -> tuple[float, float]:
+    """分開計算 oncogene 活化及抑癌功能喪失的生長優勢，可相加。"""
+    oncogene = driver_count(genotype, config) >= config.driver_hits
+    suppressor = suppressor_loss(genotype, config)
+    # 每一類優勢最多給一次；多個抑癌基因達標不再重複累加。
+    death = max(
+        0,
+        config.death_rate
+        - config.driver_death_reduction * oncogene
+        - config.suppressor_death_reduction * suppressor
+        - shared_benefit,
+    )
+    # 抗藥代價只在明確設定時加上，預設為 0 時完全不改變計算。
+    if config.resistance_cost and genotype & (1 << config.resistance_gene):
+        death = min(1.0, death + config.resistance_cost)
+    triple = (
+        config.triple_probability
+        + config.driver_triple_bonus * oncogene
+        + config.suppressor_triple_bonus * suppressor
+    )
+    return death, triple
+
+
+def il11_environment(population: dict[int, int], config: Config) -> tuple[float, float]:
+    """由當前 IL11+ 細胞比例計算下一次轉移的共享死亡率降低量。"""
+    # 關閉時此位點只是 passenger，不產生 IL11，也不提供共享優勢。
+    total = sum(population.values())
+    if not config.il11_enabled or total == 0:
+        return 0.0, 0.0
+    fraction = (
+        sum(n for g, n in population.items() if g & (1 << config.il11_gene)) / total
+    )
+    # 飽和函數是教學假設；均勻混合環境中所有細胞（含非生產者）皆受益。
+    benefit = (
+        config.il11_max_death_reduction
+        * fraction
+        / (config.il11_half_fraction + fraction)
+    )
+    return fraction, benefit
+
+
+def crowding_death(total: int, config: Config) -> float:
+    """承載量競爭的額外死亡機率；係數讓無突變細胞在 N = K 時期望子代恰為 1。"""
+    if config.carrying_capacity is None:
+        return 0.0
+    coefficient = (1 - config.death_rate) - 1 / (2 + config.triple_probability)
+    return coefficient * total / config.carrying_capacity
+
+
+# ---------------------------------------------------------------- 突變與一代更新 ----
+def mutate_offspring(
+    population: dict[int, int], config: Config, rng: np.random.Generator
+) -> dict[int, int]:
+    """逐基因二項抽樣：與逐細胞獨立突變等價，允許一代多基因突變。"""
+    # 複製輸入字典，避免突變抽樣直接改動呼叫端保存的族群。
+    population = dict(population)
+    # 依序處理一般基因與 TSG 的兩個等位基因；允許同一代兩個等位基因都突變。
+    for gene in range(config.n_genes + len(config.suppressor_genes)):
+        bit = 1 << gene
+        # 將讀取與寫入分開，避免同一輪新增的基因型被重複處理。
+        updated = dict(population)
+        for genotype, count in population.items():
+            # 已突變的基因保持不變；只替尚未突變的細胞抽樣。
+            if genotype & bit:
+                continue
+            # 二項分布一次抽出此基因型的突變細胞數，省去逐細胞迴圈。
+            mutants = int(rng.binomial(count, config.mutation_rate))
+            if mutants:
+                # 從舊基因型移出突變細胞，以位元 OR 設定新突變並合併相同基因型。
+                updated[genotype] -= mutants
+                updated[genotype | bit] = updated.get(genotype | bit, 0) + mutants
+        # 刪除零細胞的項目；突變只重新分類細胞，不改變細胞總數。
+        population = {g: n for g, n in updated.items() if n > 0}
+    return population
+
+
+def summarize(population: dict[int, int], generation: int, config: Config) -> dict:
+    # 計算總負荷及各基因型比例；分母至少為 1，讓滅絕族群也能安全處理。
+    total = sum(population.values())
+    fractions = np.array(list(population.values()), dtype=float) / max(total, 1)
+    # 抗藥基因位元決定敏感／抗藥分類，與是否已達 driver 門檻分開判斷。
+    resistant = sum(
+        n for g, n in population.items() if g & (1 << config.resistance_gene)
+    )
+    il11_fraction, shared_benefit = il11_environment(population, config)
+    # 彙整多樣性：richness 是基因型數；Shannon 用自然對數；Simpson 為 1−Σp²。
+    # driver_fraction 只計 oncogene 達標；suppressor_fraction 計 TSG 達標。
+    # suppressor_biallelic_fraction 計至少一個 TSG 雙等位基因失活；滅絕時皆為零。
+    return dict(
+        generation=generation,
+        total=total,
+        resistant=resistant,
+        il11_fraction=il11_fraction,
+        il11_shared_benefit=shared_benefit,
+        sensitive=total - resistant,
+        richness=len(population),
+        shannon=float(-np.sum(fractions * np.log(fractions))),
+        simpson=float(1 - np.sum(fractions**2)) if total else 0.0,
+        driver_fraction=sum(
+            n
+            for g, n in population.items()
+            if driver_count(g, config) >= config.driver_hits
+        )
+        / max(total, 1),
+        suppressor_fraction=sum(
+            n for g, n in population.items() if suppressor_loss(g, config)
+        )
+        / max(total, 1),
+        suppressor_biallelic_fraction=sum(
+            n
+            for g, n in population.items()
+            if any(
+                suppressor_alleles(g, gene, config) == 2
+                for gene in config.suppressor_genes
+            )
+        )
+        / max(total, 1),
+    )
+
+
+def simulate(
+    config: Config = Config(),
+    seed: int = 42,
+    therapy: bool = True,
+    target_size: int | None = None,
+) -> Result:
+    """同步世代分枝過程；治療從首次達門檻後的轉移開始，持續至模擬結束。
+
+    超過 max_cells 時保留完整該代，不截斷細胞；target_size 用於等大小比較。
+    """
+    # 先驗證設定與目標大小，再建立一次模擬專用的亂數產生器。
+    config.validate()
+    if target_size is not None and target_size <= 0:
+        raise ValueError("target_size 必須為正")
+    # 固定 seed 可重現同一試驗；基因型 0 代表所有基因都尚未突變。
+    rng = np.random.default_rng(seed)
+    population = {0: config.initial_cells}
+    # history 存摘要，populations 存基因型快照；尚未治療時代數記為 None。
+    history, populations = [], []
+    therapy_generation = None
+    therapy_on = False
+    active = []
+    stop_reason = "generation_limit"
+    # 包含第 0 代初始狀態；每輪先記錄當前族群，再決定是否推進下一代。
+    for generation in range(config.generations + 1):
+        row = summarize(population, generation, config)
+        history.append(row)
+        populations.append(dict(population))
+        # 依序處理滅絕、達取樣目標、達計算上限與觀察時間結束，保留停止原因。
+        if row["total"] == 0:
+            stop_reason = "extinction"
+            break
+        if target_size is not None and row["total"] >= target_size:
+            stop_reason = "target_reached"
+            break
+        if row["total"] >= config.max_cells:
+            stop_reason = "cell_limit"
+            break
+        if generation == config.generations:
+            break
+        # 首次達到治療門檻就記下當前世代；接下來的轉移持續套用治療。
+        if (
+            therapy
+            and therapy_generation is None
+            and row["total"] >= config.therapy_start_size
+        ):
+            therapy_generation = generation
+            therapy_on = True
+        # adaptive：降到首次治療負荷的一定比例以下就暫停，回到治療門檻再恢復。
+        elif therapy_generation is not None and config.therapy_mode == "adaptive":
+            reference = history[therapy_generation]["total"]
+            if (
+                therapy_on
+                and row["total"] <= config.adaptive_pause_fraction * reference
+            ):
+                therapy_on = False
+            elif not therapy_on and row["total"] >= config.therapy_start_size:
+                therapy_on = True
+        active.append(therapy_on)
+        crowding = crowding_death(row["total"], config)
+        # 依基因型批次處理所有父細胞；新世代完全由 offspring 取代。
+        # 每代只計算一次共享環境；本代新突變會從下一次轉移開始提供 IL11。
+        _, shared_benefit = il11_environment(population, config)
+        offspring = {}
+        for genotype, count in population.items():
+            # 將 oncogene 與抑癌基因的效果合併，再套用治療殺傷。
+            death, triple = growth_probabilities(genotype, config, shared_benefit)
+            if crowding:
+                death = min(1.0, death + crowding)
+            # 治療殺傷作用於自然存活者，因此用兩個存活機率相乘計算總死亡率。
+            if therapy_on:
+                if genotype & (1 << config.resistance_gene):
+                    kill = config.resistant_therapy_kill
+                else:
+                    kill = config.sensitive_therapy_kill
+                death = 1 - (1 - death) * (1 - kill)
+            # 先抽出存活父細胞，再抽出其中產生三個子細胞者；其餘各產生兩個。
+            survivors = int(rng.binomial(count, 1 - death))
+            triples = int(rng.binomial(survivors, triple))
+            # 每個存活者先貢獻兩個子細胞，三子細胞事件再各加一個。
+            n = 2 * survivors + triples
+            if n:
+                offspring[genotype] = n
+        # 所有分裂完成後才讓子代突變；新突變的生存效果從下一次轉移開始。
+        population = mutate_offspring(offspring, config, rng)
+    # 把逐代資料與停止資訊一起回傳，供繪圖和治療結果判讀使用。
+    return Result(
+        config, seed, history, populations, therapy_generation, stop_reason, active
+    )
+
+
+# ---------------------------------------------------------------- 判讀治療結果 ------
+def therapy_outcome(result: Result) -> dict:
+    """復發定義：先降至治療前負荷以下，再回到治療開始時負荷。"""
+    # 未啟動治療的試驗單獨標記，不當作治療成功或失敗。
+    start = result.therapy_generation
+    if start is None:
+        return dict(status="therapy_not_started", nadir=None, relapse_generation=None)
+    # 以啟動治療時的負荷為基準，只搜尋治療開始後的世代。
+    baseline = result.history[start]["total"]
+    after = result.history[start + 1 :]
+    declined = False
+    relapse = None
+    # 記住是否曾低於基準；一旦之後回升至基準，就記錄第一次復發代數。
+    for row in after:
+        declined |= row["total"] < baseline
+        if declined and row["total"] >= baseline:
+            relapse = row["generation"]
+            break
+    # 區分復發、滅絕、尚未觀察到復發及無初始反應；nadir 是觀察期最低負荷。
+    # fmt: off
+    status = (
+        "relapse" if relapse is not None
+        else "extinction" if result.stop_reason == "extinction"
+        else "no_relapse_observed" if declined
+        else "no_initial_response"
+    )
+    # fmt: on
+    return dict(
+        status=status,
+        nadir=min((r["total"] for r in after), default=baseline),
+        relapse_generation=relapse,
+    )

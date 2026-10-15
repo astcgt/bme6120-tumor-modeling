@@ -49,7 +49,7 @@ export function tellResults({slide,text,line,foot,table,math,scientificChart,cur
  {
   const g=results.gene_frequency, trans=x=>Math.log10(x+.01);
   const s=slide('基因頻率：被篩選的基因與中性對照','30 次試驗以治療開始對齊，每條線是各基因突變細胞比例的中位數',
-   '取代原本兩張熱圖。資料來自plot_genotype_evolution.py的gene_frequency_summary.csv：重現30個therapy seeds，以各自的治療開始為第0代對齊，只取所有試驗都有觀察的相對世代(−14到+17)。passenger mean是14個中性位點的平均，作為「沒有被篩選」的基準。治療前oncogene約4%而passenger約1.5%，突變率相同，差距來自選擇；RES在治療前與passenger同一水準，證明抗藥在治療前是中性的，治療後約4代升到100%。TSG任一擊約為passenger兩倍，因為有兩個等位基因。縱軸是log10(百分比+0.01)，0.01讓零值可以顯示。',
+   '取代原本兩張熱圖。資料來自main.py --only genotype輸出的gene_frequency_summary.csv：重現30個therapy seeds，以各自的治療開始為第0代對齊，只取所有試驗都有觀察的相對世代(−14到+17)。passenger mean是14個中性位點的平均，作為「沒有被篩選」的基準。治療前oncogene約4%而passenger約1.5%，突變率相同，差距來自選擇；RES在治療前與passenger同一水準，證明抗藥在治療前是中性的，治療後約4代升到100%。TSG任一擊約為passenger兩倍，因為有兩個等位基因。縱軸是log10(百分比+0.01)，0.01讓零值可以顯示。',
    'outputs/genotype_evolution/gene_frequency_summary.csv');
   scientificChart(s,'line',g.relative_generation,[curve('ONC1',g.ONC1.map(trans),'#236B8E'),curve('ONC2',g.ONC2.map(trans),'#4F8FB0'),
    curve('ONC3',g.ONC3.map(trans),'#86B5CC'),curve('RES',g.RES.map(trans),'#A74F3D'),curve('TSG1 任一擊',g['TSG1 any hit'].map(trans),'#6C5B9C'),
@@ -68,7 +68,7 @@ export function tellResults({slide,text,line,foot,table,math,scientificChart,cur
  {
   const a=results.therapy_analysis, gc=a.goldie_coldman;
   const s=slide('越早治療越可能治癒：Goldie–Coldman','治療起點 100–5,000 細胞，每個大小 200 次；理論沒有任何擬合參數',
-   `analyze_therapy.py 08。橫軸log10(治療開始負荷)，縱軸治癒(滅絕)百分比。理論：抗藥突變clone以Poisson過程出現，治療前s代出生的clone最終存活機率1−f^(s)(q_on)，q_on=0.479是治療下一個抗藥家系的滅絕機率，治癒≈exp(−Λ)。只用基準細胞，所以大負荷時略高估治癒。理論50%點約${a.half_cure_size}細胞。主實驗20,000細胞遠超過這個範圍，因此30/30復發。模擬誤差以Wilson 95%區間記錄於CSV。`,
+   `main.py --only therapy（分析 08）。橫軸log10(治療開始負荷)，縱軸治癒(滅絕)百分比。理論：抗藥突變clone以Poisson過程出現，治療前s代出生的clone最終存活機率1−f^(s)(q_on)，q_on=0.479是治療下一個抗藥家系的滅絕機率，治癒≈exp(−Λ)。只用基準細胞，所以大負荷時略高估治癒。理論50%點約${a.half_cure_size}細胞。主實驗20,000細胞遠超過這個範圍，因此30/30復發。模擬誤差以Wilson 95%區間記錄於CSV。`,
    'outputs/therapy_analysis/goldie_coldman_summary.csv');
   const x=gc.map(r=>Math.log10(r.threshold));
   const ch=scientificChart(s,'scatter',[],[
@@ -82,7 +82,7 @@ export function tellResults({slide,text,line,foot,table,math,scientificChart,cur
  {
   const a=results.therapy_analysis, r=a.relapse_rows;
   const s=slide('復發時間在治療開始時大致已經決定','用治療開始那一代的抗藥基因型預測復發延遲，30 次試驗',
-   `analyze_therapy.py 09。基準預測ln(N/R0)/ln 1.371，假設所有抗藥細胞相同，平均誤差${a.relapse.mae_baseline.toFixed(1)}代且偏晚。組成預測讓每種抗藥基因型以自己的治療中平均子代數成長(帶oncogene ×1.62)，敏感細胞×0.143衰減；向上取整後30次中${a.relapse.exact_genotype}次完全命中，平均誤差${a.relapse.mae_genotype.toFixed(1)}代。R0越多越早復發(Spearman ${a.relapse.spearman_obs_vs_R0.toFixed(2)})，oncogene比例越高越早(${a.relapse.spearman_obs_vs_onc.toFixed(2)})。治療中成長率在ρ*=${(100*a.relapse.rho_star).toFixed(0)}%穿過零，即谷底。`,
+   `main.py --only therapy（分析 09）。基準預測ln(N/R0)/ln 1.371，假設所有抗藥細胞相同，平均誤差${a.relapse.mae_baseline.toFixed(1)}代且偏晚。組成預測讓每種抗藥基因型以自己的治療中平均子代數成長(帶oncogene ×1.62)，敏感細胞×0.143衰減；向上取整後30次中${a.relapse.exact_genotype}次完全命中，平均誤差${a.relapse.mae_genotype.toFixed(1)}代。R0越多越早復發(Spearman ${a.relapse.spearman_obs_vs_R0.toFixed(2)})，oncogene比例越高越早(${a.relapse.spearman_obs_vs_onc.toFixed(2)})。治療中成長率在ρ*=${(100*a.relapse.rho_star).toFixed(0)}%穿過零，即谷底。`,
    'outputs/therapy_analysis/relapse_time_prediction.csv');
   const ch=scientificChart(s,'scatter',[],[
    {name:'基準預測',xValues:r.map(v=>v.predicted_delay_baseline),values:r.map(v=>v.observed_relapse_delay),fill:'#A5B4BD',marker:{symbol:'circle',size:7},line:{fill:'none',width:0}},
@@ -95,7 +95,7 @@ export function tellResults({slide,text,line,foot,table,math,scientificChart,cur
  {
   const a=results.therapy_analysis.sensitivity, keep=[0,2,4,5,6,7,8];
   const s=slide('殺傷率要壓過最強的抗藥細胞才能治癒','抗藥細胞殺傷率 k_R × 突變率 μ 的治癒機率，每格 30 次',
-   `analyze_therapy.py 10。表中數字是治癒(滅絕)百分比；預設k_R=0.04、μ=0.001。單純抗藥細胞在k_R=${a.boundaries['baseline resistant'].toFixed(2)}停止成長，但帶oncogene的抗藥細胞要到${a.boundaries['+ oncogene'].toFixed(2)}，再加TSG失活是${a.boundaries['+ oncogene + TSG loss'].toFixed(2)}。突變率越高，治療前越可能已有這種雙突變細胞，治癒邊界越往右移。完整熱圖與復發延遲見outputs/therapy_analysis/10_parameter_sensitivity.png。`,
+   `main.py --only therapy（分析 10）。表中數字是治癒(滅絕)百分比；預設k_R=0.04、μ=0.001。單純抗藥細胞在k_R=${a.boundaries['baseline resistant'].toFixed(2)}停止成長，但帶oncogene的抗藥細胞要到${a.boundaries['+ oncogene'].toFixed(2)}，再加TSG失活是${a.boundaries['+ oncogene + TSG loss'].toFixed(2)}。突變率越高，治療前越可能已有這種雙突變細胞，治癒邊界越往右移。完整熱圖與復發延遲見outputs/therapy_analysis/10_parameter_sensitivity.png。`,
    'outputs/therapy_analysis/parameter_sensitivity_trials.csv');
   const rows=[['μ ＼ k_R',...keep.map(i=>String(a.kills[i]))]];
   for(let j=a.mutation_rates.length-1;j>=0;j--)rows.push([String(a.mutation_rates[j]),...keep.map(i=>Math.round(100*a.p_cure[j][i])+'%')]);
@@ -106,7 +106,7 @@ export function tellResults({slide,text,line,foot,table,math,scientificChart,cur
  {
   const a=results.therapy_analysis.adaptive;
   const s=slide('適應性治療只有在細胞互相競爭時才有用','間歇用藥 vs 持續用藥的惡化時間中位數，每種設定 30 對試驗',
-   `analyze_therapy.py 11。間歇治療：負荷降到治療起點一半就暫停，回到20,000再恢復。惡化=負荷曾低於20,000後，在用藥中仍≥24,000。兩種策略用同一組seed。沒有競爭時敏感細胞不會妨礙抗藥細胞，暫停只是讓抗藥細胞少挨殺傷，所以間歇較差。加入承載量競爭(K=30,000，每個細胞額外死亡0.21·N/K)後間歇延後惡化，配對比較中幾乎每次都較長，且只用約一半藥量。代價(抗藥細胞死亡+0.05)讓差距更明顯。競爭形式與參數都是教學假設。`,
+   `main.py --only therapy（分析 11）。間歇治療：負荷降到治療起點一半就暫停，回到20,000再恢復。惡化=負荷曾低於20,000後，在用藥中仍≥24,000。兩種策略用同一組seed。沒有競爭時敏感細胞不會妨礙抗藥細胞，暫停只是讓抗藥細胞少挨殺傷，所以間歇較差。加入承載量競爭(K=30,000，每個細胞額外死亡0.21·N/K)後間歇延後惡化，配對比較中幾乎每次都較長，且只用約一半藥量。代價(抗藥細胞死亡+0.05)讓差距更明顯。競爭形式與參數都是教學假設。`,
    'outputs/therapy_analysis/adaptive_therapy_summary.csv');
   const labels=['無競爭','無競爭＋代價','競爭','競爭＋代價'];
   scientificChart(s,'bar',labels,[{name:'持續用藥',values:a.map(r=>r.continuous_median_ttp),fill:'#236B8E',valuesFormatCode:'0.0'},

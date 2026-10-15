@@ -1,40 +1,285 @@
-"""理論期望場 vs 經驗漂移場：兩組相座標，分開治療關閉與持續治療。
+"""相圖：01 實際軌跡與期望下一步、05／06 理論 vs 經驗相場。
 
-執行：.venv/bin/python plot_phase_comparison.py   （需先有 outputs/ 的治療試驗資料）
-理論：固定隱藏基因型組成的截面，箭頭端點 = φ(原始計數一步期望)。
-經驗：30 次實際試驗中，起點落在同一格的一步位移平均 E[φ(X_{t+1}) − φ(X_t)]。
-兩者的差異，即被投影掉的自由度（driver/TSG 組成、隨機性）造成的效果。只用基礎模型。
+期望步伐與箭頭資料由 analysis.py、experiments.py 計算；這裡只負責畫圖與存檔。
 """
 
 from __future__ import annotations
 
-import argparse
-import csv
-import json
-from pathlib import Path
-
-from modeling_cancer import Config
-from phase_state import (
-    GRAY,
-    INK,
-    LANGS,
-    ROOT,
-    check_expectation,
-    expected_next,
-    fitness,
-    logit_rho,
-    reproduce_trials,
-    save,
-    set_style,
-    trial_feature_rows,
-)
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
+from matplotlib.patches import FancyArrowPatch
 import numpy as np
 
+from analysis import MIN_TRANSITIONS, MIN_TRIALS, event_generations, fitness, logit_rho
+
+INK, BLUE, ORANGE, RED, GRAY = "#173042", "#236B8E", "#BC7844", "#A74F3D", "#687783"
+
+
+# ---------------------------------------------------------------- 相圖 01 -----------
+def phase_coordinates(states, composition=False):
+    total = np.array([r["total"] for r in states], dtype=float)
+    if composition:
+        # 滅絕時比例未定義，用 NaN 讓圖斷開，而非畫成 0% 抗藥。
+        fraction = np.divide(
+            [r["resistant"] for r in states],
+            total,
+            out=np.full(len(states), np.nan),
+            where=total > 0,
+        )
+        return np.column_stack((np.log10(total + 1), 100 * fraction))
+    return np.log10(np.array([[r["sensitive"], r["resistant"]] for r in states]) + 1)
+
+
+def decorate_axis(ax, title, composition=False):
+    ax.set_title(title, loc="left", fontsize=17, weight="bold", pad=16)
+    ax.grid(color="#DDE4E8", alpha=0.6, linewidth=0.7)
+    ax.set_axisbelow(True)
+    if composition:
+        ax.set_xlabel(r"總負荷 $\log_{10}(T+1)$", labelpad=12)
+        ax.set_ylabel(r"抗藥比例 $100R/T$（%）", labelpad=12)
+        ax.set_ylim(-4, 107)
+    else:
+        ax.set_xlabel(r"敏感細胞 $\log_{10}(S+1)$", labelpad=12)
+        ax.set_ylabel(r"抗藥細胞 $\log_{10}(R+1)$", labelpad=12)
+        ax.set_xlim(-0.16, 4.85)
+        ax.set_ylim(-0.18, 6.55)
+
+
+def arrow(ax, a, b, color, size=12, linewidth=2, zorder=6):
+    if np.isfinite([*a, *b]).all():
+        ax.add_patch(
+            FancyArrowPatch(
+                a,
+                b,
+                arrowstyle="-|>",
+                mutation_scale=size,
+                color=color,
+                linewidth=linewidth,
+                shrinkA=0,
+                shrinkB=0,
+                zorder=zorder,
+            )
+        )
+
+
+def plot_phase_portrait(trials, events, replicate, config, result, steps):
+    """單一相平面：30 條實際軌跡、突出案例，以及由完整基因型狀態算出的期望下一代箭頭。
+
+    取代舊的 01（軌跡兩格）與 02（條件期望）：同一試驗、同一座標不再畫兩次。
+    負荷 × 抗藥比例的座標改看相圖 05（logit 軸）；推導公式在圖 07。
+    """
+    fig = plt.figure(figsize=(15.5, 10.2))
+    ax = fig.add_axes((0.07, 0.2, 0.5, 0.58))
+    side = fig.add_axes((0.62, 0.2, 0.35, 0.58))
+    side.axis("off")
+    fig.text(
+        0.055,
+        0.965,
+        "相平面：負荷下降不等於抗藥消失",
+        fontsize=25,
+        weight="bold",
+        va="top",
+    )
+    event, states = events[replicate], trials[replicate]
+    fig.text(
+        0.055,
+        0.912,
+        f"{len(trials)} 次試驗的實際軌跡；突出案例 replicate"
+        f" {replicate}（seed={event['seed']}）。"
+        "黑色箭頭＝由當代完整基因型組成算出的期望下一代位置。",
+        fontsize=13.5,
+        color=GRAY,
+    )
+    start, relapse = event["therapy_generation"], event["relapse_generation"]
+    # fmt: off
+    colors = [
+        BLUE if start is None or g < start
+        else RED if relapse is not None and g >= relapse
+        else ORANGE
+        for g in range(len(states) - 1)
+    ]
+    # fmt: on
+    for path in trials.values():
+        ax.plot(
+            *phase_coordinates(path).T, color="#BCC7CE", alpha=0.48, lw=0.85, zorder=1
+        )
+    xy = phase_coordinates(states)
+    for g, color in enumerate(colors):
+        ax.plot(*xy[g : g + 2].T, color=color, lw=2.6, zorder=3)
+    ax.scatter(*xy.T, s=9, color=INK, alpha=0.55, zorder=4, linewidths=0)
+    # 期望箭頭：先求原始計數期望再取 log；箭頭頭端與下一個實際點的距離就是隨機偏差。
+    for g in sorted(
+        {0, 5, 10, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 28, 32, len(steps) - 1}
+    ):
+        if 0 <= g < len(steps):
+            row = steps[g]
+            arrow(
+                ax,
+                xy[g],
+                np.log10(
+                    [row["expected_sensitive"] + 1, row["expected_resistant"] + 1]
+                ),
+                INK,
+                size=11,
+                linewidth=1.5,
+                zorder=6,
+            )
+    sensitive = np.r_[0, np.geomspace(1, config.therapy_start_size, 250)]
+    resistant = np.maximum(0, config.therapy_start_size - sensitive)
+    ax.plot(
+        np.log10(sensitive + 1),
+        np.log10(resistant + 1),
+        color=GRAY,
+        ls="--",
+        lw=1,
+        alpha=0.7,
+    )
+    ax.text(
+        0.65,
+        4.37,
+        rf"$S+R={config.therapy_start_size:,}$（治療門檻）",
+        color=GRAY,
+        fontsize=11.5,
+    )
+    positions = {
+        "初始": (2.75, 0.56),
+        "治療啟動": (3.64, 3.5),
+        "負荷谷底": (1.05, 2.08),
+        "首次復發": (1.27, 5.15),
+    }
+    points = event_generations(states, event)
+    for label, g in points.items():
+        marker = {"初始": "o", "治療啟動": "D", "負荷谷底": "v", "首次復發": "s"}[label]
+        ax.scatter(
+            *xy[g],
+            s=62,
+            marker=marker,
+            c=INK,
+            edgecolors="white",
+            linewidth=0.9,
+            zorder=7,
+        )
+        ax.annotate(
+            f"{label}\n$t={g}$",
+            xy=xy[g],
+            xytext=positions[label],
+            fontsize=11.5,
+            ha="center",
+            arrowprops={"arrowstyle": "-", "color": GRAY, "lw": 0.9},
+            bbox={"facecolor": "white", "edgecolor": "none", "pad": 2},
+            zorder=8,
+        )
+    ax.scatter(*xy[-1], s=50, facecolor="white", edgecolor=RED, linewidth=1.5, zorder=7)
+    decorate_axis(ax, "敏感 × 抗藥細胞（log 座標）")
+    handles = [
+        Line2D([], [], color="#BCC7CE", lw=1, label=f"全部 {len(trials)} 次試驗"),
+        Line2D([], [], color=BLUE, lw=3, label="治療前"),
+        Line2D([], [], color=ORANGE, lw=3, label="治療至首次復發"),
+        Line2D([], [], color=RED, lw=3, label="復發後"),
+        Line2D([], [], color=INK, lw=1.5, marker=">", markersize=7, label="期望下一代"),
+    ]
+    fig.legend(
+        handles=handles,
+        loc="upper left",
+        bbox_to_anchor=(0.055, 0.875),
+        frameon=False,
+        ncol=5,
+        fontsize=12,
+    )
+    # 右側：案例數字。期望與實際並列，說明大族群幾乎沒有偏差、小族群偏差變大。
+    y = 0.97
+    side.text(0, y, "讀圖", fontsize=16, weight="bold", va="top")
+    y -= 0.08
+    for text in (
+        "治療前：S、R 一起長，路徑往右上。",
+        "治療後：S 每代少約一個數量級，\n路徑幾乎水平往左。",
+        "S 歸零後：沿縱軸直直往上，\n純抗藥族群在生長。",
+    ):
+        side.text(0, y, text, fontsize=12.5, va="top")
+        y -= 0.035 + 0.05 * (1 + text.count("\n"))
+    y -= 0.02
+    if start is not None and "負荷谷底" in points:
+        nadir = states[points["負荷谷底"]]
+        side.text(
+            0,
+            y,
+            "抗藥細胞在治療中從未減少",
+            fontsize=14,
+            weight="bold",
+            va="top",
+            color=RED,
+        )
+        y -= 0.065
+        side.text(
+            0,
+            y,
+            f"治療起點 R = {states[start]['resistant']:,}\n谷底 R ="
+            f" {nadir['resistant']:,}"
+            f"（占 {100*nadir['resistant']/nadir['total']:.1f}%）",
+            fontsize=12.5,
+            va="top",
+        )
+        y -= 0.14
+    nadir_g = points.get("負荷谷底")
+    for g, title in ((start, "治療啟動"), (nadir_g, "負荷谷底")):
+        if g is not None and g < len(steps):
+            row = steps[g]
+            side.text(
+                0,
+                y,
+                f"{title} t={g}：(S, R) = ({row['sensitive']:,}, {row['resistant']:,})",
+                fontsize=12.5,
+                weight="bold",
+                va="top",
+            )
+            y -= 0.055
+            side.text(
+                0,
+                y,
+                f"期望下一代 ({row['expected_sensitive']:,.1f},"
+                f" {row['expected_resistant']:,.1f})\n實際下一代"
+                f" ({row['observed_next_sensitive']:,},"
+                f" {row['observed_next_resistant']:,})",
+                fontsize=12,
+                va="top",
+                color=GRAY,
+            )
+            y -= 0.12
+    fig.text(
+        0.07,
+        0.115,
+        r"箭頭端點 $=\phi(\mathrm{E}[S_{t+1}\mid s],\mathrm{E}[R_{t+1}\mid s])$，"
+        r"$\phi(S,R)=(\log_{10}(S+1),\log_{10}(R+1))$；公式推導見圖 07。",
+        fontsize=12.5,
+    )
+    fig.text(
+        0.07,
+        0.07,
+        "族群越小，實際下一步偏離期望越多（人口學隨機性）。座標含 +1，"
+        "因此零細胞可顯示；空心終點是計算上限，不是平衡點。",
+        fontsize=11.5,
+        color=GRAY,
+    )
+    fig.text(
+        0.07,
+        0.035,
+        "相同 (S, R) 底下的 driver／TSG 組成可能不同，因此這是完整狀態的投影，"
+        "不是封閉的二維向量場。",
+        fontsize=11.5,
+        color=GRAY,
+    )
+    return fig
+
+
+def save_phase_figure(fig, destination, name):
+    for extension in ("png", "svg"):
+        fig.savefig(destination / f"{name}.{extension}", dpi=300, facecolor="white")
+    plt.close(fig)
+
+
+# ---------------------------------------------------------------- 相圖 05／06 -------
 THEORY, EMPIRICAL_CMAP, TRACE = "#2a78d6", "Oranges", "#C3CCD2"
-MIN_TRANSITIONS, MIN_TRIALS = 5, 2
 RHO_TICKS = (0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999, 0.99999, 0.999999)
 TEXT = {
     "zh": {
@@ -137,115 +382,6 @@ def rho_ticks(lang):
         for p in RHO_TICKS
     ]
     return positions, labels
-
-
-def theory_point(pair, x, y, config, therapy, size):
-    """格點 → 完整族群（隱藏組成依截面固定）→ 一步期望 → 相座標位移。超出可行域時回傳 None。"""
-    odds = 10**y
-    if pair == "logN":
-        total = 10**x - 1
-        sensitive = (total + 0.5 - 0.5 * odds) / (1 + odds)
-        if sensitive < 0 or sensitive > total:
-            return None
-        population = {0: sensitive, 1 << config.resistance_gene: total - sensitive}
-    else:
-        w0, w1 = fitness(0, config, False), fitness(
-            1 << config.driver_genes[0], config, False
-        )
-        f = (x - w0) / (w1 - w0)
-        sensitive = (size + 0.5 - 0.5 * odds) / (1 + odds)
-        if not 0 <= f <= 1 or sensitive < 0 or sensitive > size:
-            return None
-        resistant, onc, res = (
-            size - sensitive,
-            1 << config.driver_genes[0],
-            1 << config.resistance_gene,
-        )
-        population = {
-            0: sensitive * (1 - f),
-            onc: sensitive * f,
-            res: resistant * (1 - f),
-            res | onc: resistant * f,
-        }
-    nxt = expected_next(population, config, therapy)
-    new_x = np.log10(nxt["N"] + 1) if pair == "logN" else nxt["w_off"]
-    return new_x - x, float(logit_rho(nxt["R"], nxt["S"])) - y
-
-
-def empirical_steps(rows, pair):
-    """同一試驗相鄰世代的位移；治療狀態以起點世代為準（治療從該轉移起作用）。"""
-    key = "log_N" if pair == "logN" else "mean_w_off"
-    by_trial = {}
-    for row in rows:
-        by_trial.setdefault(row["replicate"], {})[row["generation"]] = row
-    steps = []
-    for replicate, gens in by_trial.items():
-        for g, row in gens.items():
-            if g + 1 in gens:
-                nxt = gens[g + 1]
-                steps.append({
-                    "replicate": replicate,
-                    "generation": g,
-                    "therapy": bool(row["therapy_on"]),
-                    "x": row[key],
-                    "y": row["logit_R"],
-                    "dx": nxt[key] - row[key],
-                    "dy": nxt["logit_R"] - row["logit_R"],
-                })
-    return steps
-
-
-def build_fields(rows, config, pair):
-    steps = empirical_steps(rows, pair)
-    xs = np.array([s["x"] for s in steps])
-    ys = np.array([s["y"] for s in steps])
-    pad_x = 0.04 * (xs.max() - xs.min())
-    x_edges = np.linspace(xs.min() - pad_x, xs.max() + pad_x, 13)
-    y_edges = np.linspace(
-        np.floor(ys.min() * 2) / 2 - 0.25, np.ceil(ys.max() * 2) / 2 + 0.25, 15
-    )
-    xc, yc = (x_edges[:-1] + x_edges[1:]) / 2, (y_edges[:-1] + y_edges[1:]) / 2
-    fields = []
-    for therapy in (False, True):
-        for i, x in enumerate(xc):
-            for j, y in enumerate(yc):
-                step = theory_point(
-                    pair, x, y, config, therapy, config.therapy_start_size
-                )
-                if step is not None:
-                    fields.append({
-                        "pair": pair,
-                        "kind": "theory",
-                        "therapy": therapy,
-                        "x": x,
-                        "y": y,
-                        "dx": step[0],
-                        "dy": step[1],
-                        "transitions": "",
-                        "trials": "",
-                    })
-        chosen = [s for s in steps if s["therapy"] == therapy]
-        ix = np.digitize([s["x"] for s in chosen], x_edges) - 1
-        iy = np.digitize([s["y"] for s in chosen], y_edges) - 1
-        for i in range(len(xc)):
-            for j in range(len(yc)):
-                cell = [s for s, a, b in zip(chosen, ix, iy) if a == i and b == j]
-                if (
-                    len(cell) >= MIN_TRANSITIONS
-                    and len({s["replicate"] for s in cell}) >= MIN_TRIALS
-                ):
-                    fields.append({
-                        "pair": pair,
-                        "kind": "empirical",
-                        "therapy": therapy,
-                        "x": np.mean([s["x"] for s in cell]),
-                        "y": np.mean([s["y"] for s in cell]),
-                        "dx": np.mean([s["dx"] for s in cell]),
-                        "dy": np.mean([s["dy"] for s in cell]),
-                        "transitions": len(cell),
-                        "trials": len({s["replicate"] for s in cell}),
-                    })
-    return fields, steps, x_edges, y_edges
 
 
 def column_scale(fields, therapy, x_edges, y_edges):
@@ -428,78 +564,3 @@ def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
     fig.text(0.1, 0.05, t["foot"].format(d=np.log10(w_r / w_s)), fontsize=11.5)
     fig.text(0.1, 0.025, t["foot2"], fontsize=11.5, color=GRAY)
     return fig
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, default=ROOT / "outputs")
-    parser.add_argument("--output", type=Path, default=ROOT / "outputs/phase_plots")
-    args = parser.parse_args()
-    config, results, _ = reproduce_trials(args.input)
-    check_expectation(config)
-    rows = trial_feature_rows(config, results)
-    all_fields, record = [], {}
-    names = {
-        "logN": "05_phase_field_burden_logit",
-        "fitness": "06_phase_field_fitness_logit",
-    }
-    built = {pair: build_fields(rows, config, pair) for pair in names}
-    for pair, (fields, steps, x_edges, y_edges) in built.items():
-        all_fields += fields
-        record[pair] = {
-            "x_edges": x_edges.tolist(),
-            "y_edges": y_edges.tolist(),
-            "theory_arrows": sum(f["kind"] == "theory" for f in fields),
-            "empirical_arrows": sum(f["kind"] == "empirical" for f in fields),
-            "transitions": len(steps),
-        }
-    args.output.mkdir(parents=True, exist_ok=True)
-    with (args.output / "phase_field_comparison.csv").open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(all_fields[0]))
-        writer.writeheader()
-        writer.writerows(all_fields)
-    record.update({
-        "y_coordinate": "empirical logit log10((R+0.5)/(S+0.5)); finite at rho=0 or 1",
-        "empirical_rule": (
-            f">= {MIN_TRANSITIONS} transitions from >= {MIN_TRIALS} trials per cell;"
-            " arrow from mean start"
-        ),
-        "theory_slices": {
-            "logN": "sensitive=genotype 0, resistant=resistance bit only",
-            "fitness": (
-                f"N={config.therapy_start_size}; oncogene fraction from w_off,"
-                " independent of resistance; no TSG loss"
-            ),
-        },
-        "arrow_scale": (
-            "shared within each therapy column; length proportional to displacement;"
-            " 95th percentile ≈ 0.9 cell"
-        ),
-        "base_model_only": True,
-    })
-    (args.output / "phase_field_comparison.json").write_text(
-        json.dumps(record, ensure_ascii=False, indent=2) + "\n"
-    )
-    for lang in LANGS:
-        set_style(lang)
-        for pair, (fields, steps, x_edges, y_edges) in built.items():
-            save(
-                plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang),
-                args.output,
-                names[pair],
-                lang,
-            )
-    print(
-        json.dumps(
-            {
-                k: {kk: v for kk, v in r.items() if "edges" not in kk}
-                for k, r in record.items()
-                if isinstance(r, dict) and "transitions" in r
-            },
-            indent=1,
-        )
-    )
-
-
-if __name__ == "__main__":
-    main()

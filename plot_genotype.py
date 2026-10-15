@@ -1,42 +1,30 @@
-"""基因型分布的演變：Muller 圖（Top-k 實際基因型）與每基因突變頻率軌跡。
+"""基因型演化圖：Muller 圖（Top-k 實際基因型）與每基因突變頻率軌跡。
 
-執行：.venv/bin/python plot_genotype_evolution.py   （需先有 outputs/ 的治療試驗資料）
 Muller 圖以「基因型巢狀」排列：子基因型畫在已呈現的最大子集基因型內。
-同一基因型可能來自不同祖先，因此這不是重建的親緣樹。只用基礎模型。
+同一基因型可能來自不同祖先，因此這不是重建的親緣樹。
+巢狀版面與頻率由 analysis.py 計算；這裡只負責畫圖。
 """
 
 from __future__ import annotations
 
-import argparse
 import colorsys
-import csv
-import json
-from pathlib import Path
 
-from modeling_cancer import (
-    Config,
-    Result,
-    driver_count,
-    suppressor_alleles,
-    suppressor_loss,
-)
-from phase_state import (
-    GRAY,
-    INK,
-    LANGS,
-    ROOT,
-    genotype_label,
-    reproduce_trials,
-    save,
-    set_style,
-)
-from plot_phase_portraits import choose_exemplar
 import matplotlib.pyplot as plt
 from matplotlib.colors import to_rgb
 from matplotlib.patches import Patch
 import numpy as np
 
-TOP_K = 10
+from analysis import (
+    TOP_K,
+    choose_exemplar,
+    depth,
+    family,
+    genotype_label,
+    muller_bands,
+    muller_layout,
+)
+from plot_style import GRAY, INK
+
 # 功能類別決定色相，類別內以明度區分；身分另有直接標籤，不只靠顏色。
 FAMILY = {
     "wt": "#9AA5AD",
@@ -172,68 +160,6 @@ TEXT = {
 }
 
 
-def family(genotype: int, config: Config) -> str:
-    res = bool(genotype & (1 << config.resistance_gene))
-    onc = driver_count(genotype, config) >= config.driver_hits
-    tsg = suppressor_loss(genotype, config)
-    name = "_".join(n for n, flag in (("onc", onc), ("tsg", tsg)) if flag) or "wt"
-    return ("res_" + name if name != "wt" else "res") if res else name
-
-
-def is_subset(a: int, b: int) -> bool:
-    return a & b == a
-
-
-def muller_layout(result: Result, k: int = TOP_K):
-    """選 Top-k 基因型並建立巢狀樹；未選者併入最大的已選子集祖先，因此頻率總和恆為 1。"""
-    peak = {}
-    for population in result.populations:
-        total = sum(population.values())
-        for g, n in population.items():
-            peak[g] = max(peak.get(g, 0), n / total)
-    # 基因型 0（起始狀態）永遠是根，確保每個細胞都有可併入的祖先。
-    shown = set(sorted(peak, key=lambda g: (-peak[g], g))[:k]) | {0}
-    shown = sorted(shown, key=lambda g: (bin(g).count("1"), g))
-
-    def ancestor(g):
-        """已呈現、位元為 g 子集的最大基因型（不含 g 本身）。"""
-        candidates = [a for a in shown if a != g and is_subset(a, g)]
-        return max(candidates, key=lambda a: (bin(a).count("1"), -a))
-
-    parent = {g: None if g == 0 else ancestor(g) for g in shown}
-    children = {g: [c for c in shown if parent[c] == g] for g in shown}
-    own = {g: np.zeros(len(result.populations)) for g in shown}
-    for t, population in enumerate(result.populations):
-        total = sum(population.values())
-        for g, n in population.items():
-            own[g if g in own else ancestor(g)][t] += n / total
-    assert np.allclose(sum(own.values()), 1)
-    return shown, parent, children, own
-
-
-def muller_bands(shown, children, own):
-    """遞迴：父基因型帶寬 = 自身 + 所有後代；子帶置於父帶中央，父色在上下兩側可見。"""
-    subtree = {}
-
-    def total(g):
-        if g not in subtree:
-            subtree[g] = own[g] + sum(total(c) for c in children[g])
-        return subtree[g]
-
-    total(0)
-    bands = {}
-
-    def place(g, bottom):
-        bands[g] = (bottom, bottom + subtree[g])
-        cursor = bottom + own[g] / 2
-        for c in children[g]:
-            place(c, cursor)
-            cursor = cursor + subtree[c]
-
-    place(0, np.zeros_like(own[0]))
-    return bands
-
-
 def colors_for(shown, config):
     """同一功能類別內依出現順序變化明度。"""
     counts, colors = {}, {}
@@ -283,14 +209,6 @@ def draw_muller(ax, result, config, label=True, k=TOP_K):
     ax.set_xlim(0, len(t) - 1)
     ax.set_ylim(0, 1)
     return shown, own
-
-
-def depth(g, parent):
-    d = 0
-    while parent[g] is not None:
-        g = parent[g]
-        d += 1
-    return d
 
 
 def event_lines(ax, event, t, labels=True):
@@ -421,52 +339,9 @@ def plot_muller(config, results, events, lang):
     return fig, rep, shown
 
 
-def gene_frequencies(population, config):
-    total = sum(population.values())
-    freq = {}
-    for gene in config.driver_genes + (config.resistance_gene,):
-        freq[gene] = sum(n for g, n in population.items() if g & (1 << gene)) / total
-    for gene in config.suppressor_genes:
-        freq[f"{gene}_any"] = (
-            sum(n for g, n in population.items() if suppressor_alleles(g, gene, config))
-            / total
-        )
-        freq[f"{gene}_bi"] = (
-            sum(
-                n
-                for g, n in population.items()
-                if suppressor_alleles(g, gene, config) == 2
-            )
-            / total
-        )
-    passengers = [
-        g
-        for g in range(config.n_genes)
-        if g
-        not in config.driver_genes + config.suppressor_genes + (config.resistance_gene,)
-    ]
-    freq["passenger_mean"] = np.mean([
-        sum(n for g, n in population.items() if g & (1 << p)) / total
-        for p in passengers
-    ])
-    return freq
-
-
-def plot_gene_frequencies(config, results, lang):
-    """以治療開始對齊；只取所有試驗都存活且有觀察的相對世代。"""
+def plot_gene_frequencies(rel, data, config, n_trials: int, lang: str):
+    """每個基因的突變細胞比例：中位數與 10–90 百分位帶，以治療開始對齊。"""
     t = TEXT[lang]
-    starts = [r.therapy_generation for r in results]
-    lo = -min(starts)
-    hi = min(len(r.populations) - 1 - s for r, s in zip(results, starts))
-    rel = np.arange(lo, hi + 1)
-    series = {}
-    for r, s in zip(results, starts):
-        for x in rel:
-            for key, value in gene_frequencies(r.populations[s + x], config).items():
-                series.setdefault(key, []).append(value)
-    data = {
-        key: np.array(v).reshape(len(results), len(rel)) for key, v in series.items()
-    }
     fig, axes = plt.subplots(2, 2, figsize=(16.8, 11), sharex=True, sharey=True)
     fig.subplots_adjust(
         left=0.08, right=0.97, top=0.84, bottom=0.13, hspace=0.22, wspace=0.08
@@ -474,7 +349,7 @@ def plot_gene_frequencies(config, results, lang):
     fig.text(
         0.05,
         0.965,
-        t["freq_title"].format(n=len(results)),
+        t["freq_title"].format(n=n_trials),
         fontsize=22,
         weight="bold",
         va="top",
@@ -518,63 +393,4 @@ def plot_gene_frequencies(config, results, lang):
     for ax in axes[:, 0]:
         ax.set_ylabel(t["mutfrac"], fontsize=12)
     fig.text(0.08, 0.05, t["freq_foot"], fontsize=11, color=GRAY)
-    summary = {
-        key: {
-            "relative_generation": rel.tolist(),
-            "median": np.median(v, 0).tolist(),
-            "p10": np.percentile(v, 10, 0).tolist(),
-            "p90": np.percentile(v, 90, 0).tolist(),
-        }
-        for key, v in data.items()
-    }
-    return fig, summary
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, default=ROOT / "outputs")
-    parser.add_argument(
-        "--output", type=Path, default=ROOT / "outputs/genotype_evolution"
-    )
-    args = parser.parse_args()
-    config, results, events = reproduce_trials(args.input)
-    args.output.mkdir(parents=True, exist_ok=True)
-    record = {}
-    for lang in LANGS:
-        set_style(lang)
-        fig, rep, shown = plot_muller(config, results, events, lang)
-        save(fig, args.output, "01_muller_top_genotypes", lang)
-        fig, summary = plot_gene_frequencies(config, results, lang)
-        save(fig, args.output, "02_gene_mutation_frequencies", lang)
-    _, _, _, own = muller_layout(results[rep])
-    with (args.output / "muller_representative.csv").open("w", newline="") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["generation"] + [genotype_label(g, config) for g in shown])
-        for t in range(len(own[0])):
-            writer.writerow([t] + [own[g][t] for g in shown])
-    with (args.output / "gene_frequency_summary.csv").open("w", newline="") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["series", "relative_generation", "median", "p10", "p90"])
-        for key, s in summary.items():
-            for i, x in enumerate(s["relative_generation"]):
-                writer.writerow([key, x, s["median"][i], s["p10"][i], s["p90"][i]])
-    record = {
-        "representative_replicate": rep,
-        "seed": results[rep].seed,
-        "top_k": TOP_K,
-        "shown_genotypes": [genotype_label(g, config) for g in shown],
-        "csv_note": (
-            "muller_representative.csv stores each shown genotype's own fraction after"
-            " merging unshown cells into their nearest shown ancestor"
-        ),
-        "nesting": "genotype containment (bit subset), not reconstructed lineage",
-        "base_model_only": True,
-    }
-    (args.output / "genotype_evolution.json").write_text(
-        json.dumps(record, ensure_ascii=False, indent=2) + "\n"
-    )
-    print(json.dumps(record, ensure_ascii=False, indent=1))
-
-
-if __name__ == "__main__":
-    main()
+    return fig

@@ -38,7 +38,7 @@ function text(s,str,x,y,w,h,size=28,color=INK,bold=false,align='left'){
   sh.text.style={typeface:FONT,fontSize:size,color,bold,alignment:align,verticalAlignment:'top',autoFit:'none',wrap:'square',insets:{left:0,right:0,top:0,bottom:0}};
   return sh;
 }
-function slide(title,subtitle,notes,source='modeling_cancer.py: Config, simulate, mutate_offspring'){
+function slide(title,subtitle,notes,source='simulation.py: Config, simulate, mutate_offspring'){
   const s=deck.slides.add();s.background.fill=BG;
   const n=records.length+1;
   text(s,title,64,44,1152,72,43,INK,true);
@@ -98,9 +98,11 @@ function side(s,stat,body){text(s,stat,970,235,240,150,38,BLUE,true);text(s,body
 
 
 const formulaAssets=[];
-const modelSource=(await fs.readFile(path.join(workspace,'modeling_cancer.py'),'utf8')).split('\n');
+// 程式節錄：預設取自 simulation.py；範圍第三項可指定其他檔案（例如 experiments.py）。
+const sources={};
+for(const file of ['simulation.py','experiments.py'])sources[file]=(await fs.readFile(path.join(workspace,file),'utf8')).split('\n');
 function snip(ranges){
- const lines=ranges.flatMap(([a,b])=>modelSource.slice(a-1,b)).map(l=>l.split('#')[0].trimEnd()).filter(l=>l.trim()&&!l.trim().startsWith('def ')&&!l.trim().startsWith('"""'));
+ const lines=ranges.flatMap(([a,b,file='simulation.py'])=>sources[file].slice(a-1,b)).map(l=>l.split('#')[0].trimEnd()).filter(l=>l.trim()&&!l.trim().startsWith('def ')&&!l.trim().startsWith('"""'));
  const indentation=Math.min(...lines.map(l=>l.match(/^ */)[0].length));
  return lines.map(l=>l.slice(indentation)).join('\n');
 }
@@ -134,7 +136,7 @@ tellResults({slide,text,line,foot,table,math,scientificChart,curve,side,results}
 {
  const s=slide('程式與數學如何共同解釋模擬結果','資料表示決定狀態，抽樣規則決定轉移，統計決定解讀',
  'population對應基因型計數向量，therapy_generation保存持續治療控制。growth_probabilities和il11_environment定義狀態相依環境，二項抽樣生成存活与子代，逐位元mutation等價於Q。這些規則共同定義巨大P，simulate只抽其中一條路徑。多次試驗估計結果分布；tests檢查實作語意，資料校準另需實驗證據。讀完應能追蹤程式每個變數的來源、分布與作用時點。',
- 'modeling_cancer.py, test_modeling_cancer.py');
+ 'simulation.py, experiments.py, test_simulation.py');
  table(s,[['程式物件／步驟','數學意義','可解釋的結果'],['population + therapy_generation','完整狀態 Sₜ','相同負荷的不同後續行為'],['survivors / triples / mutation','Binomial 抽樣與 Q','生長、選擇與新基因型'],['simulate + 多次試驗','P 的路徑抽樣','復發比例與試驗間變異'],['summarize + 取樣 + tests','指標、比較與不變量','可追溯並驗證的分析']],70,215,1140,340,[460,290,390],25);
  math(s,String.raw`\boldsymbol{\pi}_{t+1}=\boldsymbol{\pi}_tP,\qquad\mathrm{E}[\mathbf{N}_{t+1}\mid S_t=s]=\mathbf{n}M(s)`,70,565,1140,65);
 }

@@ -14,7 +14,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from modeling_cancer import Config, simulate
+from simulation import Config, simulate
 
 
 def read(name):
@@ -97,7 +97,7 @@ def main():
             for i in range(101)
         ],
     }
-    # 取代原本的熱圖：以治療開始對齊的基因頻率中位數（plot_genotype_evolution.py 的輸出）。
+    # 取代原本的熱圖：以治療開始對齊的基因頻率中位數（main.py --only genotype 的輸出）。
     freq_rows = read("genotype_evolution/gene_frequency_summary.csv")
     series = {
         "ONC1": "0",
@@ -122,7 +122,7 @@ def main():
             for name, key in series.items()
         },
     }
-    # 治療延伸分析（analyze_therapy.py）：只讀取已核對的輸出，不重跑。
+    # 治療延伸分析（main.py --only therapy）：只讀取已核對的輸出，不重跑。
     therapy = json.loads(
         Path("outputs/therapy_analysis/therapy_analysis_summary.json").read_text()
     )

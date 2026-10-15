@@ -1,9 +1,10 @@
-"""驗證抑癌基因等位基因、突變守恆與生長機率。"""
+"""驗證模型：抑癌基因等位基因、突變守恆、生長機率，以及多次試驗統計。"""
 
 import unittest
 from dataclasses import replace
 import numpy as np
-from modeling_cancer import (
+from experiments import therapy_ensemble
+from simulation import (
     Config,
     suppressor_alleles,
     suppressor_loss,
@@ -44,12 +45,7 @@ class SuppressorTests(unittest.TestCase):
                 invalid.validate()
 
     def test_ensemble_censoring_and_extinction(self):
-        import csv
-        import tempfile
-        from pathlib import Path
-        from unittest.mock import patch
-        import matplotlib.pyplot as plt
-        from modeling_cancer import Result, summarize, plot_therapy_ensemble
+        from simulation import Result, summarize
 
         c = Config()
 
@@ -69,18 +65,11 @@ class SuppressorTests(unittest.TestCase):
             make([{0: 100}, {}], "extinction"),
             make([{0: 100}, {0: 150}, {0: 200}], "generation_limit"),
         ]
-        with tempfile.TemporaryDirectory() as directory:
-            with patch(
-                "modeling_cancer.save_figure",
-                side_effect=lambda fig, *args: plt.close(fig),
-            ):
-                plot_therapy_ensemble(trials, Path(directory))
-            with (Path(directory) / "trajectory.csv").open() as handle:
-                rows = list(csv.DictReader(handle))
-            self.assertEqual(int(rows[2]["total_n"]), 2)
-            self.assertEqual(float(rows[2]["total_mean"]), 100)
-            self.assertEqual(int(rows[2]["resistant_percent_n"]), 1)
-            self.assertTrue(np.isnan(float(rows[2]["resistant_percent_sd"])))
+        summary, _ = therapy_ensemble(trials)
+        self.assertEqual(summary[2]["total_n"], 2)
+        self.assertEqual(summary[2]["total_mean"], 100)
+        self.assertEqual(summary[2]["resistant_percent_n"], 1)
+        self.assertTrue(np.isnan(summary[2]["resistant_percent_sd"]))
 
     def test_same_gene_two_hits(self):
         c = Config()
