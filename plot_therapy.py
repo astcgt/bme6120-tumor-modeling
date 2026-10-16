@@ -26,7 +26,14 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
     half = data["half"]
     m = (1 - config.death_rate) * (2 + config.triple_probability)
     set_plot_style()
-    fig, ax = plt.subplots(figsize=(10, 6.8), layout="constrained")
+    fig, (ax, lam) = plt.subplots(
+        2,
+        1,
+        figsize=(10, 9.4),
+        sharex=True,
+        gridspec_kw={"height_ratios": [2.1, 1]},
+        layout="constrained",
+    )
     fig.suptitle(
         "Treat earlier, cure more often: the chance of cure falls with tumor size",
         fontsize=19,
@@ -93,12 +100,50 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
     ax.set(
         xscale="log",
         ylim=(-0.03, 1.03),
-        xlabel="Tumor size when continuous therapy starts (cells, log scale)",
         ylabel="Probability of cure (tumor goes extinct)",
-        title="Bigger tumor at treatment → lower chance of cure",
+        title="A  Bigger tumor at treatment → lower chance of cure",
     )
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
     ax.legend(frameon=False, loc="lower left")
+    # B：預期能撐過治療的抗藥家系數 Λ；P(治癒) = e^(−Λ)，Λ 是決定滅絕的關鍵量。
+    lam.step(
+        grid,
+        [c["lambda_pre"] + c["lambda_on"] for c in curve],
+        where="post",
+        color=COLORS[2],
+        lw=1.8,
+        label="Λ = Λ_pre (born before therapy) + Λ_on (born during therapy)",
+    )
+    lam.step(
+        grid,
+        [c["lambda_on"] for c in curve],
+        where="post",
+        color=COLORS[2],
+        lw=1.2,
+        ls=":",
+        label="Λ_on only",
+    )
+    lam.axhline(np.log(2), color=GRAY, ls=":", lw=1)
+    if half:
+        lam.axvline(half, color=GRAY, ls=":", lw=1)
+    lam.text(
+        grid[0] * 1.03,
+        np.log(2) * 1.3,
+        "Λ = ln 2 ≈ 0.69  ↔  P(cure) = 50%",
+        ha="left",
+        va="bottom",
+        fontsize=10,
+        color=INK,
+    )
+    lam.set(
+        yscale="log",
+        ylim=(5e-3, 30),
+        xscale="log",
+        xlabel="Tumor size when continuous therapy starts (cells, log scale)",
+        ylabel="Surviving resistant\nlineages Λ (log)",
+        title="B  Expected number of resistant lineages that survive therapy",
+    )
+    lam.legend(frameon=False, loc="lower right", fontsize=9.5)
     save_figure(fig, output, "goldie_coldman")
 
 
