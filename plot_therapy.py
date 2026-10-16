@@ -253,16 +253,6 @@ def plot_relapse_prediction(data: dict, output: Path):
     ax.legend(frameon=False, loc="upper left", fontsize=9.5)
     bar = fig.colorbar(points, ax=ax, pad=0.01)
     bar.set_label("Oncogene fraction (all cells)", fontsize=10)
-    fig.supxlabel(
-        "Main experiment: 30 trials, continuous therapy from 20,000 cells. Relapse"
-        " delay = first generation after therapy start with burden ≥ burden at start."
-        " Baseline prediction assumes every resistant cell grows ×m_R per"
-        " generation;\nthe mixture prediction lets each resistant genotype grow at its"
-        " own on-therapy mean (oncogene cells faster) and lets sensitive cells decay"
-        " ×m_S. Predictions are rounded up to whole generations for the MAE. Vertical"
-        " jitter ±0.12 only separates overlapping points.",
-        fontsize=10,
-    )
     save_figure(fig, output, "relapse_time_prediction")
 
 
