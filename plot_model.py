@@ -211,13 +211,12 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
         "P(3)",
         "m: OFF",
         "m: ON",
-        "Extinct: OFF",
-        "Extinct: ON",
     ]
+    # 滅絕機率不放進表格；只保留決定成長方向的 d、q、子代機率與 m。
     table = ax.table(
-        cellText=phenotypes,
+        cellText=[row[: len(columns)] for row in phenotypes],
         colLabels=columns,
-        colWidths=[0.20, 0.06, 0.06, 0.075, 0.075, 0.075, 0.09, 0.09, 0.135, 0.135],
+        colWidths=[0.24, 0.08, 0.08, 0.10, 0.10, 0.10, 0.15, 0.15],
         bbox=[0, 0.22, 1, 0.66],
         cellLoc="center",
     )
@@ -255,12 +254,7 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
         0.04,
         0.035,
         "Panels A–B drop mutations, genotype advantages and therapy; the threshold 4 in"
-        " B is illustrative. "
-        "Extinct = probability that one cell's lineage eventually dies out (smallest"
-        " root of s = f(s)).\n"
-        "Starting from 100 baseline cells, total extinction without therapy has"
-        " probability s^100 ≈ "
-        f"{lineage_extinction(config.death_rate, config.triple_probability)**100:.0e}.",
+        " B is illustrative.",
         fontsize=10,
         color=GRAY,
     )
