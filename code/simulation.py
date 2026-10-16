@@ -224,7 +224,7 @@ def crowding_death(total: int, config: Config) -> float:
     return coefficient * total / config.carrying_capacity
 
 
-# ---------------------------------------------------------------- 突變與一代更新 ----
+# ---------------- 突變與一代更新 ----
 # 逐位元抽樣不可逆突變並合併相同基因型，保持子代細胞總數不變。
 # Sample irreversible mutations bit by bit and merge identical genotypes, keeping the total offspring count.
 def mutate_offspring(
