@@ -190,6 +190,15 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
         r" capacity.",
         11,
     )
+    # 標明 B 只是示範：只追蹤 0–3 個細胞的總數，不分基因型、不含突變。
+    label(
+        ax,
+        0.015,
+        0.14,
+        "Toy example: at most 3 cells; genotypes and mutation ignored.",
+        11,
+        weight="bold",
+    )
     label(
         ax,
         0.015,
