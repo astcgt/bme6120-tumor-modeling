@@ -117,6 +117,7 @@ def run_results(args):
     death = exp.run_death_rate_comparison(config, args.replicates, args.seed)
     plot_results.plot_death_rate(
         death["shannon"],
+        death["tests"],
         config,
         args.replicates,
         death["target"],

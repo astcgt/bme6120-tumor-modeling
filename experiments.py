@@ -356,6 +356,17 @@ def median_permutation_test(
     return float((np.sum(diff >= observed - 1e-12) + 1) / (permutations + 1))
 
 
+# 依組別順序兩兩做置換檢定，回傳 {(組 a, 組 b): p}。
+def pairwise_permutation_tests(groups: dict) -> dict:
+    """依 groups 的鍵順序兩兩比較中位數差；每對都用同一個固定種子，可重現。"""
+    keys = list(groups)
+    return {
+        (a, b): median_permutation_test(np.asarray(groups[a]), np.asarray(groups[b]))
+        for i, a in enumerate(keys)
+        for b in keys[i + 1 :]
+    }
+
+
 # 將 TSG 對照資料整理為各情境的試驗矩陣與第 18 代中位數摘要。
 def hit_comparison_series(rows: list[dict]) -> dict:
     """把逐代資料整理成每個情境的 (試驗 × 世代) 矩陣，並計算第 18 代中位數。"""
@@ -384,9 +395,9 @@ def hit_comparison_series(rows: list[dict]) -> dict:
             )
         )
     # 第 18 代負荷：三組兩兩做置換檢定（對照 vs one-hit、one-hit vs two-hit、對照 vs two-hit）。
-    end = {label: series[label][0][:, -1] for label in order}
-    pairs = [(a, b) for i, a in enumerate(order) for b in order[i + 1 :]]
-    tests = {(a, b): median_permutation_test(end[a], end[b]) for a, b in pairs}
+    tests = pairwise_permutation_tests(
+        {label: series[label][0][:, -1] for label in order}
+    )
     for row in summaries:
         row["p_vs_control"] = tests.get((order[0], row["scenario"]), "")
         if len(order) > 2 and row["scenario"] == order[2]:
@@ -467,6 +478,7 @@ def run_death_rate_comparison(
     return {
         "shannon": shannon,
         "generations": generations,
+        "tests": pairwise_permutation_tests(shannon),
         "rows": rows,
         "target": target,
         "repeats": repeats,

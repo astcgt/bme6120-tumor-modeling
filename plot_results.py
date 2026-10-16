@@ -83,6 +83,7 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
 # 同樣 5,000 個細胞：死亡率越高越異質；B 顯示機制是需要更多代（更多分裂）才長到同樣大小。
 def plot_death_rate(
     shannon: dict,
+    tests: dict,
     config: Config,
     repeats: int,
     target: int,
@@ -141,14 +142,32 @@ def plot_death_rate(
             xlabel="Natural death probability (net growth of a mutation-free cell)",
         )
         ax.margins(y=0.2, x=0.20)
-        # 留出頂端空間給「達標數」文字，避免壓到散點。
+        # 留出頂端空間給「達標數」文字與 p 值括號，避免壓到散點。
         low, high = ax.get_ylim()
-        ax.set_ylim(low, high + 0.12 * (high - low))
+        span = high - low
+        ax.set_ylim(low, high + 0.42 * span)
+    # 兩兩置換檢定：相鄰組在下排，跨組在上排。
+    index = {d: i for i, d in enumerate(deaths)}
+    for (a, b), p in tests.items():
+        i, k = index[a], index[b]
+        y = high + (0.04 if k - i == 1 else 0.17) * span
+        top = y + 0.02 * span
+        left, right = i + 0.04, k - 0.04
+        axes[0].plot([left, left, right, right], [y, top, top, y], color=INK, lw=1)
+        axes[0].text(
+            (i + k) / 2,
+            y + 0.03 * span,
+            f"p = {p:.4f}" if p >= 1e-4 else "p < 0.0001",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
     fig.supxlabel(
         f"No therapy · {repeats} trials per death rate · each trial sampled once at its"
         f" first generation ≥ {target:,} cells (without replacement).\nMore generations"
         " → more divisions before reaching the same size → more mutations accumulated"
-        " → higher diversity.",
+        " → higher diversity.\np: pairwise two-sided permutation tests of the median"
+        " difference (20,000 permutations).",
         fontsize=10,
     )
     save_figure(fig, output, "death_rate_heterogeneity")
