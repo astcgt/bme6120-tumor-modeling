@@ -156,7 +156,9 @@ pre span.l.gap{color:var(--muted)}
 .ana-h b{color:var(--sens)}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 
-@media print{:root{color-scheme:light}body{background:#fff}pre{max-height:none!important;overflow:visible!important}pre span.l{white-space:pre-wrap;word-break:break-all}.code,.fm.tex,.fm.tex .katex-display{overflow:visible!important}.dg svg{min-width:0!important;width:100%!important}.dg-scroll{overflow:visible!important}figure,.fx,.code{break-inside:avoid}section.seg{break-before:auto}}
+
+@page{size:1240px 1754px;margin:0}
+@media print{html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{background:var(--bg)}pre{max-height:none!important;overflow:visible!important}.code,.fm.tex,.fm.tex .katex-display{overflow:visible!important}figure,.fx,.code,.dg,table,.ana-h{break-inside:avoid}h2,h3,h4,.lbl{break-after:avoid}.ana{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)!important}.beat.codebeat{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)!important}.beat:not(.wide):not(.nofig):not(.codebeat){grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)!important}.beat.wide .cues{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ana-h{grid-column:1/-1}pre{font-size:11px}pre span.l{white-space:pre-wrap;overflow-wrap:anywhere;padding-left:calc(12px + 5.5ch);text-indent:-5.5ch}}
 </style>
 <div class="wrap">
 <header class="top">

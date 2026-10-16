@@ -17,6 +17,7 @@ import numpy as np
 
 from analysis import CELL_UNIT, lineage_extinction
 from experiments import OUTPUTS
+from paths import plots_for
 
 OUT = OUTPUTS / "mathematical_model"
 INK, BLUE, RED, GRAY = "#182634", "#21658B", "#A54C38", "#66717A"
@@ -147,8 +148,9 @@ def matrix_display(
 # Save the model figure as 300 dpi PNG and SVG, then close it.
 def save(fig, name):
     for suffix in ("png", "svg"):
+        plots_for(OUT).mkdir(parents=True, exist_ok=True)
         fig.savefig(
-            OUT / f"{name}.{suffix}",
+            plots_for(OUT) / f"{name}.{suffix}",
             dpi=300,
             facecolor="white",
             bbox_inches="tight",

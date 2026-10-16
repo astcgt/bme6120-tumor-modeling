@@ -5,4 +5,4 @@
 - This push cadence is a working convention, not an automatic schedule. Do not claim that unattended daily pushes are configured.
 - Keep Python dependencies isolated in this project's `.venv`; use `.venv/bin/python` and `.venv/bin/python -m pip`. Do not modify the user's conda environment.
 - Keep virtual environments, caches, credentials, and the local course reference PDF out of Git, following `.gitignore`.
-- Maintain `README.md` in both English and Traditional Chinese, with the complete English section first and the complete Traditional Chinese section second. Keep both language versions consistent whenever updating the README. Preserve this convention across conversations.
+- Maintain the README in two separate files: `README.md` (English) and `README.zh-TW.md` (Traditional Chinese), each linking to the other at the top. Keep both language versions consistent whenever updating either one. Preserve this convention across conversations.

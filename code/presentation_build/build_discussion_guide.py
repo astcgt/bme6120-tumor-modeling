@@ -31,55 +31,55 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "outputs" / "discussion_guide"
+ROOT = Path(__file__).resolve().parents[2]
+OUT = ROOT / "presentation" / "archive" / "discussion_guide"
 FIG_DIR = OUT / "figs"
 WEB_WIDTH = 1800  # 網頁與 Word 共用的縮圖寬度（px） / thumbnail width shared by the web page and Word (px)
 
 FIGURES = {
     "single_cell_rules": (
-        "outputs/mathematical_model/single_cell_rules.png",
+        "output/plots/mathematical_model/single_cell_rules.png",
         "圖 06 單細胞規則",
     ),
     "tumor_dashboard": (
-        "outputs/tumor_dashboard.png",
+        "output/plots/tumor_dashboard.png",
         "圖 01 治療下的腫瘤（30 次試驗）",
     ),
     "muller": (
-        "outputs/genotype_evolution/muller_top_genotypes_en.png",
+        "output/plots/genotype_evolution/muller_top_genotypes_en.png",
         "Muller 圖 基因型組成隨時間",
     ),
     "matrices_to_flow": (
-        "outputs/mathematical_model/matrices_to_flow.png",
+        "output/plots/mathematical_model/matrices_to_flow.png",
         "圖 07 期望矩陣 M → 向量場",
     ),
     "phase_field_burden": (
-        "outputs/phase_plots/phase_field_burden_logit_en.png",
+        "output/plots/phase_plots/phase_field_burden_logit_en.png",
         "相圖 05 負荷 × 抗藥比例：理論 vs 實際",
     ),
     "phase_field_fitness": (
-        "outputs/phase_plots/phase_field_fitness_logit_en.png",
+        "output/plots/phase_plots/phase_field_fitness_logit_en.png",
         "相圖 06 適應度 × 抗藥比例：演化與篩選的分工",
     ),
     "relapse_prediction": (
-        "outputs/therapy_analysis/relapse_time_prediction.png",
+        "output/plots/therapy_analysis/relapse_time_prediction.png",
         "圖 09 復發時間預測",
     ),
     "goldie_coldman": (
-        "outputs/therapy_analysis/goldie_coldman.png",
+        "output/plots/therapy_analysis/goldie_coldman.png",
         "圖 08 Goldie–Coldman 治癒曲線",
     ),
     "sensitivity": (
-        "outputs/therapy_analysis/parameter_sensitivity.png",
+        "output/plots/therapy_analysis/parameter_sensitivity.png",
         "圖 10 k_R × μ 敏感度",
     ),
     "one_hit_vs_two_hit": (
-        "outputs/one_hit_vs_two_hit.png",
+        "output/plots/one_hit_vs_two_hit.png",
         "圖 03 One-hit vs two-hit",
     ),
-    "death_rate": ("outputs/death_rate_heterogeneity.png", "圖 02 死亡率與異質性"),
+    "death_rate": ("output/plots/death_rate_heterogeneity.png", "圖 02 死亡率與異質性"),
     "adaptive_therapy": (
-        "outputs/therapy_analysis/adaptive_therapy.png",
+        "output/plots/therapy_analysis/adaptive_therapy.png",
         "圖 11 適應性治療",
     ),
 }
@@ -1307,7 +1307,7 @@ def fmt_time(minutes: float) -> str:
 # 擷取指定範圍的原始碼，移除共同縮排並保留原始行號。
 # Extract a range of source lines, removing the common indentation and keeping the original line numbers.
 def code_lines(file: str, start: int, end: int) -> list[tuple[int, str]]:
-    lines = (ROOT / file).read_text(encoding="utf-8").splitlines()
+    lines = (ROOT / "code" / file).read_text(encoding="utf-8").splitlines()
     chunk = lines[start - 1 : end]
     indent = min(len(l) - len(l.lstrip()) for l in chunk if l.strip())
     return [(start + i, l[indent:]) for i, l in enumerate(chunk)]

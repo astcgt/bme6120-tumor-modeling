@@ -1,5 +1,5 @@
 {
-  "source_metadata": "/Users/yiliu/Desktop/Cornell/BME 6120 Genome/project 1/outputs/run_metadata.json",
+  "source_metadata": "/Users/yiliu/Desktop/Cornell/BME 6120 Genome/project 1/output/data/run_metadata.json",
   "config": {
     "n_genes": 20,
     "driver_genes": [

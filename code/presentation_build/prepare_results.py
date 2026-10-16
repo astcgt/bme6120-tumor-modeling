@@ -15,7 +15,7 @@ import numpy as np
 # Read and check the recorded experiment outputs, summarize what the slides need, and write results.json.
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=Path, default=Path("outputs"))
+    parser.add_argument("--input", type=Path, default=Path(__file__).resolve().parents[2] / "output" / "data")
     args = parser.parse_args()
     source = args.input
 

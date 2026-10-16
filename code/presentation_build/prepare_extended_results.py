@@ -14,13 +14,14 @@ import sys
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+ROOT = Path(__file__).resolve().parents[2]
 from simulation import Config, simulate
 
 
 # 從 outputs 目錄讀取指定 CSV，回傳以欄名為鍵的字典列。
 # Read a CSV from the outputs directory into dicts keyed by column name.
 def read(name):
-    return list(csv.DictReader((Path("outputs") / name).open()))
+    return list(csv.DictReader((ROOT / "output" / "data" / name).open()))
 
 
 # 重現並核對治療與對照試驗，將基因頻率及治療延伸分析補入簡報資料檔。
@@ -29,7 +30,7 @@ def main():
     root = Path(__file__).resolve().parent
     destination = root / "data/results.json"
     data = json.loads(destination.read_text())
-    meta = json.loads(Path("outputs/run_metadata.json").read_text())
+    meta = json.loads(ROOT / "output" / "data" / "run_metadata.json".read_text())
     config_values = meta["config"].copy()
     for key in ("driver_genes", "suppressor_genes"):
         config_values[key] = tuple(config_values[key])
@@ -130,7 +131,7 @@ def main():
     # 治療延伸分析（main.py --only therapy）：只讀取已核對的輸出，不重跑。
     # Therapy follow-ups (main.py --only therapy): only read the checked outputs; nothing is rerun.
     therapy = json.loads(
-        Path("outputs/therapy_analysis/therapy_analysis_summary.json").read_text()
+        ROOT / "output" / "data" / "therapy_analysis" / "therapy_analysis_summary.json".read_text()
     )
     data["therapy_analysis"] = {
         "goldie_coldman": [

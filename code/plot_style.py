@@ -27,6 +27,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
+from paths import plots_for
+
 # 相圖與基因型圖的雙語版本。
 # Bilingual versions of the phase and genotype figures.
 LANGS = ("zh", "en")
@@ -82,7 +84,7 @@ def set_plot_style():
 def save_figure(fig, output: Path, name: str):
     # 建立輸出目錄；同時支援呼叫端傳入字串或 Path 路徑。
     # Create the output directory; the caller may pass a string or a Path.
-    output = Path(output)
+    output = plots_for(output)
     output.mkdir(parents=True, exist_ok=True)
     # 同時輸出高解析度點陣 PNG 與可縮放向量 SVG，緊密裁切多餘留白。
     # Write a high-resolution PNG and a scalable SVG, trimming extra margins.
@@ -183,6 +185,7 @@ def save_lang(fig, directory: Path, name: str, lang: str):
 
     Bilingual figures: file names get _zh / _en, one 300 dpi PNG and one SVG each.
     """
+    directory = plots_for(directory)
     directory.mkdir(parents=True, exist_ok=True)
     for extension in ("png", "svg"):
         fig.savefig(

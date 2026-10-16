@@ -11,7 +11,7 @@ import os from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {createRequire} from 'node:module';
 
-const workspace = path.resolve(import.meta.dirname, '..');
+const workspace = path.resolve(import.meta.dirname, '..', '..');
 const runtime = path.join(os.homedir(), '.cache/codex-runtimes/codex-primary-runtime/dependencies');
 const modules = process.env.RUNTIME_NODE_MODULES ?? path.join(runtime, 'node/node_modules');
 process.env.RUNTIME_NODE_MODULES = modules;
@@ -20,7 +20,7 @@ const {Presentation, PresentationFile, FileBlob} = await import(pathToFileURL(re
 const skill = path.join(os.homedir(), '.codex/plugins/cache/openai-primary-runtime/presentations/26.904.11930/skills/presentations');
 const {finalizePresentation,applyPresentationChartFont} = await import(pathToFileURL(path.join(skill,'container_tools/artifact_tool_utils.mjs')).href);
 const build = process.env.PRESENTATION_BUILD_DIR ?? path.join(workspace, '.presentation-build/code-v9');
-const out = path.join(workspace, 'outputs/presentations');
+const out = path.join(workspace, 'presentation/slides');
 await fs.mkdir(build,{recursive:true});
 await fs.mkdir(out,{recursive:true});
 
@@ -30,7 +30,7 @@ const deck=Presentation.create({slideSize:{width:1280,height:720}});
 const records=[];
 const nativeTables=[];
 const chartOwners=[];
-const results=JSON.parse(await fs.readFile(path.join(workspace,'presentations/data/results.json'),'utf8'));
+const results=JSON.parse(await fs.readFile(path.join(workspace,'code/presentation_build/data/results.json'),'utf8'));
 
 function text(s,str,x,y,w,h,size=28,color=INK,bold=false,align='left'){
   const sh=s.shapes.add({geometry:'textbox',position:{left:x,top:y,width:w,height:h},fill:'none',line:{fill:'none',width:0}});
@@ -101,7 +101,7 @@ const formulaAssets=[];
 // 程式節錄：預設取自 simulation.py；範圍第三項可指定其他檔案（例如 experiments.py）。
 // Code excerpts: taken from simulation.py by default; a third range item can name another file (e.g. experiments.py).
 const sources={};
-for(const file of ['simulation.py','experiments.py'])sources[file]=(await fs.readFile(path.join(workspace,file),'utf8')).split('\n');
+for(const file of ['simulation.py','experiments.py'])sources[file]=(await fs.readFile(path.join(workspace,'code',file),'utf8')).split('\n');
 function snip(ranges){
  const lines=ranges.flatMap(([a,b,file='simulation.py'])=>sources[file].slice(a-1,b)).map(l=>l.split('#')[0].trimEnd()).filter(l=>l.trim()&&!l.trim().startsWith('def ')&&!l.trim().startsWith('"""'));
  const indentation=Math.min(...lines.map(l=>l.match(/^ */)[0].length));
@@ -143,7 +143,7 @@ tellResults({slide,text,line,foot,table,math,scientificChart,curve,side,results}
 }
 
 await fs.writeFile(path.join(build,'equations.json'),JSON.stringify(formulaAssets.map(({latex,file})=>({latex,file})),null,2));
-const rendered=spawnSync(path.join(workspace,'.venv/bin/python'),[path.join(workspace,'presentations/render_equations.py'),path.join(build,'equations.json')],{encoding:'utf8'});
+const rendered=spawnSync(path.join(workspace,'.venv/bin/python'),[path.join(workspace,'code/presentation_build/render_equations.py'),path.join(build,'equations.json')],{encoding:'utf8'});
 if(rendered.status!==0)throw Error(rendered.stderr||rendered.stdout);
 console.log(rendered.stdout.trim());
 for(const f of formulaAssets){

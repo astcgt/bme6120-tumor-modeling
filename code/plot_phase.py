@@ -15,6 +15,7 @@ from matplotlib.patches import FancyArrowPatch
 import numpy as np
 
 from analysis import event_generations, logit_rho
+from paths import plots_for
 
 INK, BLUE, ORANGE, RED, GRAY = "#173042", "#236B8E", "#BC7844", "#A74F3D", "#687783"
 
@@ -294,6 +295,8 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
 # 將相圖儲存為 300 dpi PNG 與 SVG，然後關閉圖形。
 # Save the phase plot as 300 dpi PNG and SVG, then close it.
 def save_phase_figure(fig, destination, name):
+    destination = plots_for(destination)
+    destination.mkdir(parents=True, exist_ok=True)
     for extension in ("png", "svg"):
         fig.savefig(destination / f"{name}.{extension}", dpi=300, facecolor="white")
     plt.close(fig)

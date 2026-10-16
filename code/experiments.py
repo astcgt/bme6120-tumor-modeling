@@ -48,9 +48,7 @@ from simulation import (
     summarize,
     therapy_outcome,
 )
-
-ROOT = Path(__file__).resolve().parent
-OUTPUTS = ROOT / "outputs"
+from paths import DATA as OUTPUTS
 
 
 # ---------------------------------------------------------------- 資料讀寫 / Data I/O ----------
