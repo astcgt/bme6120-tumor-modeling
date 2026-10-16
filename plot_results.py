@@ -22,14 +22,15 @@ HIT_SHORT = {
 }
 
 
-# 腫瘤總覽：負荷與異質性；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。
+# 腫瘤總覽：負荷；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。
 def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Path):
-    """腫瘤總覽：負荷與異質性；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。"""
+    """腫瘤總覽：負荷；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。"""
     config = trials[0].config
     length = len(summary)
     keys = ("total", "sensitive", "resistant")
     set_plot_style()
-    fig, axes = plt.subplots(1, 2, figsize=(13, 6.2), layout="constrained")
+    fig, ax = plt.subplots(figsize=(10, 6.4), layout="constrained")
+    axes = [ax]
     fig.suptitle(
         f"Tumor evolution under continuous therapy | {len(trials)} stochastic trials",
         fontsize=21,
@@ -48,20 +49,8 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
             color=color,
             alpha=0.12,
         )
-    axes[0].set(title="A  Population response", ylabel="Cells (symlog)")
+    axes[0].set(title="Population response", ylabel="Cells (symlog)")
     axes[0].set_yscale("symlog", linthresh=1)
-    key = "effective_genotypes"
-    axes[1].plot(x, [r[f"{key}_median"] for r in summary], color=COLORS[2])
-    axes[1].fill_between(
-        x,
-        [r[f"{key}_p10"] for r in summary],
-        [r[f"{key}_p90"] for r in summary],
-        color=COLORS[2],
-        alpha=0.18,
-    )
-    axes[1].set(
-        title="B  Genetic heterogeneity", ylabel="Effective genotypes: exp(Shannon H)"
-    )
     # 治療起點因試驗而異，以淡色區間標示最早到最晚的啟動世代。
     if starts:
         for ax in axes:
