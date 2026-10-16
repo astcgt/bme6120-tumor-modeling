@@ -178,7 +178,7 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
         f" rates · {repeats} trials/scenario\nLines: median; bands: 10–90% of trials"
         " (not confidence intervals). One-hit: either allele; two-hit: both alleles of"
         " the same TSG. Control: TSG loss gives no advantage (two-hit counting).\nC: p from"
-        " a two-sided permutation test of the median difference vs control (20,000"
+        " pairwise two-sided permutation tests of the median difference (20,000"
         " permutations).",
         fontsize=10,
     )
@@ -238,17 +238,21 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
         xlim=(-0.5, len(order) - 0.5),
     )
     axes[2].margins(y=0.25)
-    # 置換檢定結果：在 C 面板上方以括號標出 one-hit、two-hit 各自對照組的 p 值。
+    # 置換檢定結果：在 C 面板上方以括號標出兩兩比較的 p 值；相鄰組在下、跨組在上。
     low, high = axes[2].get_ylim()
     span = high - low
     axes[2].set_ylim(low, high + 0.32 * span)
-    for k, label in enumerate(order[1:], start=1):
-        y = high + (0.04 + 0.13 * (k - 1)) * span
+    index = {label: i for i, label in enumerate(order)}
+    pairs = sorted(hits["tests"], key=lambda ab: index[ab[1]] - index[ab[0]])
+    for a, b in pairs:
+        i, k = index[a], index[b]
+        y = high + (0.04 if k - i == 1 else 0.17) * span
         top = y + 0.02 * span
-        axes[2].plot([0, 0, k, k], [y, top, top, y], color=INK, lw=1)
-        p = hits["tests"][label]
+        left, right = i + 0.04, k - 0.04
+        axes[2].plot([left, left, right, right], [y, top, top, y], color=INK, lw=1)
+        p = hits["tests"][(a, b)]
         axes[2].text(
-            k / 2,
+            (i + k) / 2,
             y + 0.03 * span,
             f"p = {p:.4f}" if p >= 1e-4 else "p < 0.0001",
             ha="center",

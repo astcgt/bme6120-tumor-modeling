@@ -383,14 +383,16 @@ def hit_comparison_series(rows: list[dict]) -> dict:
                 median_tsg_percent=float(np.median(fraction[:, -1])),
             )
         )
-    # 第 18 代負荷：one-hit、two-hit 各自與對照組做置換檢定。
-    control = series[order[0]][0][:, -1]
-    tests = {
-        label: median_permutation_test(series[label][0][:, -1], control)
-        for label in order[1:]
-    }
+    # 第 18 代負荷：三組兩兩做置換檢定（對照 vs one-hit、one-hit vs two-hit、對照 vs two-hit）。
+    end = {label: series[label][0][:, -1] for label in order}
+    pairs = [(a, b) for i, a in enumerate(order) for b in order[i + 1 :]]
+    tests = {(a, b): median_permutation_test(end[a], end[b]) for a, b in pairs}
     for row in summaries:
-        row["p_vs_control"] = tests.get(row["scenario"], "")
+        row["p_vs_control"] = tests.get((order[0], row["scenario"]), "")
+        if len(order) > 2 and row["scenario"] == order[2]:
+            row["p_vs_one_hit"] = tests[(order[1], order[2])]
+        else:
+            row["p_vs_one_hit"] = ""
     return {
         "last": last,
         "repeats": repeats,
