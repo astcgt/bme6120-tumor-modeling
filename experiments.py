@@ -340,6 +340,22 @@ def run_tsg_comparison(
     return hit_rows, rows
 
 
+# 雙尾置換檢定：打亂兩組標籤，計算中位數差至少和觀察值一樣大的比例。
+def median_permutation_test(
+    a: np.ndarray, b: np.ndarray, permutations: int = 20000, seed: int = 0
+) -> float:
+    """兩組中位數差的雙尾置換檢定 p 值；加 1 校正避免回傳 0。"""
+    pooled = np.concatenate([a, b]).astype(float)
+    observed = abs(np.median(a) - np.median(b))
+    rng = np.random.default_rng(seed)
+    # 每列是一次隨機重新分組；前 len(a) 個當作第一組。
+    shuffled = pooled[np.argsort(rng.random((permutations, len(pooled))), axis=1)]
+    diff = np.abs(
+        np.median(shuffled[:, : len(a)], axis=1) - np.median(shuffled[:, len(a) :], axis=1)
+    )
+    return float((np.sum(diff >= observed - 1e-12) + 1) / (permutations + 1))
+
+
 # 將 TSG 對照資料整理為各情境的試驗矩陣與第 18 代中位數摘要。
 def hit_comparison_series(rows: list[dict]) -> dict:
     """把逐代資料整理成每個情境的 (試驗 × 世代) 矩陣，並計算第 18 代中位數。"""
@@ -367,12 +383,21 @@ def hit_comparison_series(rows: list[dict]) -> dict:
                 median_tsg_percent=float(np.median(fraction[:, -1])),
             )
         )
+    # 第 18 代負荷：one-hit、two-hit 各自與對照組做置換檢定。
+    control = series[order[0]][0][:, -1]
+    tests = {
+        label: median_permutation_test(series[label][0][:, -1], control)
+        for label in order[1:]
+    }
+    for row in summaries:
+        row["p_vs_control"] = tests.get(row["scenario"], "")
     return {
         "last": last,
         "repeats": repeats,
         "order": order,
         "series": series,
         "summaries": summaries,
+        "tests": tests,
     }
 
 

@@ -1,4 +1,4 @@
-scenario,generation,replicates,median_cells,median_tsg_percent
-No TSG advantage,18,30,76445.5,0.05111555688740173
-TSG one-hit,18,30,94617.5,27.884107347478242
-TSG two-hit,18,30,73879.0,0.07072877227815683
+scenario,generation,replicates,median_cells,median_tsg_percent,p_vs_control
+No TSG advantage,18,30,76445.5,0.05111555688740173,
+TSG one-hit,18,30,94617.5,27.884107347478242,4.999750012499375e-05
+TSG two-hit,18,30,73879.0,0.07072877227815683,0.31158442077896104

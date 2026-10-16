@@ -75,7 +75,7 @@ Growth comparisons keep oncogene effects, mutation rates, and loci identical, va
 
 ![One-hit versus two-hit comparison](outputs/one_hit_vs_two_hit.png)
 
-The figure shows the same 30 trials per scenario from the growth experiment, including the no-TSG-advantage control (dotted gray; TSG loss is counted with the two-hit rule but gives no advantage); no therapy is applied. At generation 18 the median burdens are 76,446 (control), 94,618 (one-hit) and 73,879 (two-hit), and 0.05% / 27.9% / 0.07% of cells meet the TSG threshold. Panel A uses a linear cell-count axis, panel B shows the percentage meeting each scenario's TSG-loss threshold (symlog, linear below 0.01%), and panel C shows every trial at generation 18 with median bars. The threshold differs by definition; panel B measures the resulting phenotype, not an identical mutation state in both groups. Bands show trial variation, not confidence intervals. Overlap and stochastic reversals are retained rather than selecting favorable seeds.
+The figure shows the same 30 trials per scenario from the growth experiment, including the no-TSG-advantage control (dotted green; TSG loss is counted with the two-hit rule but gives no advantage); no therapy is applied. At generation 18 the median burdens are 76,446 (control), 94,618 (one-hit) and 73,879 (two-hit), and 0.05% / 27.9% / 0.07% of cells meet the TSG threshold. Panel A uses a linear cell-count axis, panel B shows the percentage meeting each scenario's TSG-loss threshold (symlog, linear below 0.01%), and panel C shows every trial at generation 18 with median bars and two-sided permutation-test p-values for the median difference against the control (20,000 permutations): one-hit p < 0.0001, two-hit p = 0.31. The threshold differs by definition; panel B measures the resulting phenotype, not an identical mutation state in both groups. Bands show trial variation, not confidence intervals. Overlap and stochastic reversals are retained rather than selecting favorable seeds.
 
 ### Replication and uncertainty
 
@@ -257,7 +257,7 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 
 ![One-hit 與 two-hit 比較](outputs/one_hit_vs_two_hit.png)
 
-此圖呈現生長試驗每種情境的同一批 30 次試驗，並加入無 TSG 優勢的對照組（灰色點線；TSG 失活以 two-hit 規則計數，但沒有生長優勢），不施加治療。第 18 代負荷中位數為 76,446（對照）、94,618（one-hit）、73,879（two-hit），達到 TSG 門檻的細胞分別占 0.05%／27.9%／0.07%。A 面板以線性座標顯示細胞數，B 面板顯示各情境達到 TSG 失活門檻的細胞百分比（symlog，0.01% 以下為線性），C 面板顯示第 18 代每次試驗的負荷與中位數橫線。兩情境的門檻定義不同，B 比較的是功能表型，而非完全相同的突變狀態。陰影表示試驗間變異，不是信賴區間；保留重疊與隨機反轉，不挑選有利種子。
+此圖呈現生長試驗每種情境的同一批 30 次試驗，並加入無 TSG 優勢的對照組（綠色點線；TSG 失活以 two-hit 規則計數，但沒有生長優勢），不施加治療。第 18 代負荷中位數為 76,446（對照）、94,618（one-hit）、73,879（two-hit），達到 TSG 門檻的細胞分別占 0.05%／27.9%／0.07%。A 面板以線性座標顯示細胞數，B 面板顯示各情境達到 TSG 失活門檻的細胞百分比（symlog，0.01% 以下為線性），C 面板顯示第 18 代每次試驗的負荷與中位數橫線，並標出與對照組中位數差的雙尾置換檢定 p 值（20,000 次置換）：one-hit p < 0.0001、two-hit p = 0.31。兩情境的門檻定義不同，B 比較的是功能表型，而非完全相同的突變狀態。陰影表示試驗間變異，不是信賴區間；保留重疊與隨機反轉，不挑選有利種子。
 
 ### 重複試驗與不確定性
 

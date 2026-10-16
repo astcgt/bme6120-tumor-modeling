@@ -12,7 +12,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 
 from experiments import HIT_SCENARIOS
-from plot_style import COLORS, save_figure, set_plot_style
+from plot_style import COLORS, INK, save_figure, set_plot_style
 from simulation import Config, Result, suppressor_alleles
 
 HIT_SHORT = {
@@ -177,14 +177,17 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
         f"{config.n_genes} genes · no therapy · identical oncogene effects & mutation"
         f" rates · {repeats} trials/scenario\nLines: median; bands: 10–90% of trials"
         " (not confidence intervals). One-hit: either allele; two-hit: both alleles of"
-        " the same TSG. Control: TSG loss gives no advantage (two-hit counting).",
+        " the same TSG. Control: TSG loss gives no advantage (two-hit counting).\nC: p from"
+        " a two-sided permutation test of the median difference vs control (20,000"
+        " permutations).",
         fontsize=10,
     )
     styles = {
-        HIT_SCENARIOS[0]: ("#64748B", ":"),
+        HIT_SCENARIOS[0]: (COLORS[3], ":"),
         HIT_SCENARIOS[1]: (COLORS[1], "-"),
         HIT_SCENARIOS[2]: (COLORS[2], "--"),
     }
+    medians = []
     for index, label in enumerate(order):
         color, linestyle = styles[label]
         total, fraction = hits["series"][label]
@@ -203,16 +206,8 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
         jitter = np.random.default_rng(900 + index).uniform(-0.10, 0.10, repeats)
         axes[2].scatter(index + jitter, endpoint, color=color, alpha=0.7, s=40)
         median = float(np.median(endpoint))
+        medians.append(median)
         axes[2].plot([index - 0.2, index + 0.2], [median] * 2, color=color, lw=3)
-        axes[2].text(
-            index,
-            0.98,
-            f"Median\n{median:,.0f}",
-            ha="center",
-            va="top",
-            transform=axes[2].get_xaxis_transform(),
-            fontsize=10,
-        )
     # TSG 比例差距可能跨數量級；symlog 可同時保留零值和低頻 two-hit 細胞。
     axes[0].set(
         title="A  Tumor growth (linear scale)",
@@ -237,10 +232,29 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
         title=f"C  Tumor burden at generation {last}",
         ylabel="Total cells",
         xticks=range(len(order)),
-        xticklabels=[HIT_SHORT[s] for s in order],
+        xticklabels=[
+            f"{HIT_SHORT[s]}\nmedian {m:,.0f}" for s, m in zip(order, medians)
+        ],
         xlim=(-0.5, len(order) - 0.5),
     )
     axes[2].margins(y=0.25)
+    # 置換檢定結果：在 C 面板上方以括號標出 one-hit、two-hit 各自對照組的 p 值。
+    low, high = axes[2].get_ylim()
+    span = high - low
+    axes[2].set_ylim(low, high + 0.32 * span)
+    for k, label in enumerate(order[1:], start=1):
+        y = high + (0.04 + 0.13 * (k - 1)) * span
+        top = y + 0.02 * span
+        axes[2].plot([0, 0, k, k], [y, top, top, y], color=INK, lw=1)
+        p = hits["tests"][label]
+        axes[2].text(
+            k / 2,
+            y + 0.03 * span,
+            f"p = {p:.4f}" if p >= 1e-4 else "p < 0.0001",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
     for ax in axes[:2]:
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.legend(frameon=False, loc="lower right", fontsize=9)
