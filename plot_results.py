@@ -22,10 +22,9 @@ HIT_SHORT = {
 }
 
 
-# 腫瘤總覽：負荷；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。
+# 腫瘤總覽：負荷；逐基因頻率改由基因頻率圖呈現。
 def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Path):
-    """腫瘤總覽：負荷；逐基因頻率改由基因頻率圖呈現，可用試驗數寫進註腳。"""
-    config = trials[0].config
+    """腫瘤總覽：負荷；逐基因頻率改由基因頻率圖呈現。"""
     length = len(summary)
     keys = ("total", "sensitive", "resistant")
     set_plot_style()
@@ -66,17 +65,6 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
     for ax in axes:
         ax.set_xlabel("Generation")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    # 可用試驗數改成文字：全部試驗持續觀察到哪一代，之後因計算上限而截尾。
-    complete = next(
-        (g for g, r in enumerate(summary) if r["total_n"] < len(trials)), length
-    )
-    fig.supxlabel(
-        "Lines: median; bands: 10–90% of trials, not confidence intervals. Absolute"
-        f" generation alignment.\nAll {len(trials)} trials observed through generation"
-        f" {complete - 1}; later generations include only trials still below the"
-        f" {config.max_cells:,}-cell computational cap (not tumor death).",
-        fontsize=10,
-    )
     save_figure(fig, output, "tumor_dashboard")
 
 
@@ -179,15 +167,6 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
     last, repeats, order = hits["last"], hits["repeats"], hits["order"]
     fig.suptitle(
         "One-hit vs two-hit | tumor suppressor loss", fontsize=21, fontweight="bold"
-    )
-    fig.supxlabel(
-        f"{config.n_genes} genes · no therapy · identical oncogene effects & mutation"
-        f" rates · {repeats} trials/scenario\nLines: median; bands: 10–90% of trials"
-        " (not confidence intervals). One-hit: either allele; two-hit: both alleles of"
-        " the same TSG. Control: TSG loss gives no advantage (two-hit counting).\nC: p from"
-        " pairwise two-sided permutation tests of the median difference (20,000"
-        " permutations).",
-        fontsize=10,
     )
     styles = {
         HIT_SCENARIOS[0]: (COLORS[3], ":"),

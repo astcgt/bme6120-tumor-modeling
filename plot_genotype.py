@@ -362,14 +362,6 @@ def plot_muller(config, results, events, lang):
     result, event = results[rep], events[rep]
     fig = plt.figure(figsize=(16.8, 13))
     fig.text(0.05, 0.975, t["title"], fontsize=22, weight="bold", va="top")
-    fig.text(
-        0.05,
-        0.937,
-        t["subtitle"].format(r=rep, s=result.seed, k=TOP_K),
-        fontsize=12.5,
-        color=GRAY,
-        va="top",
-    )
     top = fig.add_axes((0.07, 0.74, 0.64, 0.13))
     muller = fig.add_axes((0.07, 0.38, 0.64, 0.34), sharex=top)
     totals = np.array([sum(p.values()) for p in result.populations])
@@ -458,8 +450,6 @@ def plot_muller(config, results, events, lang):
         ax.set_title(t["rep"].format(r=e["replicate"]), fontsize=10.5)
         ax.set_yticks([0, 0.5, 1], ["0%", "50%", "100%"] if i == 0 else [])
         ax.tick_params(labelsize=9.5)
-    fig.text(0.07, 0.045, t["foot"], fontsize=10.5, color=GRAY)
-    fig.text(0.07, 0.02, t["foot2"], fontsize=10.5, color=GRAY)
     return fig, rep, shown
 
 

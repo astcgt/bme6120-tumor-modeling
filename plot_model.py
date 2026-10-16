@@ -159,13 +159,6 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
         weight="bold",
         color=INK,
     )
-    fig.text(
-        0.04,
-        0.93,
-        "Every simulated outcome is built from these per-cell offspring laws",
-        fontsize=12,
-        color=GRAY,
-    )
 
     ax = fig.add_axes([0.04, 0.52, 0.40, 0.36])
     panel(ax, "A", "Offspring distribution of a mutation-free cell")
@@ -212,15 +205,6 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
         11,
         weight="bold",
     )
-    label(
-        ax,
-        0.015,
-        -0.005,
-        "Rows: current cells. Columns: next generation. Each row sums to 1; 0 is"
-        " absorbing.",
-        11,
-        color=GRAY,
-    )
 
     ax = fig.add_axes([0.04, 0.09, 0.92, 0.34])
     panel(ax, "C", "Numbers that decide the outcome (default parameters)", gap=0.025)
@@ -256,30 +240,6 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
                 weight="bold",
                 color=RED if float(cell.get_text().get_text()) < 1 else BLUE,
             )
-    label(
-        ax,
-        0.015,
-        0.15,
-        "P(0/2/3) are offspring probabilities without therapy. m = expected offspring ="
-        " (1−d)(1−k)(2+q); m > 1 grows, m < 1 shrinks.",
-        11.5,
-    )
-    label(
-        ax,
-        0.015,
-        0.06,
-        "Therapy (ON) adds extra kill k = 0.90 for sensitive and 0.04 for resistant"
-        " cells. Resistance is neutral without therapy (same m = 1.428).",
-        11.5,
-    )
-    fig.text(
-        0.04,
-        0.035,
-        "Panels A–B drop mutations, genotype advantages and therapy; the threshold 4 in"
-        " B is illustrative.",
-        fontsize=10,
-        color=GRAY,
-    )
     save(fig, "single_cell_rules")
 
 

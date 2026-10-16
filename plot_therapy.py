@@ -24,7 +24,6 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
     """Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論）。"""
     summary, grid, curve = data["summary"], data["grid"], data["curve"]
     half = data["half"]
-    m = (1 - config.death_rate) * (2 + config.triple_probability)
     set_plot_style()
     fig, (ax, lam) = plt.subplots(
         2,
@@ -86,17 +85,6 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
             color=COLORS[1],
             arrowprops=dict(arrowstyle="-", color=COLORS[1], lw=0.8),
         )
-    ax.text(
-        0.98,
-        0.97,
-        f"Steps: the tumor grows ×{m:.2f} per generation,\nso nearby sizes start"
-        " therapy in the same generation.",
-        transform=ax.transAxes,
-        ha="right",
-        va="top",
-        fontsize=9.5,
-        color=GRAY,
-    )
     ax.set(
         xscale="log",
         ylim=(-0.03, 1.03),

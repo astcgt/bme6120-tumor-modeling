@@ -11,7 +11,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch
 import numpy as np
 
-from analysis import MIN_TRANSITIONS, MIN_TRIALS, event_generations, fitness, logit_rho
+from analysis import MIN_TRANSITIONS, event_generations, logit_rho
 
 INK, BLUE, ORANGE, RED, GRAY = "#173042", "#236B8E", "#BC7844", "#A74F3D", "#687783"
 
@@ -412,16 +412,6 @@ def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
         left=0.1, right=0.9, bottom=0.14, top=0.84, hspace=0.13, wspace=0.07
     )
     fig.text(0.05, 0.975, t["title"][pair], fontsize=24, weight="bold", va="top")
-    fig.text(
-        0.05,
-        0.935,
-        t["subtitle"].format(
-            t=len({r["replicate"] for r in rows}), m=MIN_TRANSITIONS, k=MIN_TRIALS
-        ),
-        fontsize=12.5,
-        color=GRAY,
-        va="top",
-    )
     norm = Normalize(
         MIN_TRANSITIONS,
         max(f["transitions"] for f in fields if f["kind"] == "empirical"),
@@ -561,15 +551,4 @@ def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
     )
     bar.set_label(t["count"])
     bar.outline.set_visible(False)
-    w_s = fitness(0, config, True)
-    w_r = fitness(1 << config.resistance_gene, config, True)
-    fig.text(
-        0.1,
-        0.075,
-        t["slice"][pair].format(n=config.therapy_start_size),
-        fontsize=11.5,
-        color=GRAY,
-    )
-    fig.text(0.1, 0.05, t["foot"].format(d=np.log10(w_r / w_s)), fontsize=11.5)
-    fig.text(0.1, 0.025, t["foot2"], fontsize=11.5, color=GRAY)
     return fig
