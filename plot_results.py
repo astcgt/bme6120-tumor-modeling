@@ -129,7 +129,8 @@ def plot_death_rate(
             )
     # 無突變細胞的每代淨倍增 (1-d)(2+q)：死亡率越高，越接近 1，達標需要越多代。
     labels = [
-        f"{d:.2f}\n×{(1 - d) * (2 + config.triple_probability):.2f}/gen" for d in deaths
+        f"d = {d:.2f}\nm = ×{(1 - d) * (2 + config.triple_probability):.2f} / generation"
+        for d in deaths
     ]
     axes[0].set(
         title=f"Diversity in {target:,}-cell samples",
@@ -139,7 +140,10 @@ def plot_death_rate(
         ax.set(
             xticks=range(len(deaths)),
             xticklabels=labels,
-            xlabel="Natural death probability (net growth of a mutation-free cell)",
+            xlabel=(
+                "Death probability per cell per generation, d\n"
+                "(m = expected offspring of a mutation-free cell = (1 − d)(2 + q))"
+            ),
         )
         ax.margins(y=0.2, x=0.20)
         # 留出頂端空間給「達標數」文字與 p 值括號，避免壓到散點。
@@ -162,14 +166,6 @@ def plot_death_rate(
             va="bottom",
             fontsize=10,
         )
-    fig.supxlabel(
-        f"No therapy · {repeats} trials per death rate · each trial sampled once at its"
-        f" first generation ≥ {target:,} cells (without replacement).\nMore generations"
-        " → more divisions before reaching the same size → more mutations accumulated"
-        " → higher diversity.\np: pairwise two-sided permutation tests of the median"
-        " difference (20,000 permutations).",
-        fontsize=10,
-    )
     save_figure(fig, output, "death_rate_heterogeneity")
 
 
