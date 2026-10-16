@@ -137,16 +137,41 @@ python3 -m venv .venv
 
 ### 5. 負荷 × 抗藥比例座標下的期望流向（相圖 05）
 
+![負荷 × 抗藥比例座標下的期望流向](output/plots/phase_plots/phase_field_burden_logit_zh.png)
+
 `output/plots/phase_plots/phase_field_burden_logit_zh.png` 在（腫瘤大小，抗藥比例的 logit）的每一點畫出理論上一代後的期望變化，灰線是 30 條實際軌跡。不治療時抗藥比例幾乎不變（抗藥是中性的）。治療下 logit 每代約上升一個 10 倍（log₁₀(1.371/0.143) = 0.98），所以每條軌跡都走同樣的 C 形轉彎：負荷下降、抗藥細胞接手，接著幾乎全是抗藥細胞的腫瘤重新長大。
 
 ### 保留在輸出中的其他分析
 
 以下沒有放進最終報告，但圖與資料都在 `output/`：
 
-- **復發時間預測**（`therapy_analysis/relapse_time_prediction`）：只用治療開始時的基因型，讓每個抗藥基因型以自己的速度成長，30 次中有 24 次準確預測到復發世代（平均誤差 0.2 代；只用單一成長率則為 2.0 代）。
-- **參數敏感度**（`therapy_analysis/parameter_sensitivity`）：單純抗藥細胞在 k_R = 0.30 停止成長，但要約 0.41 才能治癒，此時連帶 oncogene 的抗藥細胞也停止成長；μ 越高，這類細胞越可能事先存在。
-- **適應性治療**（`therapy_analysis/adaptive_therapy`）：沒有競爭時，暫停治療只是讓抗藥細胞先跑（惡化時間 11 vs 13 代）。有承載量競爭（K = 30,000）時，適應性治療延後惡化（16 vs 14 代，30 組配對全部較長），用藥時間約 44%。
-- **基因頻率**（`genotype_evolution/gene_mutation_frequencies_zh`）、S–R 相圖（`phase_plots/phase_portrait`）、適應度 × 抗藥比例相場，以及矩陣到流向圖（`mathematical_model/matrices_to_flow`）。
+**復發時間預測**（`therapy_analysis/relapse_time_prediction`）：只用治療開始時的基因型，讓每個抗藥基因型以自己的速度成長，30 次中有 24 次準確預測到復發世代（平均誤差 0.2 代；只用單一成長率則為 2.0 代）。
+
+![復發時間預測](output/plots/therapy_analysis/relapse_time_prediction.png)
+
+**參數敏感度**（`therapy_analysis/parameter_sensitivity`）：單純抗藥細胞在 k_R = 0.30 停止成長，但要約 0.41 才能治癒，此時連帶 oncogene 的抗藥細胞也停止成長；μ 越高，這類細胞越可能事先存在。
+
+![參數敏感度](output/plots/therapy_analysis/parameter_sensitivity.png)
+
+**適應性治療**（`therapy_analysis/adaptive_therapy`）：沒有競爭時，暫停治療只是讓抗藥細胞先跑（惡化時間 11 vs 13 代）。有承載量競爭（K = 30,000）時，適應性治療延後惡化（16 vs 14 代，30 組配對全部較長），用藥時間約 44%。
+
+![適應性治療](output/plots/therapy_analysis/adaptive_therapy.png)
+
+**基因頻率**
+
+![基因頻率](output/plots/genotype_evolution/gene_mutation_frequencies_zh.png)
+
+**S–R 相圖**
+
+![S–R 相圖](output/plots/phase_plots/phase_portrait.png)
+
+**適應度 × 抗藥比例相場**
+
+![適應度 × 抗藥比例相場](output/plots/phase_plots/phase_field_fitness_logit_zh.png)
+
+**矩陣到流向圖**
+
+![矩陣到流向圖](output/plots/mathematical_model/matrices_to_flow.png)
 
 ## 方法上的選擇與原因
 

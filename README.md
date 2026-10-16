@@ -137,16 +137,41 @@ Continuous therapy was started at 11 tumor sizes from 100 to 5,000 cells, 200 tr
 
 ### 5. Expected flow in burden × resistant-fraction coordinates (phase plot 05)
 
+![Expected flow in burden × resistant-fraction coordinates](output/plots/phase_plots/phase_field_burden_logit_en.png)
+
 `output/plots/phase_plots/phase_field_burden_logit_en.png` draws the theoretical one-step expected change at every point of (tumor size, logit of the resistant fraction), with the 30 actual trajectories in grey. Without therapy the resistant fraction stays nearly constant (resistance is neutral). On therapy the logit rises about one decade per generation (log₁₀(1.371/0.143) = 0.98), so every trajectory makes the same C-shaped turn: burden falls while resistance takes over, then an almost fully resistant tumor grows back.
 
 ### Other analyses kept in the outputs
 
 These are not in the final report but their figures and data are in `output/`:
 
-- **Relapse-time prediction** (`therapy_analysis/relapse_time_prediction`): from the genotypes at therapy start alone, letting each resistant genotype grow at its own rate predicts the exact relapse generation in 24/30 trials (mean error 0.2 generations, vs 2.0 for a single growth rate).
-- **Parameter sensitivity** (`therapy_analysis/parameter_sensitivity`): plain resistant cells stop growing at k_R = 0.30, but cure needs about 0.41, where oncogene-carrying resistant cells also stop growing; higher μ makes such cells more likely to pre-exist.
-- **Adaptive therapy** (`therapy_analysis/adaptive_therapy`): without competition, pausing therapy only helps resistant cells (time to progression 11 vs 13 generations). With carrying-capacity competition (K = 30,000), adaptive therapy delays progression (16 vs 14 generations, longer in 30/30 paired trials) with drug on about 44% of the time.
-- **Gene frequencies** (`genotype_evolution/gene_mutation_frequencies_en`), the S–R phase portrait (`phase_plots/phase_portrait`), the fitness × resistant-fraction field, and the matrix-to-flow figure (`mathematical_model/matrices_to_flow`).
+**Relapse-time prediction** (`therapy_analysis/relapse_time_prediction`): from the genotypes at therapy start alone, letting each resistant genotype grow at its own rate predicts the exact relapse generation in 24/30 trials (mean error 0.2 generations, vs 2.0 for a single growth rate).
+
+![Relapse-time prediction](output/plots/therapy_analysis/relapse_time_prediction.png)
+
+**Parameter sensitivity** (`therapy_analysis/parameter_sensitivity`): plain resistant cells stop growing at k_R = 0.30, but cure needs about 0.41, where oncogene-carrying resistant cells also stop growing; higher μ makes such cells more likely to pre-exist.
+
+![Parameter sensitivity](output/plots/therapy_analysis/parameter_sensitivity.png)
+
+**Adaptive therapy** (`therapy_analysis/adaptive_therapy`): without competition, pausing therapy only helps resistant cells (time to progression 11 vs 13 generations). With carrying-capacity competition (K = 30,000), adaptive therapy delays progression (16 vs 14 generations, longer in 30/30 paired trials) with drug on about 44% of the time.
+
+![Adaptive therapy](output/plots/therapy_analysis/adaptive_therapy.png)
+
+**Gene frequencies**
+
+![Gene frequencies](output/plots/genotype_evolution/gene_mutation_frequencies_en.png)
+
+**S–R phase portrait**
+
+![S–R phase portrait](output/plots/phase_plots/phase_portrait.png)
+
+**Fitness × resistant-fraction field**
+
+![Fitness × resistant-fraction field](output/plots/phase_plots/phase_field_fitness_logit_en.png)
+
+**Matrix-to-flow figure**
+
+![Matrix-to-flow figure](output/plots/mathematical_model/matrices_to_flow.png)
 
 ## Methods choices, and why
 
