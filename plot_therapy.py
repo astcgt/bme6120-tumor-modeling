@@ -19,22 +19,21 @@ from simulation import Config
 INK, GRAY = "#172B42", "#64748B"
 
 
-# Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論），以及治療開始時已有的抗藥細胞。
+# Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論）。
 def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
-    """Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論），以及治療開始時已有的抗藥細胞。"""
+    """Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論）。"""
     summary, grid, curve = data["summary"], data["grid"], data["curve"]
     half = data["half"]
     m = (1 - config.death_rate) * (2 + config.triple_probability)
     set_plot_style()
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6.8), layout="constrained")
+    fig, ax = plt.subplots(figsize=(10, 6.8), layout="constrained")
     fig.suptitle(
         "Treat earlier, cure more often: the chance of cure falls with tumor size",
         fontsize=19,
         fontweight="bold",
     )
     x = np.array([s["threshold"] for s in summary])
-    # A：治癒機率。階梯 = 理論；腫瘤每代 ×m 跳著長，相近門檻在同一代開始治療。
-    ax = axes[0]
+    # 治癒機率。階梯 = 理論；腫瘤每代 ×m 跳著長，相近門檻在同一代開始治療。
     ax.step(
         grid,
         [c["p_cure"] for c in curve],
@@ -96,64 +95,10 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
         ylim=(-0.03, 1.03),
         xlabel="Tumor size when continuous therapy starts (cells, log scale)",
         ylabel="Probability of cure (tumor goes extinct)",
-        title="A  Bigger tumor at treatment → lower chance of cure",
+        title="Bigger tumor at treatment → lower chance of cure",
     )
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
     ax.legend(frameon=False, loc="lower left")
-    # B：原因。治療開始時已存在的抗藥細胞數；平均被少數早期 jackpot 拉高。
-    ax = axes[1]
-    ax.plot(
-        x,
-        [s["R0_mean"] for s in summary],
-        "o",
-        color=COLORS[1],
-        label="Simulation mean",
-    )
-    ax.plot(
-        x,
-        [s["R0_median"] for s in summary],
-        "s",
-        mfc="white",
-        color=COLORS[1],
-        label="Simulation median",
-    )
-    ax.step(
-        grid,
-        [c["mean_R0"] for c in curve],
-        where="post",
-        color=INK,
-        lw=1.8,
-        label=r"Theory: expected $R_0$",
-    )
-    for s in summary:
-        ax.annotate(
-            f"{100 * s['R0_zero_fraction']:.0f}%",
-            (s["threshold"], max(s["R0_mean"], 0.02)),
-            xytext=(0, 9),
-            textcoords="offset points",
-            ha="center",
-            fontsize=9,
-            color=GRAY,
-        )
-    ax.set(
-        xscale="log",
-        yscale="symlog",
-        xlabel="Tumor size when continuous therapy starts (cells, log scale)",
-        ylabel="Resistant cells already present, R₀",
-        title="B  Why: bigger tumors already carry resistant cells",
-    )
-    ax.set_ylim(-0.05, 2.5 * max(c["mean_R0"] for c in curve))
-    ax.text(
-        0.02,
-        0.97,
-        "Gray % above each point = trials with no resistant cell (R₀ = 0)\n"
-        "Mean > median: a few early mutations grow into large 'jackpot' clones",
-        transform=ax.transAxes,
-        va="top",
-        fontsize=9.5,
-        color=GRAY,
-    )
-    ax.legend(frameon=False, loc="lower right")
     save_figure(fig, output, "goldie_coldman")
 
 
