@@ -131,31 +131,30 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
     save_figure(fig, output, "goldie_coldman")
 
 
-# 復發時間預測：預測 vs 觀察的復發延遲、R₀ 與復發延遲、治療中成長率對抗藥比例 ρ。
+# 復發時間預測：基準預測與組成預測各自對照實際復發延遲。
 def plot_relapse_prediction(data: dict, output: Path):
-    """復發時間預測：預測 vs 觀察的復發延遲、R₀ 與復發延遲、治療中成長率對抗藥比例 ρ。"""
-    rows, stats = data["rows"], data["stats"]
+    """復發時間預測：基準預測與組成預測各自對照實際復發延遲。"""
+    stats = data["stats"]
     obs, pred1, pred2 = data["obs"], data["pred_baseline"], data["pred_genotype"]
-    onc, m_r, m_s = data["oncogene_share"], data["m_r"], data["m_s"]
+    onc, m_r = data["oncogene_share"], data["m_r"]
     set_plot_style()
-    fig, axes = plt.subplots(1, 3, figsize=(19, 6.3), layout="constrained")
+    fig, ax = plt.subplots(figsize=(9.5, 7.2), layout="constrained")
     fig.suptitle(
-        "Relapse timing is predictable from the resistant cells present at therapy"
-        " start",
-        fontsize=20,
+        "Relapse timing predicted from the composition at therapy start",
+        fontsize=18,
         fontweight="bold",
     )
-    ax = axes[0]
     lim = (obs.min() - 2, obs.max() + 2)
+    # 縱向微幅抖動只為分開重疊的整數世代點。
     jitter = np.random.default_rng(9).uniform(-0.12, 0.12, len(obs))
-    ax.plot(lim, lim, color=GRAY, lw=1, ls="--")
+    ax.plot(lim, lim, color=GRAY, lw=1, ls="--", label="Perfect prediction")
     ax.scatter(
         pred1,
         obs + jitter,
         color=GRAY,
-        s=30,
+        s=34,
         alpha=0.7,
-        label=f"Baseline: ln(N/R₀)/ln {m_r:.3f}  (MAE {stats['mae_baseline']:.2f})",
+        label=f"Baseline: ln(N_T/R₀) / ln {m_r:.3f}  (MAE {stats['mae_baseline']:.2f})",
     )
     points = ax.scatter(
         pred2,
@@ -164,95 +163,25 @@ def plot_relapse_prediction(data: dict, output: Path):
         cmap="viridis",
         vmin=0,
         vmax=max(0.5, onc.max()),
-        s=46,
+        s=52,
         edgecolor="white",
         lw=0.6,
-        label=f"Genotype-aware mixture  (MAE {stats['mae_genotype']:.2f})",
+        label=(
+            f"Composition: each genotype at its own rate  (MAE"
+            f" {stats['mae_genotype']:.2f}, {stats['exact_genotype']}/{len(obs)} exact)"
+        ),
     )
     ax.set(
         xlim=lim,
         ylim=lim,
         xlabel="Predicted relapse delay (generations after therapy start)",
         ylabel="Observed relapse delay (generations)",
-        title="A  Prediction vs observation (30 trials)",
+        title=f"Prediction vs observation ({len(obs)} trials)",
     )
-    ax.legend(frameon=False, loc="upper left", fontsize=9.5)
-    bar = fig.colorbar(points, ax=ax, pad=0.01)
+    ax.set_aspect("equal", adjustable="box")
+    ax.legend(frameon=False, loc="upper left", fontsize=10)
+    bar = fig.colorbar(points, ax=ax, pad=0.01, shrink=0.85)
     bar.set_label("Oncogene fraction among resistant cells", fontsize=10)
-    ax = axes[1]
-    r0 = np.array([r["resistant_at_start"] for r in rows])
-    points = ax.scatter(
-        r0,
-        obs + jitter,
-        c=onc,
-        cmap="viridis",
-        vmin=0,
-        vmax=max(0.5, onc.max()),
-        s=46,
-        edgecolor="white",
-        lw=0.6,
-    )
-    grid = np.geomspace(r0.min() * 0.8, r0.max() * 1.2, 100)
-    ax.plot(
-        grid,
-        np.log(np.median([r["burden_at_start"] for r in rows]) / grid) / np.log(m_r),
-        color=GRAY,
-        ls="--",
-        label="Baseline prediction at median N",
-    )
-    ax.set(
-        xscale="log",
-        xlabel="Resistant cells at therapy start, R₀",
-        ylabel="Observed relapse delay (generations)",
-        title="B  More pre-existing resistance → earlier relapse",
-    )
-    ax.text(
-        0.98,
-        0.97,
-        f"Spearman: R₀ {stats['spearman_obs_vs_R0']:+.2f}\noncogene share"
-        f" {stats['spearman_obs_vs_onc']:+.2f}",
-        transform=ax.transAxes,
-        ha="right",
-        va="top",
-        fontsize=10,
-    )
-    ax.legend(frameon=False, loc="lower left", fontsize=9.5)
-    ax = axes[2]
-    points = ax.scatter(
-        data["rho"],
-        data["growth"],
-        c=data["oncogene_all"],
-        cmap="viridis",
-        s=12,
-        vmin=0,
-        vmax=1,
-        lw=0,
-        alpha=0.85,
-    )
-    g = np.linspace(0, 1, 200)
-    ax.plot(
-        g,
-        np.log((1 - g) * m_s + g * m_r),
-        color=INK,
-        lw=1.6,
-        label=r"Theory $\ln[(1-\rho)m_S+\rho\,m_R]$",
-    )
-    ax.axhline(0, color=GRAY, lw=1)
-    ax.axvline(
-        stats["rho_star"],
-        color=COLORS[1],
-        ls="--",
-        lw=1.5,
-        label=f"ρ* = {stats['rho_star']:.0%}: decline turns to regrowth",
-    )
-    ax.set(
-        xlabel="Resistant fraction ρ",
-        ylabel="Expected ln growth per generation (on therapy)",
-        title="C  The nadir happens when ρ crosses ρ*",
-    )
-    ax.legend(frameon=False, loc="upper left", fontsize=9.5)
-    bar = fig.colorbar(points, ax=ax, pad=0.01)
-    bar.set_label("Oncogene fraction (all cells)", fontsize=10)
     save_figure(fig, output, "relapse_time_prediction")
 
 
