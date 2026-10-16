@@ -57,8 +57,8 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
             ax.axvspan(
                 min(starts),
                 length - 1,
-                color=COLORS[1],
-                alpha=0.07,
+                color=COLORS[2],
+                alpha=0.10,
                 lw=0,
                 label=f"Continuous therapy (starts gen {min(starts)}–{max(starts)})",
             )
