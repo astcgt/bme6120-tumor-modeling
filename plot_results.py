@@ -1,6 +1,10 @@
 """主結果圖：腫瘤總覽（治療反應）、死亡率與異質性、one-hit vs two-hit。
 
 資料由 experiments.py 計算；這裡只負責畫圖與存檔。
+
+Main result figures: tumor dashboard (therapy response), death rate and heterogeneity, one-hit vs two-hit.
+
+Data come from experiments.py; this file only draws and saves.
 """
 
 from __future__ import annotations
@@ -23,8 +27,12 @@ HIT_SHORT = {
 
 
 # 腫瘤總覽：負荷；逐基因頻率改由基因頻率圖呈現。
+# Tumor dashboard: burden; per-gene frequencies are shown in the gene-frequency figure instead.
 def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Path):
-    """腫瘤總覽：負荷；逐基因頻率改由基因頻率圖呈現。"""
+    """腫瘤總覽：負荷；逐基因頻率改由基因頻率圖呈現。
+
+    Tumor dashboard: burden; per-gene frequencies are shown in the gene-frequency figure instead.
+    """
     length = len(summary)
     keys = ("total", "sensitive", "resistant")
     set_plot_style()
@@ -51,6 +59,7 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
     axes[0].set(title="Population response", ylabel="Cells (symlog)")
     axes[0].set_yscale("symlog", linthresh=1)
     # 持續治療：從最早啟動的世代起一路到觀察結束都以淡色背景標示；起點因試驗而異。
+    # Continuous therapy: light background from the earliest start to the end of observation; the start differs by trial.
     if starts:
         for ax in axes:
             ax.axvspan(
@@ -69,6 +78,7 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
 
 
 # 同樣 5,000 個細胞：死亡率越高越異質；B 顯示機制是需要更多代（更多分裂）才長到同樣大小。
+# Same 5,000 cells: higher death rate means more heterogeneity; B shows the mechanism is more generations (more divisions) to reach the same size.
 def plot_death_rate(
     shannon: dict,
     tests: dict,
@@ -78,7 +88,10 @@ def plot_death_rate(
     seed: int,
     output: Path,
 ):
-    """同樣 5,000 個細胞：死亡率越高越異質；x 軸標出每代淨成長，說明需要更多代才長到同樣大小。"""
+    """同樣 5,000 個細胞：死亡率越高越異質；x 軸標出每代淨成長，說明需要更多代才長到同樣大小。
+
+    Same 5,000 cells: higher death rate means more heterogeneity; the x-axis shows net growth per generation, explaining why more generations are needed.
+    """
     set_plot_style()
     fig, ax = plt.subplots(figsize=(9, 6), layout="constrained")
     axes = [ax]
@@ -94,6 +107,7 @@ def plot_death_rate(
             if not data:
                 continue
             # 散點左右微幅偏移只改善重疊顯示；黑色橫線標示該組中位數。
+            # Horizontal jitter only reduces overlap; the black bar marks the group median.
             jitter = np.random.default_rng(seed + index).uniform(-0.10, 0.10, len(data))
             ax.scatter(index + jitter, data, color=COLORS[index], s=34, alpha=0.7)
             median = float(np.median(data))
@@ -106,6 +120,7 @@ def plot_death_rate(
                 color="#172B42",
             )
             # 標示達到目標的試驗數，提醒統計是以達標為條件。
+            # Show how many trials reached the target, a reminder that the statistics are conditional on it.
             ax.text(
                 index,
                 0.98,
@@ -116,6 +131,7 @@ def plot_death_rate(
                 fontsize=9,
             )
     # 無突變細胞的每代淨倍增 (1-d)(2+q)：死亡率越高，越接近 1，達標需要越多代。
+    # Net growth of a mutation-free cell (1-d)(2+q): the higher the death rate, the closer to 1, and the more generations to reach the target.
     labels = [
         f"d = {d:.2f}\nm = ×{(1 - d) * (2 + config.triple_probability):.2f} / generation"
         for d in deaths
@@ -135,10 +151,12 @@ def plot_death_rate(
         )
         ax.margins(y=0.2, x=0.20)
         # 留出頂端空間給「達標數」文字與 p 值括號，避免壓到散點。
+        # Leave room at the top for the count text and p-value brackets so they do not cover points.
         low, high = ax.get_ylim()
         span = high - low
         ax.set_ylim(low, high + 0.42 * span)
     # 兩兩置換檢定：相鄰組在下排，跨組在上排。
+    # Pairwise permutation tests: adjacent groups on the lower row, the outer pair on the upper row.
     index = {d: i for i, d in enumerate(deaths)}
     for (a, b), p in tests.items():
         i, k = index[a], index[b]
@@ -158,9 +176,14 @@ def plot_death_rate(
 
 
 # one-hit vs two-hit：對照組、one-hit、two-hit 的生長、TSG 達標比例與第 18 代負荷。
+# one-hit vs two-hit: growth, TSG-threshold fraction and generation-18 burden for control, one-hit and two-hit.
 def plot_hit_comparison(hits: dict, config: Config, output: Path):
-    """one-hit vs two-hit：對照組、one-hit、two-hit 的生長、TSG 達標比例與第 18 代負荷。"""
+    """one-hit vs two-hit：對照組、one-hit、two-hit 的生長、TSG 達標比例與第 18 代負荷。
+
+    one-hit vs two-hit: growth, TSG-threshold fraction and generation-18 burden for control, one-hit and two-hit.
+    """
     # 圖 A 採線性尺度凸顯絕對數量差異；圖 B 顯示機制差異；圖 C 保留個別試驗。
+    # Panel A uses a linear scale for absolute differences; panel B shows the mechanism; panel C keeps individual trials.
     set_plot_style()
     output = Path(output)
     fig, axes = plt.subplots(1, 3, figsize=(17, 5.8), layout="constrained")
@@ -188,6 +211,7 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
                 alpha=0.10 if index == 0 else 0.15,
             )
         # 固定終點比較避免拿不同世代的負荷相比；散點左右位移僅為減少遮蔽。
+        # A fixed end point avoids comparing burdens at different generations; horizontal jitter only reduces overlap.
         endpoint = total[:, -1]
         jitter = np.random.default_rng(900 + index).uniform(-0.10, 0.10, repeats)
         axes[2].scatter(index + jitter, endpoint, color=color, alpha=0.7, s=40)
@@ -195,6 +219,7 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
         medians.append(median)
         axes[2].plot([index - 0.2, index + 0.2], [median] * 2, color=color, lw=3)
     # TSG 比例差距可能跨數量級；symlog 可同時保留零值和低頻 two-hit 細胞。
+    # TSG fractions can differ by orders of magnitude; symlog keeps both zeros and rare two-hit cells.
     axes[0].set(
         title="A  Tumor growth (linear scale)",
         xlabel="Generation",
@@ -225,6 +250,7 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
     )
     axes[2].margins(y=0.25)
     # 置換檢定結果：在 C 面板上方以括號標出兩兩比較的 p 值；相鄰組在下、跨組在上。
+    # Permutation-test results: brackets above panel C with pairwise p-values; adjacent pairs below, the outer pair above.
     low, high = axes[2].get_ylim()
     span = high - low
     axes[2].set_ylim(low, high + 0.32 * span)
@@ -252,9 +278,14 @@ def plot_hit_comparison(hits: dict, config: Config, output: Path):
 
 
 # 輸出生長、基因型組成、多樣性與突變頻率四面板圖。
+# Four-panel figure: growth, genotype composition, diversity and mutation frequency.
 def plot_dashboard(result: Result, output: Path):
-    """輸出生長、基因型組成、多樣性與突變頻率四面板圖。"""
+    """輸出生長、基因型組成、多樣性與突變頻率四面板圖。
+
+    Four-panel figure: growth, genotype composition, diversity and mutation frequency.
+    """
     # 建立 2×2 面板，使用自動排版協調標題、座標標籤與色條的空間。
+    # 2×2 panels with constrained layout so titles, axis labels and colour bars share space.
     set_plot_style()
     fig, axes = plt.subplots(2, 2, figsize=(15, 11), layout="constrained")
     fig.suptitle(
@@ -262,6 +293,7 @@ def plot_dashboard(result: Result, output: Path):
     )
     t = np.array([r["generation"] for r in result.history])
     # 面板 A：並列總細胞、敏感細胞與抗藥細胞的逐代數量。
+    # Panel A: total, sensitive and resistant cells per generation side by side.
     ax = axes[0, 0]
     for key, label, color in (
         ("total", "Total", "#172B42"),
@@ -270,6 +302,7 @@ def plot_dashboard(result: Result, output: Path):
     ):
         ax.plot(t, [r[key] for r in result.history], label=label, color=color)
     # symlog 同時呈現零細胞及跨數量級的增長，1 以下保留線性尺度。
+    # symlog shows zero cells and growth across orders of magnitude; linear below 1.
     ax.set(
         yscale="symlog",
         ylabel="Cells (symlog; linear below 1)",
@@ -277,6 +310,7 @@ def plot_dashboard(result: Result, output: Path):
     )
     ax.set_yscale("symlog", linthresh=1)
     # 以垂直虛線標示治療起點，淡色背景表示持續接受治療的區間。
+    # Dashed vertical line at therapy start; light background over the continuous-therapy period.
     if result.therapy_generation is not None:
         ax.axvspan(result.therapy_generation, t[-1], color=COLORS[1], alpha=0.09)
         ax.axvline(
@@ -288,6 +322,7 @@ def plot_dashboard(result: Result, output: Path):
         )
     ax.legend(frameon=False, fontsize=9)
     # 面板 B：累加各世代的基因型比例，選出整段歷程中主要的五種基因型。
+    # Panel B: sum genotype fractions over generations and pick the five main genotypes of the whole run.
     ax = axes[0, 1]
     totals = np.array([r["total"] for r in result.history])
     scores = {}
@@ -296,12 +331,14 @@ def plot_dashboard(result: Result, output: Path):
             scores[g] = scores.get(g, 0) + n / max(total, 1)
     top = sorted(scores, key=scores.get, reverse=True)[:5]
     # 將主要基因型轉為逐代比例，其餘合併為 Other；滅絕時總比例為零。
+    # Convert the main genotypes to per-generation fractions and merge the rest into Other; total is zero at extinction.
     bands = np.array([
         [p.get(g, 0) / max(n, 1) for p, n in zip(result.populations, totals)]
         for g in top
     ])
     others = np.maximum(0, (totals > 0).astype(float) - bands.sum(axis=0))
     # 以十六進位顯示基因型 bitmask；含抗藥基因者附上 R，方便辨識。
+    # Show the genotype bitmask in hex, with R appended for resistant genotypes.
     labels = [
         f"G{g:06X}" + (" (R)" if g & (1 << result.config.resistance_gene) else "")
         for g in top
@@ -310,6 +347,7 @@ def plot_dashboard(result: Result, output: Path):
     ax.set(ylim=(0, 1), ylabel="Fraction of cells", title="B  Genotype composition")
     ax.legend(loc="upper left", fontsize=8, frameon=False, ncol=2)
     # 面板 C：exp(Shannon H) 將熵轉為有效基因型數，滅絕時另外定義為零。
+    # Panel C: exp(Shannon H) turns entropy into an effective genotype count, defined as zero at extinction.
     ax = axes[1, 0]
     ax.plot(
         t,
@@ -320,6 +358,7 @@ def plot_dashboard(result: Result, output: Path):
         ylabel="Effective genotypes: exp(Shannon H)", title="C  Genetic heterogeneity"
     )
     # 面板 D：TSG 顯示任一等位基因失活的細胞比例，不代表已達功能喪失門檻。
+    # Panel D: the TSG row shows cells with any allele lost, not necessarily past the loss-of-function threshold.
     ax = axes[1, 1]
     frequency = np.array([
         [
@@ -338,6 +377,7 @@ def plot_dashboard(result: Result, output: Path):
         for gene in range(result.config.n_genes)
     ])
     # 用網格邊界繪製熱圖，固定色階 0–1，便於比較不同基因的突變頻率。
+    # Draw the heat map on cell edges with a fixed 0–1 colour scale to compare genes.
     mesh = ax.pcolormesh(
         np.arange(len(t) + 1) - 0.5,
         np.arange(result.config.n_genes + 1) - 0.5,
@@ -348,9 +388,11 @@ def plot_dashboard(result: Result, output: Path):
         shading="flat",
     )
     # 顯示時將零起算索引改成 Gene 1 起算，並標出 driver 與 resistance。
+    # Display zero-based indices as Gene 1 onwards and label the driver and resistance genes.
     config = result.config
 
     # 依基因索引回傳 driver、抗藥或 TSG 的圖例文字，其他基因回傳空字串。
+    # Legend text for a gene index: driver, resistance or TSG; empty for other genes.
     def role(g: int) -> str:
         if g in config.driver_genes:
             return " · driver"
@@ -370,6 +412,7 @@ def plot_dashboard(result: Result, output: Path):
     ax.grid(False)
     fig.colorbar(mesh, ax=ax, label="Mutant fraction", pad=0.02)
     # 所有面板共用世代標籤及整數刻度，最後一次輸出整張展示圖。
+    # All panels share the generation label and integer ticks; save the whole figure once.
     for ax in axes.flat:
         ax.set_xlabel("Generation")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))

@@ -1,6 +1,10 @@
 """治療延伸分析圖：治療時機（Goldie–Coldman）、復發時間預測、參數敏感度、適應性治療。
 
 資料由 experiments.py 計算；這裡只負責畫圖與存檔。
+
+Therapy follow-up figures: therapy timing (Goldie–Coldman), relapse-time prediction, parameter sensitivity, adaptive therapy.
+
+Data come from experiments.py; this file only draws and saves.
 """
 
 from __future__ import annotations
@@ -20,8 +24,12 @@ INK, GRAY = "#172B42", "#64748B"
 
 
 # Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論）。
+# Goldie–Coldman: therapy start burden vs cure probability (simulation and theory).
 def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
-    """Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論）。"""
+    """Goldie–Coldman：治療起始負荷 vs 治癒機率（模擬與理論）。
+
+    Goldie–Coldman: therapy start burden vs cure probability (simulation and theory).
+    """
     summary, grid, curve = data["summary"], data["grid"], data["curve"]
     half = data["half"]
     set_plot_style()
@@ -40,6 +48,7 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
     )
     x = np.array([s["threshold"] for s in summary])
     # 治癒機率。階梯 = 理論；腫瘤每代 ×m 跳著長，相近門檻在同一代開始治療。
+    # Cure probability. The staircase is theory; the tumor jumps ×m per generation, so nearby thresholds start therapy in the same generation.
     ax.step(
         grid,
         [c["p_cure"] for c in curve],
@@ -94,6 +103,7 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
     ax.legend(frameon=False, loc="lower left")
     # B：預期能撐過治療的抗藥家系數 Λ；P(治癒) = e^(−Λ)，Λ 是決定滅絕的關鍵量。
+    # B: expected number of resistant lineages that survive therapy, Λ; P(cure) = e^(−Λ), so Λ is what decides extinction.
     lam.step(
         grid,
         [c["lambda_pre"] + c["lambda_on"] for c in curve],
@@ -127,8 +137,12 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
 
 
 # 復發時間預測：基準預測與組成預測各自對照實際復發延遲。
+# Relapse-time prediction: baseline and composition predictions each against the observed relapse delay.
 def plot_relapse_prediction(data: dict, output: Path):
-    """復發時間預測：基準預測與組成預測各自對照實際復發延遲。"""
+    """復發時間預測：基準預測與組成預測各自對照實際復發延遲。
+
+    Relapse-time prediction: baseline and composition predictions each against the observed relapse delay.
+    """
     stats = data["stats"]
     obs, pred1, pred2 = data["obs"], data["pred_baseline"], data["pred_genotype"]
     onc, m_r = data["oncogene_share"], data["m_r"]
@@ -141,6 +155,7 @@ def plot_relapse_prediction(data: dict, output: Path):
     )
     lim = (obs.min() - 2, obs.max() + 2)
     # 縱向微幅抖動只為分開重疊的整數世代點。
+    # Small vertical jitter only separates overlapping whole-generation points.
     jitter = np.random.default_rng(9).uniform(-0.12, 0.12, len(obs))
     ax.plot(lim, lim, color=GRAY, lw=1, ls="--", label="Perfect prediction")
     ax.scatter(
@@ -181,8 +196,12 @@ def plot_relapse_prediction(data: dict, output: Path):
 
 
 # 參數敏感度：抗藥細胞殺傷率 × 突變率的治癒機率與復發延遲熱圖，並畫出理論邊界。
+# Parameter sensitivity: heat maps of cure probability and relapse delay over resistant kill rate × mutation rate, with theoretical boundaries.
 def plot_sensitivity(data: dict, trials: int, output: Path):
-    """參數敏感度：抗藥細胞殺傷率 × 突變率的治癒機率與復發延遲熱圖，並畫出理論邊界。"""
+    """參數敏感度：抗藥細胞殺傷率 × 突變率的治癒機率與復發延遲熱圖，並畫出理論邊界。
+
+    Parameter sensitivity: heat maps of cure probability and relapse delay over resistant kill rate × mutation rate, with theoretical boundaries.
+    """
     kills, mus = data["kills"], data["mutation_rates"]
     cure, delay, persistent = data["cure"], data["delay"], data["persistent"]
     set_plot_style()
@@ -245,6 +264,7 @@ def plot_sensitivity(data: dict, trials: int, output: Path):
         bar = fig.colorbar(image, ax=ax, pad=0.01)
         bar.set_label(label)
         # 邊界畫在 k 軸上的內插位置。
+        # Draw the boundary at its interpolated position on the k axis.
         for (name, b), style in zip(data["boundaries"].items(), ("-", "--", ":")):
             pos = np.interp(b, kills, range(len(kills)))
             ax.vlines(
@@ -257,6 +277,7 @@ def plot_sensitivity(data: dict, trials: int, output: Path):
                 label=f"{name} stops growing (k = {b:.2f})",
             )
         # 上方留一條空白帶放圖例，避免遮住格子。
+        # Leave a blank strip at the top for the legend so it does not cover cells.
         ax.set_ylim(-0.5, len(mus) - 0.5 + 0.75)
         if ax is axes[0]:
             ax.legend(frameon=False, fontsize=8.5, loc="upper left", ncol=2)
@@ -272,8 +293,12 @@ def plot_sensitivity(data: dict, trials: int, output: Path):
 
 
 # 適應性治療：一次試驗的持續與間歇治療軌跡，以及四種設定下的惡化時間比較。
+# Adaptive therapy: continuous and intermittent trajectories of one trial, and time to progression under four settings.
 def plot_adaptive(data: dict, config: Config, trials: int, output: Path):
-    """適應性治療：一次試驗的持續與間歇治療軌跡，以及四種設定下的惡化時間比較。"""
+    """適應性治療：一次試驗的持續與間歇治療軌跡，以及四種設定下的惡化時間比較。
+
+    Adaptive therapy: continuous and intermittent trajectories of one trial, and time to progression under four settings.
+    """
     rows, summary, settings, K = (
         data["rows"],
         data["summary"],

@@ -1,6 +1,10 @@
 """數學圖：單細胞規則、從 M 矩陣到流向、附錄（完整轉移核與程式流程）。
 
 矩陣與向量場由 analysis.py 計算；這裡只負責畫圖與存檔。
+
+Math figures: single-cell rules, from the M matrix to the flow, appendix (full transition kernel and program flow).
+
+Matrices and vector fields come from analysis.py; this file only draws and saves.
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ INK, BLUE, RED, GRAY = "#182634", "#21658B", "#A54C38", "#66717A"
 
 
 # 將座標軸設為隱藏刻度的單位畫布，加入面板編號與標題。
+# Turn an axis into a unit canvas with hidden ticks and add the panel letter and title.
 def panel(ax, letter, title, gap=0.055):
     ax.set(xlim=(0, 1), ylim=(0, 1))
     ax.axis("off")
@@ -27,6 +32,7 @@ def panel(ax, letter, title, gap=0.055):
 
 
 # 以統一的預設字級、顏色與頂端對齊方式，在指定位置加入文字。
+# Add text at a position with the shared default size, colour and top alignment.
 def label(ax, x, y, text, size=12, **kw):
     return ax.text(
         x, y, text, fontsize=size, color=kw.pop("color", INK), va="top", **kw
@@ -34,6 +40,7 @@ def label(ax, x, y, text, size=12, **kw):
 
 
 # 在指定中心繪製圓角流程節點並加入置中文字。
+# Draw a rounded flow node at a given centre with centred text.
 def node(ax, xy, text, width=0.25, height=0.115, color=BLUE):
     x, y = xy
     patch = FancyBboxPatch(
@@ -50,6 +57,7 @@ def node(ax, xy, text, width=0.25, height=0.115, color=BLUE):
 
 
 # 在兩點間加入可彎曲的箭頭，並依選項標示說明文字。
+# Draw a possibly curved arrow between two points, with an optional label.
 def arrow(ax, a, b, text=None, at=None, rad=0, color=GRAY):
     ax.add_patch(
         FancyArrowPatch(
@@ -77,6 +85,7 @@ def arrow(ax, a, b, text=None, at=None, rad=0, color=GRAY):
 
 
 # 以列至欄的慣例繪製數值矩陣，並依選項顯示列欄標籤。
+# Draw a numeric matrix in row-to-column order, with optional row and column labels.
 def matrix_display(
     ax,
     values,
@@ -135,6 +144,7 @@ def matrix_display(
 
 
 # 將模型圖儲存為 300 dpi PNG 與 SVG，然後關閉圖形。
+# Save the model figure as 300 dpi PNG and SVG, then close it.
 def save(fig, name):
     for suffix in ("png", "svg"):
         fig.savefig(
@@ -148,8 +158,12 @@ def save(fig, name):
 
 
 # 一個細胞一代會怎樣：子代分布、符號說明，以及四種代表性細胞的數字。
+# What one cell does in one generation: offspring distribution, symbol glossary and the numbers of four representative cells.
 def single_cell_figure(config, offspring, phenotypes):
-    """一個細胞一代會怎樣：子代分布、符號說明，以及四種代表性細胞的數字。"""
+    """一個細胞一代會怎樣：子代分布、符號說明，以及四種代表性細胞的數字。
+
+    What one cell does in one generation: offspring distribution, symbol glossary and the numbers of four representative cells.
+    """
     fig = plt.figure(figsize=(15, 11.2))
     fig.text(
         0.04,
@@ -178,6 +192,7 @@ def single_cell_figure(config, offspring, phenotypes):
     )
 
     # B：符號說明，讓 A 與 C 的每個變數都有文字定義。
+    # B: symbol glossary, so every variable in A and C has a text definition.
     ax = fig.add_axes([0.52, 0.52, 0.44, 0.36])
     panel(ax, "B", "What the symbols mean")
     terms = [
@@ -207,6 +222,7 @@ def single_cell_figure(config, offspring, phenotypes):
         "m, on therapy\nmean offspring",
     ]
     # 滅絕機率不放進表格；只保留決定成長方向的 d、q、子代機率與 m。
+    # Extinction probability is left out of the table; keep only d, q, offspring probabilities and m, which set the growth direction.
     table = ax.table(
         cellText=[row[: len(columns)] for row in phenotypes],
         colLabels=columns,
@@ -232,6 +248,7 @@ def single_cell_figure(config, offspring, phenotypes):
 
 
 # 期刊風格配色：Okabe–Ito 朱紅標示代表試驗，其他試驗用淺灰；向量場用低飽和連續色階。
+# Journal-style colours: Okabe–Ito vermilion for the representative trial, light grey for the others; low-saturation sequential map for the vector field.
 ACCENT, TRIAL_GRAY = "#D55E00", "#B8C0C6"
 JOURNAL_RC = {
     "font.family": ["Arial", "DejaVu Sans"],
@@ -258,8 +275,12 @@ JOURNAL_RC = {
 
 
 # 實際模擬路徑（完整基因型模型）：未治療面板畫治療前那段，治療面板畫治療開始之後那段。
+# Actual simulated paths (full genotype model): the no-therapy panel shows the pre-therapy part, the therapy panel the part after therapy starts.
 def draw_paths(ax, trials, events, highlight, therapy_phase):
-    """實際模擬路徑（完整基因型模型）：未治療面板畫治療前那段，治療面板畫治療開始之後那段。"""
+    """實際模擬路徑（完整基因型模型）：未治療面板畫治療前那段，治療面板畫治療開始之後那段。
+
+    Actual simulated paths (full genotype model): the no-therapy panel shows the pre-therapy part, the therapy panel the part after therapy starts.
+    """
     for rep, states in trials.items():
         start = events[rep]["therapy_generation"]
         part = states[: start + 1] if not therapy_phase else states[start:]
@@ -277,8 +298,12 @@ def draw_paths(ax, trials, events, highlight, therapy_phase):
 
 
 # 線性座標的一步期望向量場；兩面板共用倍率與色階，不做單支箭頭正規化。
+# One-step expected vector field in linear coordinates; both panels share the scale and colour map, arrows are not normalized individually.
 def draw_field(ax, field, scale, norm, title, subtitle, show_ylabel=True):
-    """線性座標的一步期望向量場；兩面板共用倍率與色階，不做單支箭頭正規化。"""
+    """線性座標的一步期望向量場；兩面板共用倍率與色階，不做單支箭頭正規化。
+
+    One-step expected vector field in linear coordinates; both panels share the scale and colour map, arrows are not normalized individually.
+    """
     quiver = ax.quiver(
         field["x"],
         field["y"],
@@ -319,16 +344,20 @@ def draw_field(ax, field, scale, norm, title, subtitle, show_ylabel=True):
 
 
 # M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。期刊風格：雙欄寬、7 pt 字。
+# M matrix (numbers) and vector field (shape) on one page, with the conditional-expectation formulas. Journal style: double-column width, 7 pt text.
 def matrices_to_flow_figure(
     config, qmatrix, before, during, fields, trials, events, highlight
 ):
-    """M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。期刊風格：雙欄寬、7 pt 字。"""
+    """M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。期刊風格：雙欄寬、7 pt 字。
+
+    M matrix (numbers) and vector field (shape) on one page, with the conditional-expectation formulas. Journal style: double-column width, 7 pt text.
+    """
     with plt.rc_context(JOURNAL_RC):
         _matrices_to_flow(config, qmatrix, before, during, fields, trials, events, highlight)
 
 
 def _matrices_to_flow(config, qmatrix, before, during, fields, trials, events, highlight):
-    scale = 9.0  # 11×11 網格比原本 19×19 稀疏，箭頭可以畫長一點；兩面板共用。
+    scale = 9.0  # 11×11 網格比原本 19×19 稀疏，箭頭可以畫長一點；兩面板共用。 / an 11×11 grid is sparser than the old 19×19, so arrows can be longer; shared by both panels
     fig = plt.figure(figsize=(7.2, 4.0))
     fig.text(
         0.012,
@@ -351,6 +380,7 @@ def _matrices_to_flow(config, qmatrix, before, during, fields, trials, events, h
     letter = dict(fontsize=9, weight="bold", color=INK, va="bottom")
 
     # a：矩陣與條件期望。
+    # a: matrices and conditional expectations.
     ax = fig.add_axes([0.012, 0.22, 0.30, 0.62])
     ax.set(xlim=(0, 1), ylim=(0, 1))
     ax.axis("off")
@@ -386,6 +416,7 @@ def _matrices_to_flow(config, qmatrix, before, during, fields, trials, events, h
     )
 
     # b、c：向量場與實際軌跡，共用倍率與色階。
+    # b, c: vector fields and actual trajectories, sharing scale and colour map.
     axes = [
         fig.add_axes([0.375, 0.30, 0.25, 0.45]),
         fig.add_axes([0.655, 0.30, 0.25, 0.45]),
@@ -470,8 +501,12 @@ def _matrices_to_flow(config, qmatrix, before, during, fields, trials, events, h
 
 
 # 附錄：完整基因型計數過程的 PGF 轉移核，以及程式的執行狀態機。
+# Appendix: PGF transition kernel of the full genotype count process, and the program's execution state machine.
 def appendix_figure(config):
-    """附錄：完整基因型計數過程的 PGF 轉移核，以及程式的執行狀態機。"""
+    """附錄：完整基因型計數過程的 PGF 轉移核，以及程式的執行狀態機。
+
+    Appendix: PGF transition kernel of the full genotype count process, and the program's execution state machine.
+    """
     fig = plt.figure(figsize=(15, 14))
     fig.text(
         0.04,

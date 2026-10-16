@@ -18,11 +18,13 @@ from simulation import Config, simulate
 
 
 # 從 outputs 目錄讀取指定 CSV，回傳以欄名為鍵的字典列。
+# Read a CSV from the outputs directory into dicts keyed by column name.
 def read(name):
     return list(csv.DictReader((Path("outputs") / name).open()))
 
 
 # 重現並核對治療與對照試驗，將基因頻率及治療延伸分析補入簡報資料檔。
+# Reproduce and check the therapy and control trials; add gene frequencies and therapy follow-ups to the slide data file.
 def main():
     root = Path(__file__).resolve().parent
     destination = root / "data/results.json"
@@ -100,6 +102,7 @@ def main():
         ],
     }
     # 取代原本的熱圖：以治療開始對齊的基因頻率中位數（main.py --only genotype 的輸出）。
+    # Replaces the old heat map: median gene frequencies aligned at therapy start (output of main.py --only genotype).
     freq_rows = read("genotype_evolution/gene_frequency_summary.csv")
     series = {
         "ONC1": "0",
@@ -125,6 +128,7 @@ def main():
         },
     }
     # 治療延伸分析（main.py --only therapy）：只讀取已核對的輸出，不重跑。
+    # Therapy follow-ups (main.py --only therapy): only read the checked outputs; nothing is rerun.
     therapy = json.loads(
         Path("outputs/therapy_analysis/therapy_analysis_summary.json").read_text()
     )

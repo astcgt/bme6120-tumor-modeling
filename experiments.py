@@ -3,6 +3,12 @@
 每個函數只做計算或讀寫，回傳資料給 main.py；畫圖在 plot_*.py。
 主實驗與對照實驗的 seed 區段：治療 +100000、TSG 對照 +0／+10000／+20000、
 死亡率 +50000、治療時機 +400000、敏感度 +500000、適應性治療 +600000。
+
+Experiments: run the model repeatedly under different conditions, summarize the results, and read/write data files.
+
+Each function only computes or does I/O and returns data to main.py; plotting lives in plot_*.py.
+Seed offsets: therapy +100000, TSG controls +0/+10000/+20000,
+death rate +50000, therapy timing +400000, sensitivity +500000, adaptive therapy +600000.
 """
 
 from __future__ import annotations
@@ -47,10 +53,12 @@ ROOT = Path(__file__).resolve().parent
 OUTPUTS = ROOT / "outputs"
 
 
-# ---------------------------------------------------------------- 資料讀寫 ----------
+# ---------------------------------------------------------------- 資料讀寫 / Data I/O ----------
 # 以第一筆資料的鍵作為欄名，將字典列寫入 UTF-8 CSV。
+# Write dict rows to a UTF-8 CSV, using the first row's keys as the header.
 def write_csv(path: Path, rows: list[dict]):
     # 以第一筆資料的鍵建立欄名；UTF-8 支援中文，newline 避免 CSV 多餘空行。
+    # Header from the first row's keys; UTF-8 supports Chinese, newline='' avoids blank lines in the CSV.
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
@@ -58,21 +66,27 @@ def write_csv(path: Path, rows: list[dict]):
 
 
 # 將資料寫成縮排兩格的 UTF-8 JSON，並依選項處理中文、結尾換行與特殊型別。
+# Write data as UTF-8 JSON with 2-space indentation, handling Chinese, the trailing newline and special types as requested.
 def write_json(
     path: Path, data, *, ensure_ascii=False, trailing_newline=True, default=None
 ):
-    """縮排 2 格的 JSON；預設保留中文並在結尾換行。"""
+    """縮排 2 格的 JSON；預設保留中文並在結尾換行。
+
+    JSON with 2-space indentation; keeps Chinese and ends with a newline by default.
+    """
     text = json.dumps(data, ensure_ascii=ensure_ascii, indent=2, default=default)
     path.write_text(text + ("\n" if trailing_newline else ""), encoding="utf-8")
 
 
 # 讀取 CSV，將每列轉成以欄名為鍵、字串為值的字典。
+# Read a CSV into dicts keyed by column name, with string values.
 def read_csv(path):
     with Path(path).open(newline="") as handle:
         return list(csv.DictReader(handle))
 
 
 # 從執行紀錄還原並驗證 Config，連同原始中繼資料回傳。
+# Restore and validate the Config from the run record, returned with the raw metadata.
 def load_config(directory: Path) -> tuple[Config, dict]:
     metadata = json.loads((directory / "run_metadata.json").read_text())
     settings = metadata["config"].copy()
@@ -84,8 +98,12 @@ def load_config(directory: Path) -> tuple[Config, dict]:
 
 
 # 讀取並核對治療軌跡與事件，排除滅絕後補值並保留各試驗的實際觀察世代。
+# Read and check the therapy trajectories and events; drop post-extinction padding and keep each trial's observed generations.
 def load_trials(directory):
-    """只使用實際觀察；不在 cell_limit 後延伸路徑或連接不同試驗。"""
+    """只使用實際觀察；不在 cell_limit 後延伸路徑或連接不同試驗。
+
+    Actual observations only; no extension past cell_limit and no joining of different trials.
+    """
     directory = Path(directory)
     metadata = json.loads((directory / "run_metadata.json").read_text())
     settings = metadata["config"].copy()
@@ -125,8 +143,12 @@ def load_trials(directory):
 
 
 # 依記錄的種子重跑治療試驗，核對 CSV 計數與治療起點並回傳完整基因型快照。
+# Rerun the therapy trials from the recorded seeds, check the CSV counts and therapy start, and return full genotype snapshots.
 def reproduce_trials(directory: Path) -> tuple[Config, list[Result], list[dict]]:
-    """以記錄的 seed 重跑治療試驗，取得完整基因型快照；計數必須與 CSV 完全一致。"""
+    """以記錄的 seed 重跑治療試驗，取得完整基因型快照；計數必須與 CSV 完全一致。
+
+    Rerun the therapy trials from the recorded seeds to get full genotype snapshots; counts must match the CSV exactly.
+    """
     config, metadata = load_config(directory)
     with (directory / "therapy_trajectories.csv").open(newline="") as handle:
         recorded = {}
@@ -168,20 +190,30 @@ def reproduce_trials(directory: Path) -> tuple[Config, list[Result], list[dict]]
     return config, results, events
 
 
-# ---------------------------------------------------------------- 主實驗 ------------
+# ---------------------------------------------------------------- 主實驗 / Main experiment ------------
 # 以互異且可重現的種子執行指定次數的治療模擬。
+# Run the therapy simulation a given number of times with distinct, reproducible seeds.
 def run_therapy_trials(config: Config, replicates: int, seed: int) -> list[Result]:
-    """主實驗：獨立重複試驗，達門檻後持續治療；第 rep 次的 seed 為 seed + 100000 + rep。"""
+    """主實驗：獨立重複試驗，達門檻後持續治療；第 rep 次的 seed 為 seed + 100000 + rep。
+
+    Main experiment: independent trials with continuous therapy after the threshold; trial rep uses seed + 100000 + rep.
+    """
     return [simulate(config, seed + 100000 + rep) for rep in range(replicates)]
 
 
 # 按絕對世代彙整治療試驗的摘要與原始列，滅絕後補零且計算上限後視為缺失。
+# Summarize therapy trials by absolute generation; zero after extinction, missing after the computational cap.
 def therapy_ensemble(trials: list[Result]) -> tuple[list[dict], list[dict]]:
     """依絕對世代彙整治療試驗；滅絕延續零值，計算上限後視為缺失。
 
     回傳 (逐代摘要, 逐試驗逐代資料)。
+
+    Summarize therapy trials by absolute generation; extinction carries zeros, the computational cap becomes missing.
+
+    Returns (per-generation summary, per-trial per-generation data).
     """
     # 不把因計算上限停止的族群當成滅絕，也不以最後數量冒充後續觀察。
+    # A run stopped by the cap is not treated as extinct, and its last count is not reused as later observations.
     length = max(len(t.history) for t in trials)
     keys = (
         "total",
@@ -217,6 +249,7 @@ def therapy_ensemble(trials: list[Result]) -> tuple[list[dict], list[dict]]:
             for key, value in values.items():
                 data[key][rep, generation] = value
     # 每代輸出平均、樣本標準差、中位數、百分位與有效 n；n=1 時 SD 不定義。
+    # Per generation: mean, sample SD, median, percentiles and valid n; SD is undefined when n = 1.
     summary = []
     for generation in range(length):
         record = dict(generation=generation)
@@ -237,8 +270,12 @@ def therapy_ensemble(trials: list[Result]) -> tuple[list[dict], list[dict]]:
 
 
 # 彙整每次試驗的種子、治療起點、停止原因、谷底與復發世代。
+# Per trial: seed, therapy start, stop reason, nadir and relapse generation.
 def therapy_events(trials: list[Result]) -> list[dict]:
-    """每次試驗的治療起點、停止原因、谷底與復發世代；保留所有結果，不只挑復發案例。"""
+    """每次試驗的治療起點、停止原因、谷底與復發世代；保留所有結果，不只挑復發案例。
+
+    Per trial: therapy start, stop reason, nadir and relapse generation; all outcomes are kept, not only relapses.
+    """
     return [
         dict(
             replicate=rep,
@@ -252,6 +289,7 @@ def therapy_events(trials: list[Result]) -> list[dict]:
 
 
 # 建立包含完整設定、種子、套件版本與結果計數的執行紀錄。
+# Run record with the full config, seed, package versions and outcome counts.
 def run_metadata(
     config: Config,
     seed: int,
@@ -259,7 +297,10 @@ def run_metadata(
     trials: list[Result],
     outcomes: list[dict],
 ) -> dict:
-    """完整參數、種子、套件版本與結果計數，方便追溯及重現本次執行。"""
+    """完整參數、種子、套件版本與結果計數，方便追溯及重現本次執行。
+
+    Full parameters, seed, package versions and outcome counts, to trace and reproduce this run.
+    """
     return dict(
         config=asdict(config),
         seed=seed,
@@ -275,26 +316,35 @@ def run_metadata(
     )
 
 
-# ---------------------------------------------------------------- 對照實驗 ----------
+# ---------------------------------------------------------------- 對照實驗 / Control experiments ----------
 # TSG 比較的三種條件；第一個是對照組（TSG 失活沒有生長優勢）。
+# Three TSG conditions; the first is the control (TSG loss gives no growth advantage).
 HIT_SCENARIOS = ("No TSG advantage", "TSG one-hit", "TSG two-hit")
 
 
 # 執行無 TSG 優勢、one-hit 與 two-hit 的無治療對照，回傳逐代與終點資料。
+# Untreated controls with no TSG advantage, one-hit and two-hit; returns per-generation and end-point data.
 def run_tsg_comparison(
     config: Config, repeats: int, seed: int, growth_horizon: int = 18
 ) -> tuple[list[dict], list[dict]]:
     """無 TSG 優勢（對照）、one-hit、two-hit 各重複 repeats 次，不治療、觀察 18 代。
 
     回傳 (逐代資料, 每次試驗終點)。
+
+    No TSG advantage (control), one-hit and two-hit, each repeated `repeats` times, untreated, observed for 18 generations.
+
+    Returns (per-generation data, end point of each trial).
     """
     # 重複次數必須為正，才有可供比較的試驗分布。
+    # The number of repeats must be positive to give a distribution to compare.
     if repeats < 1:
         raise ValueError("repeats 必須至少為 1")
     rows, hit_rows = [], []
     for condition, label in enumerate(HIT_SCENARIOS):
         # 用 replace 建立新設定而不修改原始 Config；控制組只取消 TSG 優勢；
+        # replace() builds a new Config without changing the original; the control only removes the TSG advantage;
         # 所有情境保留相同 oncogene 效果與突變率。
+        # every scenario keeps the same oncogene effects and mutation rate.
         cfg = replace(
             config,
             generations=growth_horizon,
@@ -307,11 +357,13 @@ def run_tsg_comparison(
             run_seed = seed + condition * 10000 + rep
             result = simulate(cfg, seed=run_seed, therapy=False)
             # 若碰到安全上限就停止比較並報錯，以免把截短的曲線當成完整資料。
+            # Stop with an error at the safety cap so a truncated curve is never treated as complete.
             if result.stop_reason == "cell_limit":
                 raise RuntimeError(
                     "Growth comparison hit safety limit; shorten growth_horizon"
                 )
             # 提早滅絕的試驗沿用最後一列（零細胞），使各次曲線長度一致。
+            # Trials that die early repeat their last row (zero cells) so all curves have the same length.
             for generation in range(growth_horizon + 1):
                 row = result.history[min(generation, len(result.history) - 1)]
                 hit_rows.append(
@@ -341,14 +393,19 @@ def run_tsg_comparison(
 
 
 # 雙尾置換檢定：打亂兩組標籤，計算中位數差至少和觀察值一樣大的比例。
+# Two-sided permutation test: shuffle group labels and count how often the median difference is at least as large as observed.
 def median_permutation_test(
     a: np.ndarray, b: np.ndarray, permutations: int = 20000, seed: int = 0
 ) -> float:
-    """兩組中位數差的雙尾置換檢定 p 值；加 1 校正避免回傳 0。"""
+    """兩組中位數差的雙尾置換檢定 p 值；加 1 校正避免回傳 0。
+
+    Two-sided permutation-test p-value for the difference in medians; +1 correction so it is never 0.
+    """
     pooled = np.concatenate([a, b]).astype(float)
     observed = abs(np.median(a) - np.median(b))
     rng = np.random.default_rng(seed)
     # 每列是一次隨機重新分組；前 len(a) 個當作第一組。
+    # Each row is one random regrouping; the first len(a) values form the first group.
     shuffled = pooled[np.argsort(rng.random((permutations, len(pooled))), axis=1)]
     diff = np.abs(
         np.median(shuffled[:, : len(a)], axis=1) - np.median(shuffled[:, len(a) :], axis=1)
@@ -357,8 +414,12 @@ def median_permutation_test(
 
 
 # 依組別順序兩兩做置換檢定，回傳 {(組 a, 組 b): p}。
+# Pairwise permutation tests in group order; returns {(group a, group b): p}.
 def pairwise_permutation_tests(groups: dict) -> dict:
-    """依 groups 的鍵順序兩兩比較中位數差；每對都用同一個固定種子，可重現。"""
+    """依 groups 的鍵順序兩兩比較中位數差；每對都用同一個固定種子，可重現。
+
+    Pairwise median-difference tests in key order; every pair uses the same fixed seed, so results are reproducible.
+    """
     keys = list(groups)
     return {
         (a, b): median_permutation_test(np.asarray(groups[a]), np.asarray(groups[b]))
@@ -368,14 +429,19 @@ def pairwise_permutation_tests(groups: dict) -> dict:
 
 
 # 將 TSG 對照資料整理為各情境的試驗矩陣與第 18 代中位數摘要。
+# Arrange the TSG control data into trial matrices per scenario with generation-18 median summaries.
 def hit_comparison_series(rows: list[dict]) -> dict:
-    """把逐代資料整理成每個情境的 (試驗 × 世代) 矩陣，並計算第 18 代中位數。"""
+    """把逐代資料整理成每個情境的 (試驗 × 世代) 矩陣，並計算第 18 代中位數。
+
+    Turn per-generation data into a (trial × generation) matrix per scenario and compute generation-18 medians.
+    """
     last = max(r["generation"] for r in rows)
     repeats = len({r["replicate"] for r in rows})
     order = [s for s in HIT_SCENARIOS if any(r["scenario"] == s for r in rows)]
     series, summaries = {}, []
     for label in order:
         # 依試驗與世代建立矩陣，各組均使用相同時間範圍及完整重複試驗。
+        # Build the matrix by trial and generation; every group uses the same time range and complete replicates.
         subset = [r for r in rows if r["scenario"] == label]
         trials = [
             [r for r in subset if r["replicate"] == rep] for rep in range(repeats)
@@ -395,6 +461,7 @@ def hit_comparison_series(rows: list[dict]) -> dict:
             )
         )
     # 第 18 代負荷：三組兩兩做置換檢定（對照 vs one-hit、one-hit vs two-hit、對照 vs two-hit）。
+    # Generation-18 burden: pairwise permutation tests among the three groups (control vs one-hit, one-hit vs two-hit, control vs two-hit).
     tests = pairwise_permutation_tests(
         {label: series[label][0][:, -1] for label in order}
     )
@@ -415,25 +482,34 @@ def hit_comparison_series(rows: list[dict]) -> dict:
 
 
 # 從最後一代族群無放回取樣指定細胞數並計算摘要，數量不足時回傳 None。
+# Sample a fixed number of cells without replacement from the last generation and summarize; None if there are too few.
 def sample_at_size(result: Result, size: int, rng: np.random.Generator) -> dict | None:
     """跨門檻的該代中無放回取固定數目，避免不同生長速度的 overshoot 偏差。
 
     這是等大小的腫瘤樣本，不是連續時間中恰好達到該大小的完整腫瘤。
+
+    Draw a fixed number without replacement from the generation that crosses the threshold, avoiding overshoot bias from different growth rates.
+
+    This is an equal-size tumor sample, not a whole tumor that exactly reaches that size in continuous time.
     """
     # 最後一代未達取樣數量時回傳 None，由比較函數記錄為未達目標。
+    # Return None when the last generation is below the sample size; the caller records it as not reaching the target.
     if result.history[-1]["total"] < size:
         return None
     # 多變量超幾何分布等同從整個族群無放回取樣，維持固定樣本大小。
+    # A multivariate hypergeometric draw equals sampling the whole population without replacement, keeping the sample size fixed.
     pop = result.populations[-1]
     counts = rng.multivariate_hypergeometric(
         np.array(list(pop.values()), dtype=np.int64), size
     )
     # 重建樣本的基因型計數，沿用同一統計函數計算多樣性。
+    # Rebuild the sample's genotype counts and reuse the same summary function for diversity.
     sampled = {g: int(n) for g, n in zip(pop, counts) if n}
     return summarize(sampled, result.history[-1]["generation"], result.config)
 
 
 # 比較不同死亡率下的固定大小腫瘤樣本，彙整多樣性、達標世代與試驗終點。
+# Compare fixed-size tumor samples across death rates: diversity, generation reaching the target, and trial end points.
 def run_death_rate_comparison(
     config: Config,
     repeats: int,
@@ -441,12 +517,16 @@ def run_death_rate_comparison(
     target: int = 5000,
     deaths: tuple[float, ...] = (0.20, 0.35, 0.45),
 ) -> dict:
-    """死亡率比較：首次達標後固定取樣 5,000 個細胞，降低跨門檻大小差異的影響。"""
+    """死亡率比較：首次達標後固定取樣 5,000 個細胞，降低跨門檻大小差異的影響。
+
+    Death-rate comparison: sample 5,000 cells once the target is first reached, reducing the effect of overshooting the threshold.
+    """
     shannon, generations, rows = {}, {}, []
     for index, death in enumerate(deaths):
         shannon[death], generations[death] = [], []
         for rep in range(repeats):
             # 使用與生長比較不同的種子區段；取樣也使用獨立的亂數產生器。
+            # Uses a different seed block from the growth comparison; sampling uses its own random generator.
             run_seed = seed + 50000 + index * 10000 + rep
             cfg = replace(
                 config,
@@ -462,6 +542,7 @@ def run_death_rate_comparison(
                 shannon[death].append(sample["shannon"])
                 generations[death].append(result.history[-1]["generation"])
             # 未達門檻者仍寫入 CSV，保留達標與否及停止世代，避免隱藏失敗試驗。
+            # Trials that miss the threshold are still written to the CSV with their stop generation, so failures are not hidden.
             rows.append(
                 dict(
                     experiment="death_rate",
@@ -485,10 +566,14 @@ def run_death_rate_comparison(
     }
 
 
-# ---------------------------------------------------------------- 數學圖與相圖資料 --
+# ---------------------------------------------------------------- 數學圖與相圖資料 / Data for the math and phase-plane figures --
 # 輸出 P、Q、M 矩陣的 CSV 與模型假設，採列為父代、欄為子代的方向。
+# Write the P, Q, M matrices to CSV with the model assumptions; rows are parents, columns are offspring.
 def write_markov_data(output: Path, markov: dict):
-    """矩陣 P、Q、M 的 CSV（列＝目前／父代，欄＝下一步／子代）與假設說明。"""
+    """矩陣 P、Q、M 的 CSV（列＝目前／父代，欄＝下一步／子代）與假設說明。
+
+    CSV of the matrices P, Q, M (row = current/parent, column = next/offspring) and the assumptions.
+    """
     for name, values, names in (
         ("count_transition_P", markov["P"], ["0", "1", "2", "3", "overflow"]),
         ("mutation_Q", markov["Q"], ["S", "R"]),
@@ -523,8 +608,12 @@ def write_markov_data(output: Path, markov: dict):
 
 
 # 重跑指定試驗並核對軌跡，回傳完整結果、逐代條件期望與相圖摘要。
+# Rerun a given trial, check its trajectory, and return the full result, per-generation conditional expectations and a phase-plane summary.
 def phase_portrait_data(config: Config, trials: dict, events: dict, replicate: int):
-    """重跑代表試驗並逐代核對 CSV，計算每一代由完整基因型算出的期望下一步。"""
+    """重跑代表試驗並逐代核對 CSV，計算每一代由完整基因型算出的期望下一步。
+
+    Rerun the representative trial, check it against the CSV, and compute each generation's expected next step from the full genotypes.
+    """
     if replicate not in trials:
         raise ValueError(f"replicate {replicate} 不存在；可選 {sorted(trials)}")
     result = simulate(config, events[replicate]["seed"], therapy=True)
@@ -537,6 +626,7 @@ def phase_portrait_data(config: Config, trials: dict, events: dict, replicate: i
     assert result.therapy_generation == events[replicate]["therapy_generation"]
     steps = conditional_steps(result)
     # 沒有敏感父代且突變不可逆時，下一代敏感細胞數的期望必須為零。
+    # With no sensitive parents and irreversible mutation, the expected next sensitive count must be zero.
     assert all(row["expected_sensitive"] == 0 for row in steps if row["sensitive"] == 0)
     points = event_generations(result.history, events[replicate])
     details = {
@@ -588,6 +678,7 @@ def phase_portrait_data(config: Config, trials: dict, events: dict, replicate: i
 
 
 # 攤平向量場網格並寫入含原始位移、顯示位移及繪圖倍率的 CSV，同時回傳資料列。
+# Flatten the vector-field grid and write a CSV with raw steps, display steps and plotting scale; also return the rows.
 def write_grid_csv(fields, destination):
     rows = []
     keys = (
@@ -623,10 +714,14 @@ def write_grid_csv(fields, destination):
 
 
 # 建立向量場的假設、狀態截面、網格設定與驗證結果紀錄。
+# Record of the vector-field assumptions, state slice, grid settings and checks.
 def vector_field_record(
     config: Config, grids: dict, fields: list[dict], rows: list
 ) -> dict:
-    """向量場資料的假設、截面與驗證說明。"""
+    """向量場資料的假設、截面與驗證說明。
+
+    Assumptions, slice and checks for the vector-field data.
+    """
     return {
         "source_metadata": str(OUTPUTS / "run_metadata.json"),
         "config": asdict(config),
@@ -676,8 +771,12 @@ def vector_field_record(
 
 
 # 建立兩組相座標的理論與經驗向量場，連同逐代特徵及比較紀錄回傳。
+# Theory and empirical vector fields for both phase coordinates, returned with the per-generation features and a comparison record.
 def phase_comparison_data(config: Config, results: list[Result]) -> dict:
-    """理論 vs 經驗相場：兩組座標各自的理論箭頭與經驗平均箭頭。"""
+    """理論 vs 經驗相場：兩組座標各自的理論箭頭與經驗平均箭頭。
+
+    Theory vs empirical phase fields: theory arrows and empirical mean arrows for both coordinate pairs.
+    """
     rows = trial_feature_rows(config, results)
     built = {pair: build_fields(rows, config, pair) for pair in ("logN", "fitness")}
     all_fields, record = [], {}
@@ -712,10 +811,14 @@ def phase_comparison_data(config: Config, results: list[Result]) -> dict:
     return {"rows": rows, "built": built, "fields": all_fields, "record": record}
 
 
-# ---------------------------------------------------------------- 基因型資料 --------
+# ---------------------------------------------------------------- 基因型資料 / Genotype data --------
 # 將代表試驗中各顯示基因型併入未顯示基因型後的自身比例寫入 CSV。
+# Write to CSV each shown genotype's own fraction in the representative trial, after merging unshown genotypes.
 def write_muller_csv(path: Path, result: Result, shown: list[int], config: Config):
-    """代表試驗中每個已呈現基因型自己的比例（未呈現細胞已併入最近祖先）。"""
+    """代表試驗中每個已呈現基因型自己的比例（未呈現細胞已併入最近祖先）。
+
+    Each shown genotype's own fraction in the representative trial (unshown cells merged into the nearest ancestor).
+    """
     _, _, _, own = muller_layout(result)
     with path.open("w", newline="") as handle:
         writer = csv.writer(handle)
@@ -725,6 +828,7 @@ def write_muller_csv(path: Path, result: Result, shown: list[int], config: Confi
 
 
 # 將各基因序列的相對世代、中位數及第 10、90 百分位數寫入 CSV。
+# Write each gene series' relative generation, median and 10th/90th percentiles to CSV.
 def write_gene_frequency_csv(path: Path, summary: dict):
     with path.open("w", newline="") as handle:
         writer = csv.writer(handle)
@@ -735,6 +839,7 @@ def write_gene_frequency_csv(path: Path, summary: dict):
 
 
 # 建立代表試驗、顯示基因型與 Muller 資料解讀方式的紀錄。
+# Record of the representative trial, the shown genotypes and how to read the Muller data.
 def genotype_record(
     replicate: int, result: Result, shown: list[int], config: Config
 ) -> dict:
@@ -752,10 +857,14 @@ def genotype_record(
     }
 
 
-# ---------------------------------------------------------------- 治療延伸分析 ------
+# ---------------------------------------------------------------- 治療延伸分析 / Therapy follow-up analyses ------
 # 執行單次模擬並回傳結果摘要及逐代負荷、抗藥數與治療狀態，供子程序使用。
+# Run one simulation and return a summary plus per-generation burden, resistant count and therapy state, for worker processes.
 def run_trial(args) -> dict:
-    """子程序：跑一次試驗，只回傳摘要與逐代 N／R／治療狀態，避免傳回整個基因型快照。"""
+    """子程序：跑一次試驗，只回傳摘要與逐代 N／R／治療狀態，避免傳回整個基因型快照。
+
+    Worker: run one trial and return only the summary and per-generation N / R / therapy state, not the full genotype snapshots.
+    """
     config, seed = args
     result = simulate(config, seed=seed, therapy=True)
     start = result.therapy_generation
@@ -774,16 +883,21 @@ def run_trial(args) -> dict:
 
 
 # 使用程序池平行執行試驗工作，依輸入順序回傳結果。
+# Run trial jobs in a process pool; results come back in input order.
 def run_many(jobs, workers):
     with ProcessPoolExecutor(max_workers=workers) as pool:
         return list(pool.map(run_trial, jobs, chunksize=4))
 
 
 # 比較不同治療起始負荷下的模擬治癒機率與 Goldie–Coldman 理論近似。
+# Compare simulated cure probability across therapy start sizes with the Goldie–Coldman theory.
 def goldie_coldman_experiment(
     config: Config, trials: int, seed: int, workers: int
 ) -> dict:
-    """Goldie–Coldman：治療起始負荷 100–5,000 細胞，每個大小 trials 次；與分枝過程理論比較。"""
+    """Goldie–Coldman：治療起始負荷 100–5,000 細胞，每個大小 trials 次；與分枝過程理論比較。
+
+    Goldie–Coldman: therapy start burden 100–5,000 cells, `trials` runs per size, compared with branching-process theory.
+    """
     sizes = [100, 150, 200, 300, 500, 700, 1000, 1500, 2000, 3000, 5000]
     jobs, keys = [], []
     for i, size in enumerate(sizes):
@@ -841,8 +955,12 @@ def goldie_coldman_experiment(
 
 
 # 由治療起點的抗藥基因型組成預測復發延遲，並與觀察結果比較。
+# Predict the relapse delay from the resistant genotype composition at therapy start and compare with observation.
 def relapse_prediction(config: Config, results: list[Result]) -> dict:
-    """復發預測：用治療開始那一代的抗藥基因型組成預測每次試驗的復發延遲。"""
+    """復發預測：用治療開始那一代的抗藥基因型組成預測每次試驗的復發延遲。
+
+    Relapse prediction: use the resistant genotype composition at therapy start to predict each trial's relapse delay.
+    """
     w_off = fitness(0, config, False)
     m_r = fitness(1 << config.resistance_gene, config, True)
     m_s = fitness(0, config, True)
@@ -867,8 +985,10 @@ def relapse_prediction(config: Config, results: list[Result]) -> dict:
             / r0
         )
         # 基準預測：抗藥細胞全是單純 RES，每代 ×m_R，S 很快消失。
+        # Baseline prediction: all resistant cells are plain RES growing ×m_R per generation; S vanishes quickly.
         t_simple = np.log(n_t / r0) / np.log(m_r)
         # 組成預測：每個抗藥基因型以自己的治療中適應度成長，敏感細胞以 m_S 衰減。
+        # Composition prediction: each resistant genotype grows at its own on-therapy fitness; sensitive cells decay at m_S.
         weights = np.array([fitness(g, config, True) for g in resistant])
         counts = np.array(list(resistant.values()), float)
         burden = (counts[:, None] * weights[:, None] ** t_grid).sum(
@@ -891,6 +1011,7 @@ def relapse_prediction(config: Config, results: list[Result]) -> dict:
     pred2 = np.array([r["predicted_delay_genotype"] for r in rows])
     onc = np.array([r["oncogene_fraction_of_resistant"] for r in rows])
     # 觀察值是整數世代（第一次 N ≥ 起始負荷），預測值向上取整後比較。
+    # Observations are whole generations (first N ≥ starting burden), so predictions are rounded up before comparing.
     stats = {
         "mae_baseline": float(np.mean(np.abs(np.ceil(pred1) - obs))),
         "mae_genotype": float(np.mean(np.abs(np.ceil(pred2) - obs))),
@@ -923,10 +1044,14 @@ def relapse_prediction(config: Config, results: list[Result]) -> dict:
 
 
 # 掃描抗藥殺傷率與突變率的參數網格，彙整治癒、復發與持續存活結果。
+# Scan a grid of resistant kill rate × mutation rate and summarize cure, relapse and persistence.
 def sensitivity_experiment(
     config: Config, trials: int, seed: int, workers: int
 ) -> dict:
-    """參數敏感度：抗藥細胞殺傷率 k_R × 突變率 μ，每格 trials 次；分類為治癒、復發或持續存活。"""
+    """參數敏感度：抗藥細胞殺傷率 k_R × 突變率 μ，每格 trials 次；分類為治癒、復發或持續存活。
+
+    Parameter sensitivity: resistant kill k_R × mutation rate μ, `trials` runs per cell; outcomes are cure, relapse or persistence.
+    """
     kills = [0.0, 0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6]
     mus = [1e-4, 3e-4, 1e-3, 3e-3]
     jobs, keys = [], []
@@ -979,6 +1104,7 @@ def sensitivity_experiment(
             if d:
                 delay[j, i] = np.median(d)
     # 抗藥族群在治療下停止成長的殺傷率：(1−k)·m = 1。
+    # Kill rate at which a resistant population stops growing on therapy: (1−k)·m = 1.
     boundaries = {}
     for name, genotype in (
         ("baseline resistant", 1 << config.resistance_gene),
@@ -1009,13 +1135,19 @@ def sensitivity_experiment(
     }
 
 
-# ---------------------------------------------------------------- 11 適應性治療 --------
+# ---------------------------------------------------------------- 11 適應性治療 / 11 Adaptive therapy --------
 # 尋找負荷曾下降後於用藥轉移中達到惡化門檻的延遲，未觀察到時回傳 None。
+# Delay until progression during a dosed transition after the burden first fell; None if never observed.
 def time_to_progression(record, start_size, factor=1.2):
     """惡化：治療開始後負荷曾降到門檻以下，之後在「上一代有用藥」的情況下仍 ≥ factor × 門檻。
 
     要求用藥中，是因為離散世代下暫停期的一代就可能長 20–30%，恢復用藥前的那一步不算治療失敗。
     回傳治療開始後的代數；觀察期內未惡化回傳 None（右設限）。
+
+    Progression: after therapy start the burden fell below the threshold, then reached ≥ factor × threshold while the previous generation was dosed.
+
+    Requiring dosing matters because, with discrete generations, one paused generation can grow 20–30%; the step before resuming is not a therapy failure.
+    Returns generations after therapy start; None if no progression within the window (right-censored).
     """
     T = record["therapy_generation"]
     if T is None:
@@ -1033,8 +1165,12 @@ def time_to_progression(record, start_size, factor=1.2):
 
 
 # 在有無競爭及抗藥代價的設定下，比較適應性與持續治療的惡化時間。
+# Compare time to progression for adaptive vs continuous therapy, with and without competition and resistance cost.
 def adaptive_experiment(config: Config, trials: int, seed: int, workers: int) -> dict:
-    """適應性治療：間歇（適應性）與持續治療，在有／無承載量競爭與抗藥代價下的惡化時間。"""
+    """適應性治療：間歇（適應性）與持續治療，在有／無承載量競爭與抗藥代價下的惡化時間。
+
+    Adaptive therapy: time to progression for intermittent (adaptive) vs continuous therapy, with and without carrying-capacity competition and resistance cost.
+    """
     K = int(1.5 * config.therapy_start_size)
     settings = [
         ("No competition", None, 0.0),
@@ -1055,6 +1191,7 @@ def adaptive_experiment(config: Config, trials: int, seed: int, workers: int) ->
             )
             for rep in range(trials):
                 # 兩種策略用同一組 seed：治療開始前的軌跡完全相同。
+                # Both strategies use the same seeds, so trajectories before therapy are identical.
                 jobs.append((cfg, seed + 600_000 + 1000 * i + rep))
                 keys.append((name, mode))
     results = run_many(jobs, workers)
@@ -1094,6 +1231,7 @@ def adaptive_experiment(config: Config, trials: int, seed: int, workers: int) ->
                 np.median([r["therapy_fraction"] for r in sub])
             )
         # 配對比較（同 seed）：adaptive 惡化時間較長的試驗比例。
+        # Paired comparison (same seed): share of trials where adaptive progresses later.
         continuous = [
             r for r in rows if r["setting"] == name and r["strategy"] == "continuous"
         ]

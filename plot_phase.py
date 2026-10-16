@@ -1,6 +1,10 @@
 """相圖：實際軌跡與期望下一步（phase_portrait）、理論 vs 經驗相場（plot_pair）。
 
 期望步伐與箭頭資料由 analysis.py、experiments.py 計算；這裡只負責畫圖與存檔。
+
+Phase plots: actual trajectories with expected next step (phase_portrait), theory vs empirical phase fields (plot_pair).
+
+Expected steps and arrow data come from analysis.py and experiments.py; this file only draws and saves.
 """
 
 from __future__ import annotations
@@ -15,12 +19,14 @@ from analysis import event_generations, logit_rho
 INK, BLUE, ORANGE, RED, GRAY = "#173042", "#236B8E", "#BC7844", "#A74F3D", "#687783"
 
 
-# ---------------------------------------------------------------- 實際軌跡相圖 ------
+# ---------------------------------------------------------------- 實際軌跡相圖 / Actual-trajectory phase plot ------
 # 將逐代計數轉為敏感與抗藥對數座標，或總負荷對數與抗藥百分比座標。
+# Turn per-generation counts into log sensitive/resistant coordinates, or log total burden and resistant percentage.
 def phase_coordinates(states, composition=False):
     total = np.array([r["total"] for r in states], dtype=float)
     if composition:
         # 滅絕時比例未定義，用 NaN 讓圖斷開，而非畫成 0% 抗藥。
+        # The fraction is undefined at extinction; NaN breaks the line instead of plotting 0% resistant.
         fraction = np.divide(
             [r["resistant"] for r in states],
             total,
@@ -32,6 +38,7 @@ def phase_coordinates(states, composition=False):
 
 
 # 依相座標種類設定標題、網格、軸標籤及抗藥比例的顯示範圍。
+# Set title, grid, axis labels and the resistant-fraction display range for the chosen coordinates.
 def decorate_axis(ax, title, composition=False):
     ax.set_title(title, loc="left", fontsize=17, weight="bold", pad=16)
     ax.grid(color="#DDE4E8", alpha=0.6, linewidth=0.7)
@@ -48,6 +55,7 @@ def decorate_axis(ax, title, composition=False):
 
 
 # 僅在起終點皆為有限數值時，於座標軸加入指定樣式的箭頭。
+# Add a styled arrow to the axis only when both ends are finite.
 def arrow(ax, a, b, color, size=12, linewidth=2, zorder=6):
     if np.isfinite([*a, *b]).all():
         ax.add_patch(
@@ -66,11 +74,17 @@ def arrow(ax, a, b, color, size=12, linewidth=2, zorder=6):
 
 
 # 繪製實際試驗軌跡，突出代表案例並疊加由完整基因型算出的下一代期望箭頭。
+# Draw the actual trial paths, highlight the representative case, and overlay expected next-generation arrows from the full genotypes.
 def plot_phase_portrait(trials, events, replicate, config, result, steps):
     """單一相平面：30 條實際軌跡、突出案例，以及由完整基因型狀態算出的期望下一代箭頭。
 
     取代舊的 01（軌跡兩格）與 02（條件期望）：同一試驗、同一座標不再畫兩次。
     負荷 × 抗藥比例的座標改看 phase_field_burden_logit（logit 軸）；推導公式在 matrices_to_flow。
+
+    One phase plane: 30 actual trajectories, a highlighted case, and expected next-generation arrows from the full genotype state.
+
+    Replaces the old 01 (two trajectory panels) and 02 (conditional expectation): the same trial is no longer drawn twice in the same coordinates.
+    For burden × resistant fraction see phase_field_burden_logit (logit axis); the derivation is in matrices_to_flow.
     """
     fig = plt.figure(figsize=(15.5, 10.2))
     ax = fig.add_axes((0.07, 0.2, 0.5, 0.58))
@@ -112,6 +126,7 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
         ax.plot(*xy[g : g + 2].T, color=color, lw=2.6, zorder=3)
     ax.scatter(*xy.T, s=9, color=INK, alpha=0.55, zorder=4, linewidths=0)
     # 期望箭頭：先求原始計數期望再取 log；箭頭頭端與下一個實際點的距離就是隨機偏差。
+    # Expected arrows: expectation of raw counts first, then log; the gap between the arrow head and the next actual point is the random deviation.
     for g in sorted(
         {0, 5, 10, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 28, 32, len(steps) - 1}
     ):
@@ -191,6 +206,7 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
         fontsize=12,
     )
     # 右側：案例數字。期望與實際並列，說明大族群幾乎沒有偏差、小族群偏差變大。
+    # Right side: case numbers. Expected and actual side by side show that large populations barely deviate and small ones deviate more.
     y = 0.97
     side.text(0, y, "讀圖", fontsize=16, weight="bold", va="top")
     y -= 0.08
@@ -276,13 +292,14 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
 
 
 # 將相圖儲存為 300 dpi PNG 與 SVG，然後關閉圖形。
+# Save the phase plot as 300 dpi PNG and SVG, then close it.
 def save_phase_figure(fig, destination, name):
     for extension in ("png", "svg"):
         fig.savefig(destination / f"{name}.{extension}", dpi=300, facecolor="white")
     plt.close(fig)
 
 
-# ---------------------------------------------------------------- 理論 vs 經驗相場 --
+# ---------------------------------------------------------------- 理論 vs 經驗相場 / Theory vs empirical phase fields --
 THEORY, TRACE = "#2a78d6", "#C3CCD2"
 RHO_TICKS = (0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999, 0.99999, 0.999999)
 TEXT = {
@@ -374,13 +391,18 @@ TEXT = {
 
 
 # 選取不大於輸入值的最大 1、2、5 乘十次方刻度，作為箭頭比例鍵。
+# Largest 1, 2 or 5 × 10^k tick not above the input, used for the arrow scale key.
 def nice(value):
-    """取 1、2、5 × 10^k 中不大於 value 的最大值，作為比例鍵。"""
+    """取 1、2、5 × 10^k 中不大於 value 的最大值，作為比例鍵。
+
+    Largest of 1, 2, 5 × 10^k not above value, used as the scale key.
+    """
     exponent = np.floor(np.log10(value))
     return max(m for m in (1, 2, 5) if m * 10**exponent <= value) * 10**exponent
 
 
 # 將預設抗藥比例轉為 logit 刻度位置及百分比標籤。
+# Logit tick positions and percentage labels for the preset resistant fractions.
 def rho_ticks(lang):
     positions = [np.log10(p / (1 - p)) for p in RHO_TICKS]
     labels = [
@@ -391,8 +413,12 @@ def rho_ticks(lang):
 
 
 # 依同一治療狀態的理論及經驗位移，計算共用箭頭倍率與比例鍵。
+# Shared arrow scale and key from the theory and empirical steps of one therapy state.
 def column_scale(fields, therapy, x_edges, y_edges):
-    """同一治療狀態的理論與經驗共用比例：95 百分位箭頭 ≈ 0.9 格；長度仍與位移成正比。"""
+    """同一治療狀態的理論與經驗共用比例：95 百分位箭頭 ≈ 0.9 格；長度仍與位移成正比。
+
+    Theory and empirical share a scale per therapy state: the 95th-percentile arrow ≈ 0.9 cell; length stays proportional to the step.
+    """
     span = np.array([x_edges[-1] - x_edges[0], y_edges[-1] - y_edges[0]])
     cell = np.hypot(*(span / [len(x_edges) - 1, len(y_edges) - 1] / span))
     lengths = [
@@ -404,9 +430,11 @@ def column_scale(fields, therapy, x_edges, y_edges):
 
 
 # 繪製指定相座標下未治療及治療中的理論與經驗向量場四面板比較圖。
+# Four-panel comparison of theory and empirical vector fields, untreated and on therapy, in the chosen coordinates.
 def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
     t = TEXT[lang]
     # 只畫理論（期望一步）向量場；灰線為實際試驗軌跡。
+    # Draw only the theory (expected one-step) vector field; grey lines are actual trial paths.
     fig, axes = plt.subplots(1, 2, figsize=(16.8, 7.8), sharex=True, sharey=True)
     fig.subplots_adjust(left=0.1, right=0.97, bottom=0.12, top=0.78, wspace=0.07)
     fig.text(0.05, 0.965, t["title"][pair], fontsize=24, weight="bold", va="top")
@@ -480,6 +508,7 @@ def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
                 ax.set_ylabel(t["y"], fontsize=13)
             ax.set_xlabel(t["x"][pair], fontsize=13)
         # 箭頭比例鍵：x、y 各一支，取接近該欄位移 95 百分位的整齊數值；長度與資料位移成正比。
+        # Arrow scale keys: one for x and one for y, a round value near the 95th percentile of the steps; length stays proportional to the data.
         chosen = [f for f in fields if f["therapy"] == therapy]
         ax = axes[c]
         span_x, span_y = x_edges[-1] - x_edges[0], y_edges[-1] - y_edges[0]

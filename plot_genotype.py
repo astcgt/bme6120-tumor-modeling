@@ -3,6 +3,12 @@
 Muller 圖以「基因型巢狀」排列：子基因型畫在已呈現的最大子集基因型內。
 同一基因型可能來自不同祖先，因此這不是重建的親緣樹。
 巢狀版面與頻率由 analysis.py 計算；這裡只負責畫圖。
+
+Genotype-evolution figures: Muller plot (top-k actual genotypes) and per-gene mutation-frequency trajectories.
+
+The Muller plot is nested by genotype: a child genotype is drawn inside the largest shown subset genotype.
+The same genotype can arise from different ancestors, so this is not a reconstructed phylogeny.
+The nested layout and frequencies come from analysis.py; this file only draws.
 """
 
 from __future__ import annotations
@@ -24,22 +30,26 @@ from plot_style import GRAY, INK
 from simulation import suppressor_alleles
 
 # 依功能分色系（CIELAB 色相角，感知均勻）：只有 oncogene 為暖色系、只有 TSG 為綠色系、
+# Colour families by function (CIELAB hue angle, perceptually uniform): oncogene only = warm, TSG only = green,
 # 兩者皆有為紫色系、沒有功能突變為灰。同一色系內，色相依帶哪幾個基因小幅偏移、
+# both = purple, no functional mutation = grey. Within a family the hue shifts slightly by gene,
 # passenger 再微調，突變越多越深：所以突變組成越相近顏色越接近。抗藥不影響顏色，只加斜線。
+# passengers nudge it further, and more mutations means darker: similar compositions get similar colours. Resistance does not change colour, only adds hatching.
 WT_LIGHTNESS = 84
-DARKEN_PER_HIT = 9  # 每個功能突變降低的明度（passenger 與單一 TSG 等位基因按權重）
+DARKEN_PER_HIT = 9  # 每個功能突變降低的明度（passenger 與單一 TSG 等位基因按權重） / lightness lost per functional mutation (passengers and single TSG alleles weighted)
 PASSENGER_WEIGHT = 0.35
 FAMILY_HUE = {"onc": 45, "tsg": 150, "both": 320, "neutral": 250}
 FAMILY_CHROMA = {"onc": 52, "tsg": 44, "both": 40, "neutral": 4}
-ONCOGENE_SHIFTS = (-24, 0, 24)  # ONC1 珊瑚紅、ONC2 橘、ONC3 琥珀
-TSG_SHIFTS = (-18, 18)  # TSG1 綠、TSG2 青綠
-BOTH_SHIFT_SCALE = 0.6  # 紫色系內，oncogene 與 TSG 的偏移各取一部分
-SINGLE_ALLELE_CHROMA = 0.6  # 只有單一 TSG 等位基因突變：彩度較低（淡綠）
+ONCOGENE_SHIFTS = (-24, 0, 24)  # ONC1 珊瑚紅、ONC2 橘、ONC3 琥珀 / ONC1 coral, ONC2 orange, ONC3 amber
+TSG_SHIFTS = (-18, 18)  # TSG1 綠、TSG2 青綠 / TSG1 green, TSG2 teal
+BOTH_SHIFT_SCALE = 0.6  # 紫色系內，oncogene 與 TSG 的偏移各取一部分 / within the purple family, take part of both the oncogene and TSG shifts
+SINGLE_ALLELE_CHROMA = 0.6  # 只有單一 TSG 等位基因突變：彩度較低（淡綠） / only one TSG allele mutated: lower chroma (pale green)
 PASSENGER_HUE_STEP = 5
-PASSENGER_TINT = 6  # 灰色系中每個 passenger 加的彩度，讓不同 passenger 仍略有色差
-GOLDEN_ANGLE = 137.5  # passenger 依基因編號以黃金角分散方向，彼此不重疊
+PASSENGER_TINT = 6  # 灰色系中每個 passenger 加的彩度，讓不同 passenger 仍略有色差 / chroma added per passenger in the grey family, so passengers still differ slightly
+GOLDEN_ANGLE = 137.5  # passenger 依基因編號以黃金角分散方向，彼此不重疊 / passengers spread by gene number at the golden angle so they do not overlap
 STRIPES = "///"
 # CIE XYZ（D65）→ 線性 sRGB 的標準矩陣。
+# Standard CIE XYZ (D65) → linear sRGB matrix.
 XYZ_TO_LINEAR_RGB = np.array(
     [
         [3.2406, -1.5372, -0.4986],
@@ -161,13 +171,18 @@ TEXT = {
 
 
 # 將 D65 CIELAB 轉成 sRGB，必要時降低彩度以落入可顯示色域。
+# Convert D65 CIELAB to sRGB, lowering chroma when needed to stay in gamut.
 def lab_to_rgb(lightness, a, b):
-    """CIELAB（D65）→ sRGB，不在色域內就保持色相、逐步降低彩度。"""
+    """CIELAB（D65）→ sRGB，不在色域內就保持色相、逐步降低彩度。
+
+    CIELAB (D65) → sRGB; out of gamut, keep the hue and lower chroma step by step.
+    """
     for scale in np.linspace(1, 0, 21):
         fy = (lightness + 16) / 116
         fx, fz = fy + a * scale / 500, fy - b * scale / 200
 
         # 反轉 CIELAB 的分段轉換，取得相對 XYZ 分量。
+        # Invert the piecewise CIELAB transform to get relative XYZ components.
         def inverse(f):
             return f**3 if f**3 > 0.008856 else (f - 16 / 116) / 7.787
 
@@ -183,8 +198,12 @@ def lab_to_rgb(lightness, a, b):
 
 
 # 依 oncogene 與 TSG 組合選色系，再依基因及突變數調整色相與明暗。
+# Choose the colour family from the oncogene/TSG combination, then adjust hue and lightness by gene and mutation count.
 def genotype_color(genotype, config):
-    """色系由 oncogene／TSG 決定；色系內依基因小幅偏移色相，突變越多越暗。抗藥位元不計入。"""
+    """色系由 oncogene／TSG 決定；色系內依基因小幅偏移色相，突變越多越暗。抗藥位元不計入。
+
+    Family set by oncogene/TSG; hue shifts slightly by gene within the family, and more mutations make it darker. The resistance bit is ignored.
+    """
     onc = [
         ONCOGENE_SHIFTS[i]
         for i, gene in enumerate(config.driver_genes)
@@ -196,7 +215,7 @@ def genotype_color(genotype, config):
         if alleles:
             tsg.append(TSG_SHIFTS[i])
             tsg_weight = max(tsg_weight, alleles / 2)
-            hits += alleles / 2  # 每個等位基因算半個突變
+            hits += alleles / 2  # 每個等位基因算半個突變 / each allele counts as half a mutation
     functional = set(config.driver_genes + config.suppressor_genes)
     passengers = [
         gene
@@ -220,6 +239,7 @@ def genotype_color(genotype, config):
         chroma *= SINGLE_ALLELE_CHROMA
     if family == "neutral" and passengers:
         # 灰色系：passenger 給一點淡色調，方向依基因編號。
+        # Grey family: passengers get a faint tint whose direction depends on the gene number.
         hue = np.degrees(
             np.arctan2(
                 sum(np.sin(np.radians(g * GOLDEN_ANGLE)) for g in passengers),
@@ -233,28 +253,37 @@ def genotype_color(genotype, config):
 
 
 # 依底色亮度選擇白色或深色斜線，維持抗藥標記的對比。
+# Choose white or dark hatching from the band's lightness to keep the resistance mark visible.
 def stripe_color(color):
-    """深色帶用白色斜線、淺色帶用深色斜線，在任何底色上都看得見。"""
+    """深色帶用白色斜線、淺色帶用深色斜線，在任何底色上都看得見。
+
+    White hatching on dark bands, dark hatching on light bands, visible on any background.
+    """
     r, g, b = color[:3]
     luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return (1, 1, 1, 0.7) if luminance < 0.45 else (0.1, 0.13, 0.17, 0.32)
 
 
 # 建立具有指定底色、斜線與標籤的圖例色塊。
+# Legend patch with a given fill, hatching and label.
 def swatch(color, stripes, label):
     color = to_rgb(color)
     return Patch(
         facecolor=color,
         edgecolor=stripe_color(color) if stripes else color,
         hatch=stripes,
-        linewidth=0,  # 只留斜線，不畫外框
+        linewidth=0,  # 只留斜線，不畫外框 / hatching only, no outline
         label=label,
     )
 
 
 # 建立功能基因色系、passenger 與抗藥斜線的圖例項目。
+# Legend entries for the functional colour families, passengers and resistance hatching.
 def color_key(config, t):
-    """三個色系的代表：各單一基因、單一 TSG 等位基因、oncogene+TSG、passenger、抗藥。"""
+    """三個色系的代表：各單一基因、單一 TSG 等位基因、oncogene+TSG、passenger、抗藥。
+
+    Representatives of the three families: each single gene, a single TSG allele, oncogene+TSG, passenger, resistance.
+    """
     onc = [(1 << gene, f"ONC{i + 1}") for i, gene in enumerate(config.driver_genes)]
     tsg = [
         (
@@ -285,17 +314,19 @@ def color_key(config, t):
 
 
 # 檢查基因型是否含有設定的抗藥突變位元。
+# Whether a genotype carries the configured resistance bit.
 def resistant(genotype, config):
     return bool(genotype & (1 << config.resistance_gene))
 
 
 # 在指定座標軸繪製巢狀基因型比例色帶、抗藥斜線與可選標籤。
+# Draw nested genotype-fraction bands on an axis, with resistance hatching and optional labels.
 def draw_muller(ax, result, config, label=True, k=TOP_K):
     shown, parent, children, own = muller_layout(result, k)
     bands = muller_bands(shown, children, own)
     colors = {g: genotype_color(g, config) for g in shown}
     t = np.arange(len(own[0]))
-    for g in shown:  # 深度優先：父帶先畫，子帶疊在上面
+    for g in shown:  # 深度優先：父帶先畫，子帶疊在上面 / depth-first: parent bands first, children drawn on top
         low, high = bands[g]
         ax.fill_between(t, low, high, color=colors[g], linewidth=0.4, edgecolor="white")
         if resistant(g, config):
@@ -339,6 +370,7 @@ def draw_muller(ax, result, config, label=True, k=TOP_K):
 
 
 # 在座標軸標示治療啟動的垂直線，並依選項加入文字標籤。
+# Vertical line at therapy start on an axis, with an optional text label.
 def event_lines(ax, event, t, labels=True):
     for key, name, style in (("therapy_generation", "therapy", "--"),):
         g = event[key]
@@ -356,6 +388,7 @@ def event_lines(ax, event, t, labels=True):
 
 
 # 選取代表試驗並繪製含基因型比例、負荷、事件與色系圖例的 Muller 圖。
+# Pick the representative trial and draw the Muller plot with genotype fractions, burden, events and colour legend.
 def plot_muller(config, results, events, lang):
     t = TEXT[lang]
     rep = choose_exemplar({e["replicate"]: e for e in events})
@@ -389,6 +422,7 @@ def plot_muller(config, results, events, lang):
     muller.set_xlabel(t["gen"], fontsize=12)
     muller.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
     # 主圖：依巢狀（深度優先）逐一列出 Top-k 基因型，縮排表示層級；抗藥者加斜線。
+    # Main panel: list the top-k genotypes in nested (depth-first) order, indented by level; resistant ones hatched.
     handles = [
         swatch(
             colors[g],
@@ -424,6 +458,7 @@ def plot_muller(config, results, events, lang):
     )
     fig.add_artist(first)
     # 小分圖：最早與最晚復發，加上復發時間的 4 個分位數代表。
+    # Small panels: earliest and latest relapse plus 4 quantile representatives of relapse time.
     relapsing = sorted(
         (
             e
@@ -454,8 +489,12 @@ def plot_muller(config, results, events, lang):
 
 
 # 繪製以治療起點對齊的各基因突變頻率中位數與第 10 至 90 百分位帶。
+# Per-gene median mutation frequency with the 10–90th percentile band, aligned at therapy start.
 def plot_gene_frequencies(rel, data, config, n_trials: int, lang: str):
-    """每個基因的突變細胞比例：中位數與 10–90 百分位帶，以治療開始對齊。"""
+    """每個基因的突變細胞比例：中位數與 10–90 百分位帶，以治療開始對齊。
+
+    Fraction of mutated cells per gene: median and 10–90th percentile band, aligned at therapy start.
+    """
     t = TEXT[lang]
     fig, axes = plt.subplots(2, 2, figsize=(16.8, 11), sharex=True, sharey=True)
     fig.subplots_adjust(

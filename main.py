@@ -13,6 +13,22 @@
 
 檔案分工：simulation.py 模型本身；experiments.py 重複試驗與資料讀寫；
 analysis.py 理論公式；plot_*.py 畫圖。
+
+Entry point: run the simulations, save the data and draw the figures, in order.
+
+    .venv/bin/python main.py                          # all steps
+    .venv/bin/python main.py --only results           # main and control experiments only
+    .venv/bin/python main.py --only therapy --analyses goldie_coldman relapse_prediction
+
+Steps (later steps read the CSVs written by results, so run results first):
+    results   main experiment (therapy and relapse) and controls: tumor dashboard, death rate and heterogeneity, one-hit vs two-hit
+    model     math figures: single-cell rules, matrices and flow, appendix (transition kernel and program flow)
+    phase     phase plots: actual trajectories, burden × resistant fraction, fitness × resistant fraction
+    genotype  Muller plot and gene frequencies
+    therapy   therapy follow-ups: Goldie–Coldman, relapse prediction, parameter sensitivity, adaptive therapy
+
+Files: simulation.py the model itself; experiments.py repeated trials and data I/O;
+analysis.py theory formulas; plot_*.py figures.
 """
 
 from __future__ import annotations
@@ -23,7 +39,7 @@ import os
 from dataclasses import asdict
 from functools import lru_cache
 
-import plot_style  # 先設定 matplotlib 後端與快取位置
+import plot_style  # 先設定 matplotlib 後端與快取位置 / set the matplotlib backend and cache location first
 import analysis
 import experiments as exp
 import plot_genotype
@@ -38,6 +54,7 @@ ANALYSES = ("goldie_coldman", "relapse_prediction", "sensitivity", "adaptive")
 
 
 # 解析命令列參數，依指定步驟執行實驗、數學圖、相圖、基因型圖與治療分析。
+# Parse command-line arguments and run the chosen steps: experiments, math figures, phase plots, genotype plots and therapy analyses.
 def main():
     args = parse_args()
     steps = args.only or STEPS
@@ -54,6 +71,7 @@ def main():
 
 
 # 解析執行步驟、種子、試驗數與分析選項，並檢查主實驗重複次數。
+# Parse steps, seed, trial counts and analysis options; check the number of main-experiment replicates.
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -92,20 +110,29 @@ def parse_args():
 
 
 # 依輸出紀錄重現完整治療試驗並快取，供相圖、基因型與復發分析共用。
+# Reproduce the full therapy trials from the output record and cache them for the phase, genotype and relapse analyses.
 @lru_cache(maxsize=1)
 def reproduced_trials():
-    """相圖、基因型與復發分析共用：依記錄的 seed 重跑治療試驗，取得完整基因型快照。"""
+    """相圖、基因型與復發分析共用：依記錄的 seed 重跑治療試驗，取得完整基因型快照。
+
+    Shared by the phase, genotype and relapse analyses: rerun the therapy trials from recorded seeds to get full genotype snapshots.
+    """
     return exp.reproduce_trials(exp.OUTPUTS)
 
 
 # 執行治療、TSG 與死亡率實驗，輸出比較圖、CSV 及可重現的執行紀錄。
+# Run the therapy, TSG and death-rate experiments; write comparison figures, CSVs and a reproducible run record.
 def run_results(args):
-    """主實驗與兩組對照實驗：腫瘤總覽、死亡率與異質性、one-hit vs two-hit 三張圖與對應的 CSV。"""
+    """主實驗與兩組對照實驗：腫瘤總覽、死亡率與異質性、one-hit vs two-hit 三張圖與對應的 CSV。
+
+    Main experiment and two controls: tumor dashboard, death rate and heterogeneity, one-hit vs two-hit figures with their CSVs.
+    """
     out = exp.OUTPUTS
     out.mkdir(parents=True, exist_ok=True)
     config = Config(suppressor_hits=args.suppressor_hits)
 
     # 主實驗：30 次治療試驗。
+    # Main experiment: 30 therapy trials.
     trials = exp.run_therapy_trials(config, args.replicates, args.seed)
     summary, raw = exp.therapy_ensemble(trials)
     plot_results.plot_therapy_ensemble(trials, summary, out)
@@ -113,6 +140,7 @@ def run_results(args):
     exp.write_csv(out / "therapy_trajectories.csv", raw)
 
     # 對照實驗：死亡率與異質性、TSG one-hit vs two-hit。
+    # Controls: death rate and heterogeneity, TSG one-hit vs two-hit.
     tsg_rows, growth_rows = exp.run_tsg_comparison(config, args.replicates, args.seed)
     death = exp.run_death_rate_comparison(config, args.replicates, args.seed)
     plot_results.plot_death_rate(
@@ -131,6 +159,7 @@ def run_results(args):
     exp.write_csv(out / "one_hit_vs_two_hit_summary.csv", hits["summaries"])
 
     # 每次試驗的結果與本次執行的完整設定。
+    # Per-trial results and the full settings of this run.
     outcomes = exp.therapy_events(trials)
     exp.write_csv(out / "therapy_replicates.csv", outcomes)
     metadata = exp.run_metadata(config, args.seed, args.replicates, trials, outcomes)
@@ -142,8 +171,12 @@ def run_results(args):
 
 
 # 計算模型矩陣與線性向量場，輸出數學圖、流程附錄及矩陣資料。
+# Compute the model matrices and linear vector fields; write the math figures, the flow appendix and the matrix data.
 def run_model():
-    """數學圖：矩陣與向量場由 analysis.py 計算，實際路徑讀取主實驗的 CSV。"""
+    """數學圖：矩陣與向量場由 analysis.py 計算，實際路徑讀取主實驗的 CSV。
+
+    Math figures: matrices and vector fields come from analysis.py; actual paths are read from the main-experiment CSV.
+    """
     out = plot_model.OUT
     out.mkdir(parents=True, exist_ok=True)
     config = Config()
@@ -168,13 +201,18 @@ def run_model():
 
 
 # 重現代表軌跡並建立相圖、向量場及雙語理論與經驗比較圖，輸出相關資料。
+# Reproduce the representative trajectory; build phase plots, vector fields and the bilingual theory vs empirical figures, and write the data.
 def run_phase(args):
-    """實際軌跡相圖（與期望下一步）、向量場資料、兩張理論 vs 經驗相場圖。"""
+    """實際軌跡相圖（與期望下一步）、向量場資料、兩張理論 vs 經驗相場圖。
+
+    Actual-trajectory phase plot (with expected next step), vector-field data and two theory vs empirical phase-field figures.
+    """
     out = exp.OUTPUTS / "phase_plots"
     out.mkdir(parents=True, exist_ok=True)
     config, trials, events = exp.load_trials(exp.OUTPUTS)
 
     # 實際軌跡相圖：重跑代表試驗，計算每一代的期望下一步。
+    # Actual-trajectory phase plot: rerun the representative trial and compute each generation's expected next step.
     rep = analysis.choose_exemplar(events) if args.replicate is None else args.replicate
     result, steps, summary = exp.phase_portrait_data(config, trials, events, rep)
     exp.write_csv(out / "conditional_phase_steps.csv", steps)
@@ -184,12 +222,14 @@ def run_phase(args):
     plot_phase.save_phase_figure(figure, out, "phase_portrait")
 
     # 向量場資料（矩陣與流向圖使用同一組公式）。
+    # Vector-field data (the matrix and flow figure uses the same formulas).
     grids, fields = analysis.vector_field_grids(config)
     rows = exp.write_grid_csv(fields, out / "phase_vector_grid.csv")
     record = exp.vector_field_record(config, grids, fields, rows)
     exp.write_json(out / "phase_vector_assumptions.json", record)
 
     # 理論 vs 經驗相場：兩組座標的理論箭頭與經驗平均箭頭。
+    # Theory vs empirical phase fields: theory arrows and empirical mean arrows for both coordinate pairs.
     base_config, results, _ = reproduced_trials()
     analysis.check_expectation(base_config)
     comparison = exp.phase_comparison_data(base_config, results)
@@ -217,8 +257,12 @@ def run_phase(args):
 
 
 # 重現治療試驗，輸出雙語 Muller 圖、基因頻率圖及對應資料。
+# Reproduce the therapy trials; write the bilingual Muller plot, the gene-frequency plot and their data.
 def run_genotype():
-    """Muller 圖與每基因突變頻率（雙語），以及繪圖數值的 CSV。"""
+    """Muller 圖與每基因突變頻率（雙語），以及繪圖數值的 CSV。
+
+    Muller plot and per-gene mutation frequencies (bilingual), plus CSVs of the plotted values.
+    """
     out = exp.OUTPUTS / "genotype_evolution"
     out.mkdir(parents=True, exist_ok=True)
     config, results, events = reproduced_trials()
@@ -239,8 +283,12 @@ def run_genotype():
 
 
 # 執行選定的治療延伸分析，輸出圖表與 CSV 並更新共用摘要。
+# Run the chosen therapy follow-ups, write figures and CSVs, and update the shared summary.
 def run_therapy(args):
-    """治療延伸分析（ANALYSES）；摘要依分析名稱累積寫入 therapy_analysis_summary.json。"""
+    """治療延伸分析（ANALYSES）；摘要依分析名稱累積寫入 therapy_analysis_summary.json。
+
+    Therapy follow-ups (ANALYSES); summaries accumulate by analysis name in therapy_analysis_summary.json.
+    """
     out = exp.OUTPUTS / "therapy_analysis"
     out.mkdir(parents=True, exist_ok=True)
     config = Config()

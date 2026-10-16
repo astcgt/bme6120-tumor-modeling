@@ -99,6 +99,7 @@ function side(s,stat,body){text(s,stat,970,235,240,150,38,BLUE,true);text(s,body
 
 const formulaAssets=[];
 // 程式節錄：預設取自 simulation.py；範圍第三項可指定其他檔案（例如 experiments.py）。
+// Code excerpts: taken from simulation.py by default; a third range item can name another file (e.g. experiments.py).
 const sources={};
 for(const file of ['simulation.py','experiments.py'])sources[file]=(await fs.readFile(path.join(workspace,file),'utf8')).split('\n');
 function snip(ranges){

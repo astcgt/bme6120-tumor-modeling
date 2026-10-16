@@ -6,6 +6,15 @@
 
 執行：.venv/bin/python presentations/build_discussion_guide.py
 輸出：outputs/discussion_guide/
+
+Cue cards for a 20-minute discussion with the instructor: the same content as a web page (HTML) and Word.
+
+The content is cues, not a script: each section gives the time, the figure to open, the code lines to point at,
+English key sentences to say (with the Chinese meaning), concept anchors, numbers to cite and transitions.
+Code excerpts are read from the source by line number; recheck the line numbers in SEGMENTS after changing the source.
+
+Run: .venv/bin/python presentations/build_discussion_guide.py
+Output: outputs/discussion_guide/
 """
 
 from __future__ import annotations
@@ -25,7 +34,7 @@ from docx.shared import Cm, Pt, RGBColor
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "outputs" / "discussion_guide"
 FIG_DIR = OUT / "figs"
-WEB_WIDTH = 1800  # 網頁與 Word 共用的縮圖寬度（px）
+WEB_WIDTH = 1800  # 網頁與 Word 共用的縮圖寬度（px） / thumbnail width shared by the web page and Word (px)
 
 FIGURES = {
     "single_cell_rules": (
@@ -81,7 +90,9 @@ THESIS = (
 )
 
 # 每段：時間、標題、目標，以及數個「節拍」（beat）。每個 beat 對應一張圖或一段程式。
+# Each section: time, title, goal and several beats. Each beat matches one figure or one code excerpt.
 # says = (可直接說的英文句, 中文意思)；point = 指圖的順序；code = (檔案, 起, 迄, 強調行)。
+# says = (English sentence to say, Chinese meaning); point = pointing order; code = (file, start, end, highlighted lines).
 SEGMENTS = [
     dict(
         id="open",
@@ -1023,7 +1034,9 @@ CHEAT = [
 ]
 
 # 程式導覽：以類別卡（UML 風格）介紹架構。Config／Result 是真正的類別（dataclass）；
+# Code tour: introduce the architecture with UML-style class cards. Config / Result are real classes (dataclasses);
 # 其他檔案是無狀態的模組，這裡把「一個模組」畫成「一張類別卡」：職責 + 對外方法。
+# the other files are stateless modules, drawn here as one class card per module: responsibility + public methods.
 ARCH_INTRO = (
     "Config 與 Result 是真正的類別（dataclass），代表「參數」與「一次試驗的結果」兩個物件；"
     "其他檔案是無狀態的模組，這裡把每個模組畫成一張類別卡：上半是它保存的資料（屬性），"
@@ -1031,6 +1044,7 @@ ARCH_INTRO = (
 )
 
 # 分層：(層名, 模組, 一句話職責)；網頁畫成由左到右的流程帶。
+# Layers: (layer name, modules, one-line responsibility); drawn on the page as a left-to-right band.
 ARCH_LAYERS = [
     ("入口", "main.py", "讀命令列參數，依序呼叫 5 個步驟"),
     ("實驗", "experiments.py", "用不同設定重複跑模型、彙整、讀寫 CSV"),
@@ -1040,7 +1054,9 @@ ARCH_LAYERS = [
 ]
 
 # 每張類別卡：kind（UML 刻板印象）、name、file、role、attrs [(名稱: 型別, 說明)]、
+# Each class card: kind (UML stereotype), name, file, role, attrs [(name: type, description)],
 # methods [(簽名 → 回傳, 說明)]。只列對外會用到的方法，內部小工具省略。
+# methods [(signature → return, description)]. Only public methods; small internal helpers are omitted.
 ARCH_CLASSES = [
     dict(
         kind="«module» 入口",
@@ -1243,6 +1259,7 @@ ARCH_CLASSES = [
 ]
 
 # 執行流程：(呼叫, 說明)。第 4 步展開 simulate() 內一代發生的事。
+# Execution flow: (call, description). Step 4 expands what happens in one generation inside simulate().
 ARCH_FLOW = [
     ("$ .venv/bin/python main.py", "main() → parse_args() 決定要跑的步驟"),
     ("run_results(args)", "建立參數物件 config = Config(suppressor_hits=2)"),
@@ -1282,11 +1299,13 @@ ARCH_SAYS = [
 
 
 # 將分鐘數格式化為分與秒的時間字串。
+# Format minutes as a minutes:seconds string.
 def fmt_time(minutes: float) -> str:
     return f"{int(minutes)}:{int(round((minutes % 1) * 60)):02d}"
 
 
 # 擷取指定範圍的原始碼，移除共同縮排並保留原始行號。
+# Extract a range of source lines, removing the common indentation and keeping the original line numbers.
 def code_lines(file: str, start: int, end: int) -> list[tuple[int, str]]:
     lines = (ROOT / file).read_text(encoding="utf-8").splitlines()
     chunk = lines[start - 1 : end]
@@ -1295,12 +1314,14 @@ def code_lines(file: str, start: int, end: int) -> list[tuple[int, str]]:
 
 
 # 複製討論提示卡所需圖片，並以 macOS sips 等比例縮至網頁使用寬度。
+# Copy the figures needed for the cue cards and shrink them proportionally to page width with macOS sips.
 def prepare_figures():
     FIG_DIR.mkdir(parents=True, exist_ok=True)
     for key, (source, _) in FIGURES.items():
         target = FIG_DIR / f"{key}.png"
         shutil.copyfile(ROOT / source, target)
         # sips 為 macOS 內建；只縮小寬度，保持比例。
+        # sips is built into macOS; only shrink the width, keeping the aspect ratio.
         subprocess.run(
             ["sips", "--resampleWidth", str(WEB_WIDTH), str(target)],
             check=True,
@@ -1308,7 +1329,7 @@ def prepare_figures():
         )
 
 
-# ---------------------------------------------------------------- 網頁 --------------
+# ---------------------------------------------------------------- 網頁 / Web page --------------
 CSS = """
 :root{
   /* Layout: sticky talk clock + time ribbon on top; each segment = figure column + cue column, code underneath. */
@@ -1439,11 +1460,13 @@ el('reset').addEventListener('click', () => {
 
 
 # 跳脫文字中的 HTML 特殊字元及引號，供網頁內容安全插入。
+# Escape HTML special characters and quotes so text can be inserted into the page safely.
 def esc(text: str) -> str:
     return html.escape(text, quote=True)
 
 
 # 將指定原始碼片段轉為含行號與重點標記的 HTML 區塊。
+# Turn a source excerpt into an HTML block with line numbers and highlighted lines.
 def html_code(code, title) -> str:
     file, start, end, hl = code
     rows = "".join(
@@ -1458,6 +1481,7 @@ def html_code(code, title) -> str:
 
 
 # 將指圖順序、關鍵句與補充提示轉為 HTML 提示區塊。
+# Turn the pointing order, key sentences and extra cues into an HTML cue block.
 def html_cues(beat) -> str:
     parts = []
     if beat.get("point"):
@@ -1484,6 +1508,7 @@ def html_cues(beat) -> str:
 
 
 # 將單一討論節拍的圖片、提示與程式碼組成 HTML 內容。
+# Combine one beat's figure, cues and code into HTML.
 def html_beat(beat) -> str:
     cues = html_cues(beat)
     if beat.get("fig"):
@@ -1503,6 +1528,7 @@ def html_beat(beat) -> str:
 
 
 # 建立包含分層架構、模組職責與函式索引的 HTML 程式導覽。
+# HTML code tour with the layered architecture, module responsibilities and function index.
 def html_arch() -> str:
     layers = '<span class="layer-arrow">→</span>'.join(
         f'<div class="layer"><div class="ln">{esc(n)}</div><div'
@@ -1511,6 +1537,7 @@ def html_arch() -> str:
     )
 
     # 將名稱與說明配對轉為帶標題的 HTML 清單，空清單則回傳空字串。
+    # Turn (name, description) pairs into a titled HTML list; empty input returns an empty string.
     def members(label, rows):
         if not rows:
             return ""
@@ -1546,6 +1573,7 @@ def html_arch() -> str:
 
 
 # 組合時間軸、程式導覽、討論段落、問答與計時功能，回傳完整提示卡 HTML。
+# Assemble the timeline, code tour, sections, Q&A and timer into the complete cue-card HTML.
 def build_html() -> str:
     ribbon = "".join(
         f'<a href="#{s["id"]}" data-id="{s["id"]}" style="flex:{s["end"] - s["start"]}"'
@@ -1613,6 +1641,7 @@ TEAL = RGBColor(0x13, 0x74, 0x8A)
 
 
 # 設定 Word 文字片段的西文與中文字型、字級、顏色及粗體。
+# Set the Latin and East Asian fonts, size, colour and bold of a Word text run.
 def set_fonts(
     run,
     latin="Arial",
@@ -1643,6 +1672,7 @@ def set_fonts(
 
 
 # 在 Word 段落屬性中加入指定底色。
+# Add a shading colour to a Word paragraph's properties.
 def shade(paragraph, fill):
     ppr = paragraph._p.get_or_add_pPr()
     shd = OxmlElement("w:shd")
@@ -1653,6 +1683,7 @@ def shade(paragraph, fill):
 
 
 # 為 Word 段落加入指定顏色的左側框線。
+# Add a coloured left border to a Word paragraph.
 def left_border(paragraph, color="E4683F"):
     ppr = paragraph._p.get_or_add_pPr()
     borders = OxmlElement("w:pBdr")
@@ -1669,6 +1700,7 @@ def left_border(paragraph, color="E4683F"):
 
 
 # 建立 Word 段落，設定段後距離並依選項加入格式化文字。
+# Create a Word paragraph with spacing after and optional formatted text.
 def para(doc, text="", size=10.5, color=INK, bold=False, space_after=4, style=None):
     p = doc.add_paragraph(style=style)
     p.paragraph_format.space_after = Pt(space_after)
@@ -1678,6 +1710,7 @@ def para(doc, text="", size=10.5, color=INK, bold=False, space_after=4, style=No
 
 
 # 建立帶統一間距與字型的 Word 小標題段落。
+# Create a Word subheading paragraph with the shared spacing and font.
 def label(doc, text):
     p = para(doc, space_after=2)
     p.paragraph_format.space_before = Pt(6)
@@ -1686,6 +1719,7 @@ def label(doc, text):
 
 
 # 將討論節拍的指圖順序、關鍵句與補充提示寫入 Word 文件。
+# Write a beat's pointing order, key sentences and extra cues into the Word document.
 def word_cues(doc, beat):
     if beat.get("point"):
         label(doc, "指圖順序")
@@ -1715,6 +1749,7 @@ def word_cues(doc, beat):
 
 
 # 將帶標題、原始行號與重點標記的程式碼片段寫入 Word 文件。
+# Write a titled code excerpt with original line numbers and highlighted lines into the Word document.
 def word_code(doc, code, title):
     file, start, end, hl = code
     p = para(doc, space_after=0)
@@ -1737,6 +1772,7 @@ def word_code(doc, code, title):
 
 
 # 將名稱與說明配對寫成 Word 表格，空清單則略過。
+# Write (name, description) pairs as a Word table; skip empty input.
 def word_members(doc, label_text, rows):
     if not rows:
         return
@@ -1752,6 +1788,7 @@ def word_members(doc, label_text, rows):
 
 
 # 將分層架構、模組職責與函式索引寫入 Word 程式導覽。
+# Write the layered architecture, module responsibilities and function index into the Word code tour.
 def word_arch(doc):
     h = doc.add_heading(level=1)
     set_fonts(h.add_run("講前先讀　"), size=13, color=ACCENT)
@@ -1796,6 +1833,7 @@ def word_arch(doc):
 
 
 # 建立含版面樣式、程式導覽、討論提示與備用資料的 Word 文件並儲存。
+# Build and save the Word document with page styles, code tour, cues and backup material.
 def build_docx(path: Path):
     doc = Document()
     sec = doc.sections[0]
@@ -1829,6 +1867,7 @@ def build_docx(path: Path):
     )
 
     # 時間表
+    # Timetable
     table = doc.add_table(rows=1, cols=3)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.style = "Light Grid Accent 1"
@@ -1922,6 +1961,7 @@ def build_docx(path: Path):
 
 
 # 準備圖片並輸出討論提示卡的 HTML 與 Word 檔案。
+# Prepare the figures and write the cue cards as HTML and Word.
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     prepare_figures()
