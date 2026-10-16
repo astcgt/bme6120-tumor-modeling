@@ -59,7 +59,6 @@ TEXT = {
         "gen": "世代",
         "therapy": "治療開始",
         "nadir": "谷底",
-        "relapse": "復發",
         "genotypes": "基因型（主圖，縮排 = 巢狀層級）",
         "key_title": (
             "顏色規則：oncogene 暖色、TSG 綠色、兩者紫色\n"
@@ -70,8 +69,7 @@ TEXT = {
         "key_passenger": "passenger（灰色微帶色調）",
         "key_res": "斜線：帶抗藥突變（RES）",
         "small": "其他試驗（顏色規則同主圖）",
-        "rep": "rep {r}：復發 t={g}",
-        "norelapse": "rep {r}：未復發",
+        "rep": "rep {r}",
         "foot": (
             "巢狀規則：子基因型位於「已呈現且位元為其子集的最大基因型」內（同大小時取該基因型出現時"
             "細胞較多者）；這是基因型包含關係，不是重建的細胞譜系。"
@@ -115,7 +113,6 @@ TEXT = {
         "gen": "Generation",
         "therapy": "Therapy start",
         "nadir": "Nadir",
-        "relapse": "Relapse",
         "genotypes": "Genotypes (main panel; indent = nesting)",
         "key_title": (
             "Color code: oncogene warm, TSG green, both purple\n"
@@ -126,8 +123,7 @@ TEXT = {
         "key_tsg_one": "TSG1 (one allele)",
         "key_res": "Hatched: carries resistance (RES)",
         "small": "Other trials (same color code as the main panel)",
-        "rep": "rep {r}: relapse t={g}",
-        "norelapse": "rep {r}: no relapse",
+        "rep": "rep {r}",
         "foot": (
             "Nesting: each genotype sits inside the largest shown genotype whose"
             " mutations are a subset of its own (ties: the larger one when it first"
@@ -342,12 +338,9 @@ def draw_muller(ax, result, config, label=True, k=TOP_K):
     return shown, parent, colors
 
 
-# 在座標軸標示治療啟動與復發的垂直線，並依選項加入文字標籤。
+# 在座標軸標示治療啟動的垂直線，並依選項加入文字標籤。
 def event_lines(ax, event, t, labels=True):
-    for key, name, style in (
-        ("therapy_generation", "therapy", "--"),
-        ("relapse_generation", "relapse", ":"),
-    ):
+    for key, name, style in (("therapy_generation", "therapy", "--"),):
         g = event[key]
         if g is not None:
             ax.axvline(g, color=INK, ls=style, lw=1.1)
@@ -462,14 +455,7 @@ def plot_muller(config, results, events, lang):
         ax = fig.add_axes((0.07 + i * 0.147, 0.1, 0.13, 0.19))
         draw_muller(ax, results[e["replicate"]], config, label=False)
         event_lines(ax, e, t, labels=False)
-        ax.set_title(
-            (
-                t["rep"].format(r=e["replicate"], g=e["relapse_generation"])
-                if e["relapse_generation"] is not None
-                else t["norelapse"].format(r=e["replicate"])
-            ),
-            fontsize=10.5,
-        )
+        ax.set_title(t["rep"].format(r=e["replicate"]), fontsize=10.5)
         ax.set_yticks([0, 0.5, 1], ["0%", "50%", "100%"] if i == 0 else [])
         ax.tick_params(labelsize=9.5)
     fig.text(0.07, 0.045, t["foot"], fontsize=10.5, color=GRAY)
