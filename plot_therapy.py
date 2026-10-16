@@ -114,15 +114,6 @@ def plot_goldie_coldman(data: dict, config: Config, trials: int, output: Path):
         lw=1.8,
         label="Λ = Λ_pre (born before therapy) + Λ_on (born during therapy)",
     )
-    lam.step(
-        grid,
-        [c["lambda_on"] for c in curve],
-        where="post",
-        color=COLORS[2],
-        lw=1.2,
-        ls=":",
-        label="Λ_on only",
-    )
     lam.axhline(np.log(2), color=GRAY, ls=":", lw=1)
     if half:
         lam.axvline(half, color=GRAY, ls=":", lw=1)
