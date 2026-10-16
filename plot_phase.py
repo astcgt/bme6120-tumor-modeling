@@ -6,12 +6,11 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch
 import numpy as np
 
-from analysis import MIN_TRANSITIONS, event_generations, logit_rho
+from analysis import event_generations, logit_rho
 
 INK, BLUE, ORANGE, RED, GRAY = "#173042", "#236B8E", "#BC7844", "#A74F3D", "#687783"
 
@@ -284,12 +283,12 @@ def save_phase_figure(fig, destination, name):
 
 
 # ---------------------------------------------------------------- 理論 vs 經驗相場 --
-THEORY, EMPIRICAL_CMAP, TRACE = "#2a78d6", "Oranges", "#C3CCD2"
+THEORY, TRACE = "#2a78d6", "#C3CCD2"
 RHO_TICKS = (0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 0.9999, 0.99999, 0.999999)
 TEXT = {
     "zh": {
         "title": {
-            "logN": "負荷 × 抗藥組成：理論截面與實際流向",
+            "logN": "負荷 × 抗藥組成：理論期望流向",
             "fitness": "適應度 × 抗藥組成：演化與選擇的分工",
         },
         "subtitle": (
@@ -325,7 +324,7 @@ TEXT = {
     },
     "en": {
         "title": {
-            "logN": "Burden × resistant composition: theory slice vs observed flow",
+            "logN": "Burden × resistant composition: expected flow (theory)",
             "fitness": "Fitness × resistant composition: evolution versus selection",
         },
         "subtitle": (
@@ -407,24 +406,18 @@ def column_scale(fields, therapy, x_edges, y_edges):
 # 繪製指定相座標下未治療及治療中的理論與經驗向量場四面板比較圖。
 def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
     t = TEXT[lang]
-    fig, axes = plt.subplots(2, 2, figsize=(16.8, 13.2), sharex=True, sharey=True)
-    fig.subplots_adjust(
-        left=0.1, right=0.9, bottom=0.14, top=0.84, hspace=0.13, wspace=0.07
-    )
-    fig.text(0.05, 0.975, t["title"][pair], fontsize=24, weight="bold", va="top")
-    norm = Normalize(
-        MIN_TRANSITIONS,
-        max(f["transitions"] for f in fields if f["kind"] == "empirical"),
-    )
-    cmap = plt.get_cmap(EMPIRICAL_CMAP)
+    # 只畫理論（期望一步）向量場；灰線為實際試驗軌跡。
+    fig, axes = plt.subplots(1, 2, figsize=(16.8, 7.8), sharex=True, sharey=True)
+    fig.subplots_adjust(left=0.1, right=0.97, bottom=0.12, top=0.78, wspace=0.07)
+    fig.text(0.05, 0.965, t["title"][pair], fontsize=24, weight="bold", va="top")
     positions, labels = rho_ticks(lang)
     by_trial = {}
     for s in steps:
         by_trial.setdefault((s["replicate"], s["therapy"]), []).append(s)
     for c, therapy in enumerate((False, True)):
         k = column_scale(fields, therapy, x_edges, y_edges)
-        for r, kind in enumerate(("theory", "empirical")):
-            ax = axes[r, c]
+        for kind in ("theory",):
+            ax = axes[c]
             for segment in by_trial.values():
                 if segment[0]["therapy"] == therapy:
                     xs = [s["x"] for s in segment] + [
@@ -441,11 +434,7 @@ def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
                 X, Y, U, V = (
                     np.array([f[key] for f in chosen]) for key in ("x", "y", "dx", "dy")
                 )
-                color = (
-                    THEORY
-                    if kind == "theory"
-                    else cmap(norm([f["transitions"] for f in chosen]) * 0.65 + 0.35)
-                )
+                color = THEORY
                 ax.quiver(
                     X,
                     Y,
@@ -466,7 +455,7 @@ def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
                 total = 10**grid - 1
                 ax.plot(grid, logit_rho(total, 0), color=GRAY, ls="--", lw=1)
                 ax.plot(grid, logit_rho(0, total), color=GRAY, ls=":", lw=1)
-                if r == 1 and c == 1:
+                if c == 1:
                     ax.text(
                         grid[6],
                         logit_rho(10 ** grid[6] - 1, 0) + 0.3,
@@ -486,15 +475,13 @@ def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
             ax.set_yticks(positions, labels)
             ax.grid(color="#E6EBEE", lw=0.7)
             ax.set_axisbelow(True)
-            if r == 0:
-                ax.set_title(t["cols"][c], fontsize=16, weight="bold", pad=10)
+            ax.set_title(t["cols"][c], fontsize=16, weight="bold", pad=10)
             if c == 0:
-                ax.set_ylabel(f"{t['rows'][r]}\n{t['y']}", fontsize=13)
-            if r == 1:
-                ax.set_xlabel(t["x"][pair], fontsize=13)
+                ax.set_ylabel(t["y"], fontsize=13)
+            ax.set_xlabel(t["x"][pair], fontsize=13)
         # 箭頭比例鍵：x、y 各一支，取接近該欄位移 95 百分位的整齊數值；長度與資料位移成正比。
         chosen = [f for f in fields if f["therapy"] == therapy]
-        ax = axes[0, c]
+        ax = axes[c]
         span_x, span_y = x_edges[-1] - x_edges[0], y_edges[-1] - y_edges[0]
         x0, y0 = x_edges[0] + 0.05 * span_x, y_edges[-1] - 0.08 * span_y
         for axis, values in (
@@ -534,21 +521,12 @@ def plot_pair(pair, rows, fields, steps, x_edges, y_edges, config, lang):
     fig.legend(
         handles=[
             Line2D([], [], color=THEORY, lw=3, label=t["legend"][0]),
-            Line2D([], [], color=cmap(0.8), lw=3, label=t["legend"][1]),
             Line2D([], [], color=TRACE, lw=2, label=t["legend"][2]),
         ],
         loc="upper left",
-        bbox_to_anchor=(0.05, 0.905),
-        ncol=3,
+        bbox_to_anchor=(0.05, 0.9),
+        ncol=2,
         frameon=False,
         fontsize=12,
     )
-    bar = fig.colorbar(
-        plt.cm.ScalarMappable(norm, cmap),
-        ax=axes[1, :].tolist(),
-        fraction=0.02,
-        pad=0.015,
-    )
-    bar.set_label(t["count"])
-    bar.outline.set_visible(False)
     return fig
