@@ -77,7 +77,20 @@ def arrow(ax, a, b, text=None, at=None, rad=0, color=GRAY):
 
 
 # 以列至欄的慣例繪製數值矩陣，並依選項顯示列欄標籤。
-def matrix_display(ax, values, x, y, width, height, rows=None, cols=None, fmt=".6g"):
+def matrix_display(
+    ax,
+    values,
+    x,
+    y,
+    width,
+    height,
+    rows=None,
+    cols=None,
+    fmt=".6g",
+    size=12,
+    colors=(BLUE, GRAY),
+    lw=1.3,
+):
     """Draw an actual numeric matrix, with conventional row-to-column orientation."""
     nr, nc = values.shape
     cw, ch = width / nc, height / nr
@@ -89,15 +102,15 @@ def matrix_display(ax, values, x, y, width, height, rows=None, cols=None, fmt=".
                 format(values[i, j], fmt),
                 ha="center",
                 va="center",
-                fontsize=12,
-                color=BLUE if values[i, j] else GRAY,
+                fontsize=size,
+                color=colors[0] if values[i, j] else colors[1],
             )
     for bx, inward in ((x, 0.015), (x + width, -0.015)):
         ax.plot(
             [bx + inward, bx, bx, bx + inward],
             [y, y, y - height, y - height],
             color=INK,
-            lw=1.3,
+            lw=lw,
         )
     if rows:
         for i, name in enumerate(rows):
@@ -107,7 +120,7 @@ def matrix_display(ax, values, x, y, width, height, rows=None, cols=None, fmt=".
                 name,
                 ha="right",
                 va="center",
-                fontsize=12,
+                fontsize=size,
             )
     if cols:
         for j, name in enumerate(cols):
@@ -117,7 +130,7 @@ def matrix_display(ax, values, x, y, width, height, rows=None, cols=None, fmt=".
                 name,
                 ha="center",
                 va="bottom",
-                fontsize=12,
+                fontsize=size,
             )
 
 
@@ -270,6 +283,32 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
     save(fig, "single_cell_rules")
 
 
+# 期刊風格配色：Okabe–Ito 朱紅標示代表試驗，其他試驗用淺灰；向量場用低飽和連續色階。
+ACCENT, TRIAL_GRAY = "#D55E00", "#B8C0C6"
+JOURNAL_RC = {
+    "font.family": ["Arial", "DejaVu Sans"],
+    "mathtext.fontset": "custom",
+    "mathtext.rm": "Arial",
+    "mathtext.it": "Arial:italic",
+    "mathtext.bf": "Arial:bold",
+    "font.size": 7,
+    "axes.linewidth": 0.6,
+    "axes.labelsize": 7,
+    "axes.titlesize": 7.5,
+    "xtick.labelsize": 6.5,
+    "ytick.labelsize": 6.5,
+    "xtick.major.width": 0.6,
+    "ytick.major.width": 0.6,
+    "xtick.major.size": 2.5,
+    "ytick.major.size": 2.5,
+    "xtick.direction": "out",
+    "ytick.direction": "out",
+    "legend.fontsize": 6.5,
+    "svg.fonttype": "none",
+    "axes.unicode_minus": False,
+}
+
+
 # 實際模擬路徑（完整基因型模型）：未治療面板畫治療前那段，治療面板畫治療開始之後那段。
 def draw_paths(ax, trials, events, highlight, therapy_phase):
     """實際模擬路徑（完整基因型模型）：未治療面板畫治療前那段，治療面板畫治療開始之後那段。"""
@@ -279,18 +318,18 @@ def draw_paths(ax, trials, events, highlight, therapy_phase):
         xy = np.array([[r["sensitive"], r["resistant"]] for r in part]) / 1e4
         if rep == highlight:
             continue
-        ax.plot(*xy.T, color="#9AA7B0", lw=0.9, alpha=0.55, zorder=2)
+        ax.plot(*xy.T, color=TRIAL_GRAY, lw=0.5, alpha=0.8, zorder=2)
     start = events[highlight]["therapy_generation"]
     states = trials[highlight]
     part = states[: start + 1] if not therapy_phase else states[start:]
     xy = np.array([[r["sensitive"], r["resistant"]] for r in part]) / 1e4
-    ax.plot(*xy.T, color="#D9822B", lw=2.4, zorder=5)
-    ax.scatter(*xy.T, s=14, color="#D9822B", edgecolor="white", lw=0.5, zorder=6)
-    ax.scatter(*xy[0 if therapy_phase else -1], s=60, marker="D", color=INK, zorder=7)
+    ax.plot(*xy.T, color=ACCENT, lw=1.1, zorder=5)
+    ax.scatter(*xy.T, s=5, color=ACCENT, edgecolor="white", lw=0.3, zorder=6)
+    ax.scatter(*xy[0 if therapy_phase else -1], s=16, marker="D", color=INK, zorder=7)
 
 
 # 線性座標的一步期望向量場；兩面板共用倍率與色階，不做單支箭頭正規化。
-def draw_field(ax, field, scale, norm, title, show_ylabel=True):
+def draw_field(ax, field, scale, norm, title, subtitle, show_ylabel=True):
     """線性座標的一步期望向量場；兩面板共用倍率與色階，不做單支箭頭正規化。"""
     quiver = ax.quiver(
         field["x"],
@@ -302,177 +341,181 @@ def draw_field(ax, field, scale, norm, title, show_ylabel=True):
         scale_units="xy",
         scale=scale,
         pivot="tail",
-        cmap="viridis",
+        cmap="cividis",
         norm=norm,
-        width=0.0045,
-        headwidth=3.4,
-        headlength=4.4,
-        headaxislength=3.8,
+        width=0.006,
+        headwidth=3.2,
+        headlength=3.8,
+        headaxislength=3.4,
         minlength=0,
         minshaft=1,
     )
-    ax.scatter(0, 0, s=18, color=INK, zorder=4)
+    ax.scatter(0, 0, s=6, color=INK, zorder=4)
     ax.set_aspect("equal", adjustable="box")
     ax.set(xlim=(-0.08, 3.2), ylim=(-0.08, 3.2))
-    ax.set_xticks(np.arange(0, 3.1, 0.5))
-    ax.set_yticks(np.arange(0, 3.1, 0.5))
-    ax.set_xlabel(r"Sensitive cells $S$ ($\times10^4$)", fontsize=12)
+    ax.set_xticks(np.arange(0, 3.1, 1.0))
+    ax.set_yticks(np.arange(0, 3.1, 1.0))
+    ax.set_xticks(np.arange(0, 3.1, 0.5), minor=True)
+    ax.set_yticks(np.arange(0, 3.1, 0.5), minor=True)
+    ax.tick_params(which="minor", length=1.5, width=0.5)
+    ax.set_xlabel(r"Sensitive cells, $S$ ($\times10^4$)")
     if show_ylabel:
-        ax.set_ylabel(r"Resistant cells $R$ ($\times10^4$)", fontsize=12)
-    ax.grid(color="#E1E7EB", lw=0.65, alpha=0.75)
-    ax.set_axisbelow(True)
+        ax.set_ylabel(r"Resistant cells, $R$ ($\times10^4$)")
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
-    ax.set_title(title, loc="left", fontsize=13, weight="bold", color=INK, pad=10)
+    ax.spines["left"].set_position(("outward", 3))
+    ax.spines["bottom"].set_position(("outward", 3))
+    ax.set_title(title, loc="left", fontsize=7.5, weight="bold", color=INK, pad=12)
+    ax.text(0, 1.02, subtitle, transform=ax.transAxes, fontsize=6.5, color=GRAY)
     return quiver
 
 
-# M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。
+# M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。期刊風格：雙欄寬、7 pt 字。
 def matrices_to_flow_figure(
     config, qmatrix, before, during, fields, trials, events, highlight
 ):
-    """M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。"""
+    """M 矩陣（數字）與向量場（形狀）放同一頁；附條件期望公式。期刊風格：雙欄寬、7 pt 字。"""
+    with plt.rc_context(JOURNAL_RC):
+        _matrices_to_flow(config, qmatrix, before, during, fields, trials, events, highlight)
+
+
+def _matrices_to_flow(config, qmatrix, before, during, fields, trials, events, highlight):
     scale = 9.0  # 11×11 網格比原本 19×19 稀疏，箭頭可以畫長一點；兩面板共用。
-    fig = plt.figure(figsize=(17, 10.2))
+    fig = plt.figure(figsize=(7.2, 4.0))
     fig.text(
-        0.035,
-        0.965,
+        0.012,
+        0.975,
         "From the mean matrix M to the flow of the tumor",
-        fontsize=22,
+        fontsize=9,
         weight="bold",
         color=INK,
+        va="top",
     )
     fig.text(
-        0.035,
+        0.012,
         0.93,
         "Two-type reduction: sensitive (S) and resistant (R). The numbers on the left"
         " are the arrows on the right.",
-        fontsize=12,
+        fontsize=7,
         color=GRAY,
+        va="top",
     )
-    ax = fig.add_axes([0.035, 0.10, 0.34, 0.78])
-    panel(ax, "A", "Mutation and mean-offspring matrices")
-    label(
-        ax,
-        0.015,
-        0.90,
-        "Reduced slice: resistance bit only; other growth effects off.",
-        10,
-        color=GRAY,
-    )
-    label(ax, 0.015, 0.80, r"$Q=$", 17)
-    matrix_display(ax, qmatrix, 0.20, 0.81, 0.52, 0.12, ["S", "R"], ["S", "R"])
-    label(ax, 0.78, 0.79, r"$\mu=0.001$", 14)
-    label(ax, 0.015, 0.62, r"$M_{gh}=m_gQ_{gh}$", 15)
-    label(ax, 0.015, 0.52, r"$M_{\mathrm{off}}=$", 14)
-    matrix_display(ax, before, 0.25, 0.52, 0.70, 0.085, fmt=".7g")
-    label(ax, 0.015, 0.40, r"$M_{\mathrm{on}}=$", 14)
-    matrix_display(ax, during, 0.25, 0.40, 0.70, 0.085, fmt=".7g")
-    label(
-        ax, 0.015, 0.26, r"$\mathrm{E}[S_{t+1}\mid s]=(1-\mu)\,B_S(s)$", 15, color=BLUE
-    )
-    label(
-        ax,
-        0.015,
-        0.19,
-        r"$\mathrm{E}[R_{t+1}\mid s]=B_R(s)+\mu\,B_S(s)$",
-        15,
-        color=BLUE,
-    )
-    label(
-        ax,
-        0.015,
-        0.12,
-        r"$B_S=\sum_{g\in\mathcal{S}}n_gm_g,\quad B_R=\sum_{g\in\mathcal{R}}n_gm_g$",
-        14,
-        color=BLUE,
-    )
-    label(
-        ax,
-        0.015,
-        0.045,
+    letter = dict(fontsize=9, weight="bold", color=INK, va="bottom")
+
+    # a：矩陣與條件期望。
+    ax = fig.add_axes([0.012, 0.22, 0.30, 0.62])
+    ax.set(xlim=(0, 1), ylim=(0, 1))
+    ax.axis("off")
+    ax.text(0, 1.0, "a", **letter)
+    ax.text(0.07, 1.0, "Mutation and mean-offspring matrices", fontsize=7.5,
+            weight="bold", color=INK, va="bottom")
+    ax.text(0.0, 0.93, "Reduced slice: resistance bit only; other growth effects off.",
+            fontsize=6.3, color=GRAY, va="top")
+    mat = dict(size=7, colors=(INK, "#9AA3AA"), lw=0.7)
+    ax.text(0.0, 0.73, r"$Q=$", fontsize=8.5, va="center")
+    matrix_display(ax, qmatrix, 0.22, 0.79, 0.42, 0.12, ["S", "R"], ["S", "R"], **mat)
+    ax.text(0.72, 0.73, r"$\mu=0.001$", fontsize=7.5, va="center")
+    ax.text(0.0, 0.56, r"$M_{gh}=m_g\,Q_{gh}$", fontsize=8, va="center")
+    ax.text(0.0, 0.445, r"$M_{\mathrm{off}}=$", fontsize=8, va="center")
+    matrix_display(ax, before, 0.25, 0.49, 0.66, 0.09, fmt=".7g", **mat)
+    ax.text(0.0, 0.315, r"$M_{\mathrm{on}}=$", fontsize=8, va="center")
+    matrix_display(ax, during, 0.25, 0.36, 0.66, 0.09, fmt=".7g", **mat)
+    ax.plot([0, 0.95], [0.235, 0.235], color="#D5DBDF", lw=0.5)
+    for y, text in (
+        (0.18, r"$\mathrm{E}[S_{t+1}\mid s]=(1-\mu)\,B_S(s)$"),
+        (0.10, r"$\mathrm{E}[R_{t+1}\mid s]=B_R(s)+\mu\,B_S(s)$"),
+        (0.02, r"$B_S=\sum_{g\in\mathcal{S}}n_gm_g,\quad B_R=\sum_{g\in\mathcal{R}}n_gm_g$"),
+    ):
+        ax.text(0.0, y, text, fontsize=7.5, va="center", color=INK)
+    fig.text(
+        0.012,
+        0.16,
         "Full model: m_g uses each genotype's own d, q and therapy kill.\n"
         "M is NOT a probability matrix; row sums are m.",
-        10.5,
+        fontsize=6.3,
         color=GRAY,
+        va="top",
     )
 
+    # b、c：向量場與實際軌跡，共用倍率與色階。
     axes = [
-        fig.add_axes([0.42, 0.30, 0.24, 0.52]),
-        fig.add_axes([0.69, 0.30, 0.24, 0.52]),
+        fig.add_axes([0.375, 0.30, 0.25, 0.45]),
+        fig.add_axes([0.655, 0.30, 0.25, 0.45]),
     ]
-    color_ax = fig.add_axes([0.945, 0.35, 0.009, 0.42])
+    color_ax = fig.add_axes([0.925, 0.34, 0.007, 0.36])
     norm = Normalize(0, max(np.max(f["magnitude_cells"]) for f in fields))
     quivers = []
     for i, (axis, field) in enumerate(zip(axes, fields)):
         m_s, m_r = np.sum(field["matrix"][0]), np.sum(field["matrix"][1])
-        title = (
-            "B  No therapy" if i == 0 else "C  Continuous therapy"
-        ) + f"\nm_S = {m_s:.4g}, m_R = {m_r:.4g}"
-        quivers.append(draw_field(axis, field, scale, norm, title, show_ylabel=i == 0))
+        title = "No therapy" if i == 0 else "Continuous therapy"
+        subtitle = rf"$m_S={m_s:.4g},\ m_R={m_r:.4g}$"
+        quivers.append(
+            draw_field(axis, field, scale, norm, title, subtitle, show_ylabel=i == 0)
+        )
         draw_paths(axis, trials, events, highlight, therapy_phase=i == 1)
+        axis.text(-0.17, 1.1, "bc"[i], transform=axis.transAxes, **letter)
         a, b, c = (
             field["matrix"][0, 0] - 1,
             field["matrix"][0, 1],
             field["matrix"][1, 1] - 1,
         )
-        fig.text(
-            0.42 + 0.27 * i,
-            0.245,
+        axis.text(
+            0.0,
+            -0.30,
             rf"$\Delta S={a:.4g}\,S$" + "\n" + rf"$\Delta R={b:.4g}\,S+{c:.4g}\,R$",
-            fontsize=13.5,
-            color=BLUE,
+            transform=axis.transAxes,
+            fontsize=7,
+            color=INK,
             va="top",
+            linespacing=1.5,
         )
     bar = fig.colorbar(quivers[0], cax=color_ax)
-    bar.set_label(r"$\|\Delta\|$ (cells / generation)", fontsize=11)
-    bar.ax.ticklabel_format(style="sci", scilimits=(4, 4))
-    bar.ax.tick_params(labelsize=9)
+    bar.set_label(r"$\|\Delta\|$ ($10^4$ cells / generation)", fontsize=6.5)
+    bar.ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v / 1e4:g}"))
+    bar.ax.tick_params(labelsize=6, width=0.5, length=2)
+    bar.outline.set_linewidth(0.5)
     axes[0].quiverkey(
         quivers[0],
-        X=0.43,
-        Y=0.135,
+        X=0.375,
+        Y=0.075,
         U=1,
         label=f"{CELL_UNIT:,} cells / generation",
         labelpos="E",
         coordinates="figure",
-        fontproperties={"size": 11},
-        color=BLUE,
+        fontproperties={"size": 6.5},
+        color=INK,
     )
-    axes[1].legend(
+    fig.legend(
         handles=[
+            Line2D([], [], color=TRIAL_GRAY, lw=0.8, label=f"{len(trials)} simulated trials"),
             Line2D(
-                [], [], color="#9AA7B0", lw=1.2, label=f"{len(trials)} simulated trials"
-            ),
-            Line2D(
-                [],
-                [],
-                color="#D9822B",
-                lw=2.4,
-                marker="o",
-                ms=4,
+                [], [], color=ACCENT, lw=1.1, marker="o", ms=2.5,
                 label=f"Trial {highlight} (one dot per generation)",
             ),
-            Line2D([], [], color=INK, marker="D", lw=0, label="Therapy starts"),
+            Line2D([], [], color=INK, marker="D", ms=3, lw=0, label="Therapy starts"),
         ],
-        loc="upper left",
-        bbox_to_anchor=(0.69, 0.19),
-        bbox_transform=fig.transFigure,
-        fontsize=10,
+        loc="center left",
+        bbox_to_anchor=(0.53, 0.075),
+        ncol=3,
+        columnspacing=1.4,
         frameon=False,
+        handlelength=1.8,
+        labelspacing=0.3,
     )
     fig.text(
-        0.42,
-        0.07,
+        0.012,
+        -0.005,
         "Arrows = one-generation expected change E[(S',R') | s] − (S,R) on the baseline"
         " slice; shared length scale. Lines = actual trials of the full model (with"
-        " oncogenes):\nB shows each trial before therapy, C from therapy start on."
+        " oncogenes):\nb shows each trial before therapy, c from therapy start on."
         " Trials run along the arrows: rightward before therapy, then left to S = 0 and"
         " up the R axis (beyond the plotted range).\nOn linear axes the paths hug the"
         " edges because R stays below a few hundred cells before therapy; phase"
         " portrait 01 shows the same paths in log coordinates.",
-        fontsize=10.5,
+        fontsize=5.8,
         color=GRAY,
+        va="top",
+        linespacing=1.4,
     )
     assert quivers[0].scale == quivers[1].scale
     save(fig, "matrices_to_flow")
