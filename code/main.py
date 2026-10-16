@@ -217,9 +217,12 @@ def run_phase(args):
     result, steps, summary = exp.phase_portrait_data(config, trials, events, rep)
     exp.write_csv(out / "conditional_phase_steps.csv", steps)
     exp.write_json(out / "phase_summary.json", summary)
-    plot_style.set_phase_style()
-    figure = plot_phase.plot_phase_portrait(trials, events, rep, config, result, steps)
-    plot_phase.save_phase_figure(figure, out, "phase_portrait")
+    for lang in plot_style.LANGS:
+        plot_style.set_style(lang)
+        figure = plot_phase.plot_phase_portrait(
+            trials, events, rep, config, result, steps, lang
+        )
+        plot_style.save_lang(figure, out, "phase_portrait", lang)
 
     # 向量場資料（矩陣與流向圖使用同一組公式）。
     # Vector-field data (the matrix and flow figure uses the same formulas).

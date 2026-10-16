@@ -163,7 +163,7 @@ These are not in the final report but their figures and data are in `output/`:
 
 **S–R phase portrait**
 
-![S–R phase portrait](output/plots/phase_plots/phase_portrait.png)
+![S–R phase portrait](output/plots/phase_plots/phase_portrait_en.png)
 
 **Fitness × resistant-fraction field**
 

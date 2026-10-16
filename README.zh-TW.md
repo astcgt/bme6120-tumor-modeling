@@ -163,7 +163,7 @@ python3 -m venv .venv
 
 **S–R 相圖**
 
-![S–R 相圖](output/plots/phase_plots/phase_portrait.png)
+![S–R 相圖](output/plots/phase_plots/phase_portrait_zh.png)
 
 **適應度 × 抗藥比例相場**
 

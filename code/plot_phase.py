@@ -15,12 +15,115 @@ from matplotlib.patches import FancyArrowPatch
 import numpy as np
 
 from analysis import event_generations, logit_rho
-from paths import plots_for
 
 INK, BLUE, ORANGE, RED, GRAY = "#173042", "#236B8E", "#BC7844", "#A74F3D", "#687783"
 
 
 # ---------------------------------------------------------------- 實際軌跡相圖 / Actual-trajectory phase plot ------
+# 實際軌跡相圖的雙語文字；事件鍵沿用 analysis.event_generations 的中文鍵。
+# Bilingual text for the actual-trajectory phase plot; event keys follow analysis.event_generations' Chinese keys.
+PORTRAIT_TEXT = {
+    "zh": {
+        "title": "相平面：負荷下降不等於抗藥消失",
+        "subtitle": (
+            "{n} 次試驗的實際軌跡；突出案例 replicate {rep}（seed = {seed}）。\n"
+            "黑色箭頭＝由當代完整基因型組成算出的期望下一代位置。"
+        ),
+        "threshold": "（治療門檻）",
+        "events": {
+            "初始": "初始",
+            "治療啟動": "治療啟動",
+            "負荷谷底": "負荷谷底",
+            "首次復發": "首次復發",
+        },
+        "axis": "敏感 × 抗藥細胞（log 座標）",
+        "xlabel": "敏感細胞",
+        "ylabel": "抗藥細胞",
+        "legend": (
+            "全部 {n} 次試驗",
+            "治療前",
+            "治療至首次復發",
+            "復發後",
+            "期望下一代",
+        ),
+        "read": "讀圖",
+        "notes": (
+            "治療前：$S$、$R$ 一起長，\n路徑往右上。",
+            "治療後：$S$ 每代少約一個數量級，\n路徑幾乎水平往左。",
+            "$S$ 歸零後：沿縱軸直直往上，\n純抗藥族群在生長。",
+        ),
+        "never": "抗藥細胞在治療中從未減少",
+        "rcount": "治療起點 $R = {r0}$\n谷底 $R = {r1}$（占 ${pct:.1f}\\%$）",
+        "state": "{title}，$t = {g}$\n$(S, R) = ({s},\\ {r})$",
+        "next": "期望下一代 $({es},\\ {er})$\n實際下一代 $({os},\\ {or_})$",
+        "formula": (
+            "箭頭端點 $= \\phi(\\mathrm{E}[S_{t+1} \\mid s],\\ \\mathrm{E}[R_{t+1} \\mid s])$，"
+            "其中 $\\phi(S, R) = (\\log_{10}(S+1),\\ \\log_{10}(R+1))$。\n"
+            "公式推導見矩陣流向圖（matrices_to_flow）。"
+        ),
+        "foot": (
+            "族群越小，實際下一步偏離期望越多（人口學隨機性）。\n"
+            "座標含 $+1$，因此零細胞可顯示；空心終點是計算上限，不是平衡點。\n"
+            "相同 $(S, R)$ 底下的 driver／TSG 組成可能不同，"
+            "因此這是完整狀態的投影，不是封閉的二維向量場。"
+        ),
+    },
+    "en": {
+        "title": "Phase plane: falling burden does not mean resistance is gone",
+        "subtitle": (
+            "Actual paths of {n} trials; highlighted replicate {rep} (seed = {seed}).\n"
+            "Black arrows = expected next-generation position from the full genotype"
+            " composition."
+        ),
+        "threshold": " (therapy threshold)",
+        "events": {
+            "初始": "Start",
+            "治療啟動": "Therapy start",
+            "負荷谷底": "Burden nadir",
+            "首次復發": "First relapse",
+        },
+        "axis": "Sensitive × resistant cells (log scale)",
+        "xlabel": "Sensitive cells",
+        "ylabel": "Resistant cells",
+        "legend": (
+            "All {n} trials",
+            "Before therapy",
+            "Therapy to first relapse",
+            "After relapse",
+            "Expected next generation",
+        ),
+        "read": "How to read",
+        "notes": (
+            "Before therapy: $S$ and $R$ grow together;\nthe path heads up and right.",
+            "On therapy: $S$ falls about 10× per\ngeneration; the path runs almost\nstraight left.",
+            "After $S$ reaches 0: the path climbs\nthe vertical axis — pure resistant\ngrowth.",
+        ),
+        "never": "Resistant cells never fell during therapy",
+        "rcount": "At therapy start: $R = {r0}$\nAt the nadir: $R = {r1}$ (${pct:.1f}\\%$ of cells)",
+        "state": "{title}, $t = {g}$\n$(S, R) = ({s},\\ {r})$",
+        "next": "Expected next: $({es},\\ {er})$\nActual next: $({os},\\ {or_})$",
+        "formula": (
+            "Arrow head $= \\phi(\\mathrm{E}[S_{t+1} \\mid s],\\ \\mathrm{E}[R_{t+1} \\mid s])$,"
+            " where $\\phi(S, R) = (\\log_{10}(S+1),\\ \\log_{10}(R+1))$.\n"
+            "Derivation: see the matrix-to-flow figure (matrices_to_flow)."
+        ),
+        "foot": (
+            "Smaller populations stray further from the expected step (demographic noise).\n"
+            "Coordinates add $+1$ so zero cells can be shown; the hollow end point is the"
+            " computational cap, not an equilibrium.\n"
+            "Points with the same $(S, R)$ can differ in driver / TSG makeup, so this is a"
+            " projection of the full state, not a closed 2-D vector field."
+        ),
+    },
+}
+
+
+# 數字轉成 mathtext：千分位逗號加大括號，避免被當成標點後的空白。
+# Number for mathtext: braces around thousands commas so they are not spaced as punctuation.
+def math_number(value, digits=0):
+    return f"{value:,.{digits}f}".replace(",", "{,}")
+
+
 # 將逐代計數轉為敏感與抗藥對數座標，或總負荷對數與抗藥百分比座標。
 # Turn per-generation counts into log sensitive/resistant coordinates, or log total burden and resistant percentage.
 def phase_coordinates(states, composition=False):
@@ -40,7 +143,7 @@ def phase_coordinates(states, composition=False):
 
 # 依相座標種類設定標題、網格、軸標籤及抗藥比例的顯示範圍。
 # Set title, grid, axis labels and the resistant-fraction display range for the chosen coordinates.
-def decorate_axis(ax, title, composition=False):
+def decorate_axis(ax, title, composition=False, labels=("敏感細胞", "抗藥細胞")):
     ax.set_title(title, loc="left", fontsize=17, weight="bold", pad=16)
     ax.grid(color="#DDE4E8", alpha=0.6, linewidth=0.7)
     ax.set_axisbelow(True)
@@ -49,8 +152,8 @@ def decorate_axis(ax, title, composition=False):
         ax.set_ylabel(r"抗藥比例 $100R/T$（%）", labelpad=12)
         ax.set_ylim(-4, 107)
     else:
-        ax.set_xlabel(r"敏感細胞 $\log_{10}(S+1)$", labelpad=12)
-        ax.set_ylabel(r"抗藥細胞 $\log_{10}(R+1)$", labelpad=12)
+        ax.set_xlabel(labels[0] + r" $\log_{10}(S+1)$", labelpad=12)
+        ax.set_ylabel(labels[1] + r" $\log_{10}(R+1)$", labelpad=12)
         ax.set_xlim(-0.16, 4.85)
         ax.set_ylim(-0.18, 6.55)
 
@@ -76,7 +179,7 @@ def arrow(ax, a, b, color, size=12, linewidth=2, zorder=6):
 
 # 繪製實際試驗軌跡，突出代表案例並疊加由完整基因型算出的下一代期望箭頭。
 # Draw the actual trial paths, highlight the representative case, and overlay expected next-generation arrows from the full genotypes.
-def plot_phase_portrait(trials, events, replicate, config, result, steps):
+def plot_phase_portrait(trials, events, replicate, config, result, steps, lang="zh"):
     """單一相平面：30 條實際軌跡、突出案例，以及由完整基因型狀態算出的期望下一代箭頭。
 
     取代舊的 01（軌跡兩格）與 02（條件期望）：同一試驗、同一座標不再畫兩次。
@@ -87,27 +190,21 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
     Replaces the old 01 (two trajectory panels) and 02 (conditional expectation): the same trial is no longer drawn twice in the same coordinates.
     For burden × resistant fraction see phase_field_burden_logit (logit axis); the derivation is in matrices_to_flow.
     """
-    fig = plt.figure(figsize=(15.5, 10.2))
-    ax = fig.add_axes((0.07, 0.2, 0.5, 0.58))
-    side = fig.add_axes((0.62, 0.2, 0.35, 0.58))
+    t = PORTRAIT_TEXT[lang]
+    fig = plt.figure(figsize=(16, 13))
+    ax = fig.add_axes((0.075, 0.25, 0.5, 0.5))
+    side = fig.add_axes((0.63, 0.25, 0.35, 0.56))
     side.axis("off")
-    fig.text(
-        0.055,
-        0.965,
-        "相平面：負荷下降不等於抗藥消失",
-        fontsize=25,
-        weight="bold",
-        va="top",
-    )
+    fig.text(0.055, 0.975, t["title"], fontsize=26, weight="bold", va="top")
     event, states = events[replicate], trials[replicate]
     fig.text(
         0.055,
-        0.912,
-        f"{len(trials)} 次試驗的實際軌跡；突出案例 replicate"
-        f" {replicate}（seed={event['seed']}）。"
-        "黑色箭頭＝由當代完整基因型組成算出的期望下一代位置。",
-        fontsize=13.5,
+        0.93,
+        t["subtitle"].format(n=len(trials), rep=replicate, seed=event["seed"]),
+        fontsize=15,
         color=GRAY,
+        va="top",
+        linespacing=1.5,
     )
     start, relapse = event["therapy_generation"], event["relapse_generation"]
     # fmt: off
@@ -155,11 +252,11 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
         alpha=0.7,
     )
     ax.text(
-        0.65,
-        4.37,
-        rf"$S+R={config.therapy_start_size:,}$（治療門檻）",
+        0.45,
+        4.4,
+        f"$S+R={math_number(config.therapy_start_size)}$" + t["threshold"],
         color=GRAY,
-        fontsize=11.5,
+        fontsize=13,
     )
     positions = {
         "初始": (2.75, 0.56),
@@ -180,126 +277,90 @@ def plot_phase_portrait(trials, events, replicate, config, result, steps):
             zorder=7,
         )
         ax.annotate(
-            f"{label}\n$t={g}$",
+            f"{t['events'][label]}\n$t={g}$",
             xy=xy[g],
             xytext=positions[label],
-            fontsize=11.5,
+            fontsize=13.5,
             ha="center",
             arrowprops={"arrowstyle": "-", "color": GRAY, "lw": 0.9},
             bbox={"facecolor": "white", "edgecolor": "none", "pad": 2},
             zorder=8,
         )
     ax.scatter(*xy[-1], s=50, facecolor="white", edgecolor=RED, linewidth=1.5, zorder=7)
-    decorate_axis(ax, "敏感 × 抗藥細胞（log 座標）")
+    decorate_axis(ax, t["axis"], labels=(t["xlabel"], t["ylabel"]))
+    ax.xaxis.label.set_size(15)
+    ax.yaxis.label.set_size(15)
+    ax.tick_params(labelsize=13)
     handles = [
-        Line2D([], [], color="#BCC7CE", lw=1, label=f"全部 {len(trials)} 次試驗"),
-        Line2D([], [], color=BLUE, lw=3, label="治療前"),
-        Line2D([], [], color=ORANGE, lw=3, label="治療至首次復發"),
-        Line2D([], [], color=RED, lw=3, label="復發後"),
-        Line2D([], [], color=INK, lw=1.5, marker=">", markersize=7, label="期望下一代"),
+        Line2D([], [], color="#BCC7CE", lw=1, label=t["legend"][0].format(n=len(trials))),
+        Line2D([], [], color=BLUE, lw=3, label=t["legend"][1]),
+        Line2D([], [], color=ORANGE, lw=3, label=t["legend"][2]),
+        Line2D([], [], color=RED, lw=3, label=t["legend"][3]),
+        Line2D(
+            [], [], color=INK, lw=1.5, marker=">", markersize=7, label=t["legend"][4]
+        ),
     ]
     fig.legend(
         handles=handles,
         loc="upper left",
-        bbox_to_anchor=(0.055, 0.875),
+        bbox_to_anchor=(0.055, 0.865),
         frameon=False,
-        ncol=5,
-        fontsize=12,
+        ncol=3,
+        fontsize=14,
     )
     # 右側：案例數字。期望與實際並列，說明大族群幾乎沒有偏差、小族群偏差變大。
     # Right side: case numbers. Expected and actual side by side show that large populations barely deviate and small ones deviate more.
-    y = 0.97
-    side.text(0, y, "讀圖", fontsize=16, weight="bold", va="top")
-    y -= 0.08
-    for text in (
-        "治療前：S、R 一起長，路徑往右上。",
-        "治療後：S 每代少約一個數量級，\n路徑幾乎水平往左。",
-        "S 歸零後：沿縱軸直直往上，\n純抗藥族群在生長。",
-    ):
-        side.text(0, y, text, fontsize=12.5, va="top")
-        y -= 0.035 + 0.05 * (1 + text.count("\n"))
+    line = 0.042  # 一行 14 pt 文字約占側欄高度的比例 / height of one 14 pt line in side-panel units
+
+    def block(y, text, gap=0.03, **style):
+        side.text(0, y, text, va="top", linespacing=1.35, **{"fontsize": 14, **style})
+        return y - line * (1 + text.count("\n")) - gap
+
+    y = block(1.0, t["read"], fontsize=17, weight="bold", gap=0.02)
+    for text in t["notes"]:
+        y = block(y, text)
     y -= 0.02
     if start is not None and "負荷谷底" in points:
         nadir = states[points["負荷谷底"]]
-        side.text(
-            0,
+        y = block(y, t["never"], fontsize=15, weight="bold", color=RED, gap=0.01)
+        y = block(
             y,
-            "抗藥細胞在治療中從未減少",
-            fontsize=14,
-            weight="bold",
-            va="top",
-            color=RED,
+            t["rcount"].format(
+                r0=math_number(states[start]["resistant"]),
+                r1=math_number(nadir["resistant"]),
+                pct=100 * nadir["resistant"] / nadir["total"],
+            ),
         )
-        y -= 0.065
-        side.text(
-            0,
-            y,
-            f"治療起點 R = {states[start]['resistant']:,}\n谷底 R ="
-            f" {nadir['resistant']:,}"
-            f"（占 {100*nadir['resistant']/nadir['total']:.1f}%）",
-            fontsize=12.5,
-            va="top",
-        )
-        y -= 0.14
     nadir_g = points.get("負荷谷底")
     for g, title in ((start, "治療啟動"), (nadir_g, "負荷谷底")):
         if g is not None and g < len(steps):
             row = steps[g]
-            side.text(
-                0,
+            y = block(
                 y,
-                f"{title} t={g}：(S, R) = ({row['sensitive']:,}, {row['resistant']:,})",
-                fontsize=12.5,
+                t["state"].format(
+                    title=t["events"][title],
+                    g=g,
+                    s=math_number(row["sensitive"]),
+                    r=math_number(row["resistant"]),
+                ),
                 weight="bold",
-                va="top",
+                gap=0.01,
             )
-            y -= 0.055
-            side.text(
-                0,
+            y = block(
                 y,
-                f"期望下一代 ({row['expected_sensitive']:,.1f},"
-                f" {row['expected_resistant']:,.1f})\n實際下一代"
-                f" ({row['observed_next_sensitive']:,},"
-                f" {row['observed_next_resistant']:,})",
-                fontsize=12,
-                va="top",
+                t["next"].format(
+                    es=math_number(row["expected_sensitive"], 1),
+                    er=math_number(row["expected_resistant"], 1),
+                    os=math_number(row["observed_next_sensitive"]),
+                    or_=math_number(row["observed_next_resistant"]),
+                ),
                 color=GRAY,
             )
-            y -= 0.12
+    fig.text(0.075, 0.165, t["formula"], fontsize=14.5, va="top", linespacing=1.6)
     fig.text(
-        0.07,
-        0.115,
-        r"箭頭端點 $=\phi(\mathrm{E}[S_{t+1}\mid s],\mathrm{E}[R_{t+1}\mid s])$，"
-        r"$\phi(S,R)=(\log_{10}(S+1),\log_{10}(R+1))$；公式推導見矩陣流向圖（matrices_to_flow）。",
-        fontsize=12.5,
-    )
-    fig.text(
-        0.07,
-        0.07,
-        "族群越小，實際下一步偏離期望越多（人口學隨機性）。座標含 +1，"
-        "因此零細胞可顯示；空心終點是計算上限，不是平衡點。",
-        fontsize=11.5,
-        color=GRAY,
-    )
-    fig.text(
-        0.07,
-        0.035,
-        "相同 (S, R) 底下的 driver／TSG 組成可能不同，因此這是完整狀態的投影，"
-        "不是封閉的二維向量場。",
-        fontsize=11.5,
-        color=GRAY,
+        0.075, 0.095, t["foot"], fontsize=13.5, color=GRAY, va="top", linespacing=1.5
     )
     return fig
-
-
-# 將相圖儲存為 300 dpi PNG 與 SVG，然後關閉圖形。
-# Save the phase plot as 300 dpi PNG and SVG, then close it.
-def save_phase_figure(fig, destination, name):
-    destination = plots_for(destination)
-    destination.mkdir(parents=True, exist_ok=True)
-    for extension in ("png", "svg"):
-        fig.savefig(destination / f"{name}.{extension}", dpi=300, facecolor="white")
-    plt.close(fig)
 
 
 # ---------------------------------------------------------------- 理論 vs 經驗相場 / Theory vs empirical phase fields --
