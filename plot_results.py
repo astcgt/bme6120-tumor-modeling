@@ -51,16 +51,16 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
         )
     axes[0].set(title="Population response", ylabel="Cells (symlog)")
     axes[0].set_yscale("symlog", linthresh=1)
-    # 治療起點因試驗而異，以淡色區間標示最早到最晚的啟動世代。
+    # 持續治療：從最早啟動的世代起一路到觀察結束都以淡色背景標示；起點因試驗而異。
     if starts:
         for ax in axes:
             ax.axvspan(
                 min(starts),
-                max(starts),
+                length - 1,
                 color=COLORS[1],
-                alpha=0.10,
+                alpha=0.07,
                 lw=0,
-                label=f"Therapy starts (gen {min(starts)}–{max(starts)})",
+                label=f"Continuous therapy (starts gen {min(starts)}–{max(starts)})",
             )
     axes[0].legend(frameon=False, fontsize=9)
     for ax in axes:
