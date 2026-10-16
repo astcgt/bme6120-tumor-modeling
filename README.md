@@ -126,7 +126,7 @@ The adaptive analysis uses three `Config` options that are off by default and le
 
 `.venv/bin/python main.py --only model` regenerates the publication-style 300 dpi PNG and vector SVG figures in `outputs/mathematical_model/`:
 
-- `single_cell_rules`: the offspring distribution of a mutation-free cell, the same rule as an exact five-state matrix (mutations and therapy disabled; the overflow state is imposed bookkeeping absorption, not biological saturation), and a table of d, q, offspring probabilities, mean offspring m with and without therapy, and the probability that one cell's lineage eventually dies out (smallest root of s = f(s)). A baseline resistant lineage survives therapy with probability 0.52; sensitive lineages under therapy always die out.
+- `single_cell_rules`: the offspring distribution of a mutation-free cell (with m = f′(1) and the lineage extinction probability s = f(s)), a glossary of every symbol, and a table of d, q, offspring probabilities and mean offspring m with and without therapy, whose column headers spell out what each variable means. A baseline resistant lineage survives therapy with probability 0.52; sensitive lineages under therapy always die out.
 - `matrices_to_flow`: the reduced sensitive/resistant mutation matrix Q and expected-offspring matrices M, the conditional-mean formulas E[S′ | s] and E[R′ | s], and beside them the linear S–R vector fields with therapy off and on (13×13 grid up to 30,000 cells, shared length scale). The 30 main-experiment trajectories are overlaid: the pre-therapy segment on the untreated panel and the segment from therapy start on the treated panel, with the representative trial highlighted. The actual paths follow the arrows even though the arrows use baseline cells only.
 - `markov_kernel_and_controller` (appendix): the full genotype-count Markov kernel written with probability-generating functions, and the execution state machine.
 
@@ -308,7 +308,7 @@ PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示�
 
 執行 `.venv/bin/python main.py --only model`，可在 `outputs/mathematical_model/` 重新生成論文風格的 300 dpi PNG 與向量 SVG：
 
-- `single_cell_rules`：未突變細胞的子代分布、同一規則寫成的精確五狀態矩陣（停用突變與治療；溢出狀態是人為設定的記帳吸收狀態，不是生物飽和），以及 d、q、子代機率、治療前後平均子代數 m 和單一細胞家系最終滅絕機率（s = f(s) 的最小根）的表格。基準抗藥細胞的家系在治療下有 0.52 的機率存活；敏感細胞家系在治療下必定滅絕。
+- `single_cell_rules`：未突變細胞的子代分布（含 m = f′(1) 與單一家系滅絕機率 s = f(s)）、每個符號的文字說明，以及 d、q、子代機率、治療前後平均子代數 m 的表格；表頭直接寫出每個變數的意義。基準抗藥細胞的家系在治療下有 0.52 的機率存活；敏感細胞家系在治療下必定滅絕。
 - `matrices_to_flow`：簡化的敏感／抗藥突變矩陣 Q、期望子代矩陣 M、條件期望公式 E[S′ | s] 與 E[R′ | s]，旁邊是治療關閉與持續治療的線性 S–R 向量場（13×13 網格至 30,000 細胞，共用長度比例）。疊上主實驗 30 次試驗的實際路徑：未治療面板畫治療前那段，治療面板畫治療開始之後那段，並突出代表試驗。雖然箭頭只用基準細胞計算，實際路徑仍順著箭頭走。
 - `markov_kernel_and_controller`（附錄）：以機率生成函數寫出的完整基因型計數 Markov 轉移核，以及程式執行狀態機。
 

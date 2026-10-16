@@ -151,9 +151,7 @@ def run_model():
     fields = analysis.linear_flow_fields(config)
     _, trials, events = exp.load_trials(exp.OUTPUTS)
     plot_style.set_model_style()
-    plot_model.single_cell_figure(
-        config, markov["P"], markov["law"], markov["phenotypes"]
-    )
+    plot_model.single_cell_figure(config, markov["law"], markov["phenotypes"])
     plot_model.matrices_to_flow_figure(
         config,
         markov["Q"],

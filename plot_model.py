@@ -147,9 +147,9 @@ def save(fig, name):
     plt.close(fig)
 
 
-# 一個細胞一代會怎樣：子代分布、有限計數鏈，以及四種代表性細胞的數字。
-def single_cell_figure(config, matrix, offspring, phenotypes):
-    """一個細胞一代會怎樣：子代分布、有限計數鏈，以及四種代表性細胞的數字。"""
+# 一個細胞一代會怎樣：子代分布、符號說明，以及四種代表性細胞的數字。
+def single_cell_figure(config, offspring, phenotypes):
+    """一個細胞一代會怎樣：子代分布、符號說明，以及四種代表性細胞的數字。"""
     fig = plt.figure(figsize=(15, 11.2))
     fig.text(
         0.04,
@@ -160,7 +160,7 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
         color=INK,
     )
 
-    ax = fig.add_axes([0.04, 0.52, 0.40, 0.36])
+    ax = fig.add_axes([0.04, 0.52, 0.44, 0.36])
     panel(ax, "A", "Offspring distribution of a mutation-free cell")
     label(ax, 0.015, 0.86, r"$d=0.30,\quad q=0.04,\quad\mathrm{no\ therapy}$", 14)
     node(ax, (0.16, 0.54), "1 parent", 0.23, 0.15)
@@ -177,53 +177,41 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
         15,
     )
 
-    ax = fig.add_axes([0.49, 0.52, 0.47, 0.36])
-    panel(ax, "B", "Same rule as a finite Markov matrix")
-    label(
-        ax,
-        0.015,
-        0.86,
-        r"$P_{ij}=[z^j]f(z)^i;\qquad \boldsymbol{\pi}_{t+1}=\boldsymbol{\pi}_tP$",
-        15,
-    )
-    labels = ["0", "1", "2", "3", r"$\dagger$"]
-    matrix_display(ax, matrix, 0.12, 0.65, 0.83, 0.47, labels, labels)
-    label(
-        ax,
-        0.015,
-        0.08,
-        r"$\dagger$: first entry into $N\geq4$; bookkeeping stop, not a carrying"
-        r" capacity.",
-        11,
-    )
-    # 標明 B 只是示範：只追蹤 0–3 個細胞的總數，不分基因型、不含突變。
-    label(
-        ax,
-        0.015,
-        0.14,
-        "Toy example: at most 3 cells; genotypes and mutation ignored.",
-        11,
-        weight="bold",
-    )
+    # B：符號說明，讓 A 與 C 的每個變數都有文字定義。
+    ax = fig.add_axes([0.52, 0.52, 0.44, 0.36])
+    panel(ax, "B", "What the symbols mean")
+    terms = [
+        (r"$d$", "death probability per generation (cell leaves no offspring)"),
+        (r"$q$", "probability that a surviving cell makes 3 daughters (else 2)"),
+        (r"$k$", "extra kill probability from therapy (sensitive 0.90, resistant 0.04)"),
+        (r"$P(n)$", "probability that one parent leaves n offspring"),
+        (r"$f(z)$", "offspring generating function; coefficient of $z^n$ = P(n)"),
+        (r"$m$", "mean offspring per cell = (1−d)(1−k)(2+q); m > 1 grows"),
+        (r"$s$", "probability that one cell's lineage eventually dies out"),
+    ]
+    for i, (sym, text) in enumerate(terms):
+        y = 0.84 - i * 0.12
+        label(ax, 0.02, y, sym, 14)
+        label(ax, 0.16, y - 0.005, text, 11.5, color=GRAY)
 
     ax = fig.add_axes([0.04, 0.09, 0.92, 0.34])
     panel(ax, "C", "Numbers that decide the outcome (default parameters)", gap=0.025)
     columns = [
         "Parent phenotype",
-        "d",
-        "q",
-        "P(0)",
-        "P(2)",
-        "P(3)",
-        "m: OFF",
-        "m: ON",
+        "d\ndeath prob.",
+        "q\nP(3 daughters\n| survives)",
+        "P(0)\nno offspring",
+        "P(2)\n2 daughters",
+        "P(3)\n3 daughters",
+        "m, no therapy\nmean offspring",
+        "m, on therapy\nmean offspring",
     ]
     # 滅絕機率不放進表格；只保留決定成長方向的 d、q、子代機率與 m。
     table = ax.table(
         cellText=[row[: len(columns)] for row in phenotypes],
         colLabels=columns,
-        colWidths=[0.24, 0.08, 0.08, 0.10, 0.10, 0.10, 0.15, 0.15],
-        bbox=[0, 0.22, 1, 0.66],
+        colWidths=[0.22, 0.09, 0.12, 0.10, 0.10, 0.10, 0.135, 0.135],
+        bbox=[0, 0.08, 1, 0.80],
         cellLoc="center",
     )
     table.auto_set_font_size(False)
@@ -234,7 +222,7 @@ def single_cell_figure(config, matrix, offspring, phenotypes):
         cell.set_text_props(color=INK)
         if r == 0:
             cell.set_facecolor("#E9EFF3")
-            cell.set_text_props(weight="bold")
+            cell.set_text_props(weight="bold", fontsize=10, linespacing=1.25)
         elif c in (6, 7):
             cell.set_text_props(
                 weight="bold",
