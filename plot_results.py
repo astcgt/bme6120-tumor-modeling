@@ -83,26 +83,23 @@ def plot_therapy_ensemble(trials: list[Result], summary: list[dict], output: Pat
 # 同樣 5,000 個細胞：死亡率越高越異質；B 顯示機制是需要更多代（更多分裂）才長到同樣大小。
 def plot_death_rate(
     shannon: dict,
-    generations: dict,
     config: Config,
     repeats: int,
     target: int,
     seed: int,
     output: Path,
 ):
-    """同樣 5,000 個細胞：死亡率越高越異質；B 顯示機制是需要更多代（更多分裂）才長到同樣大小。"""
+    """同樣 5,000 個細胞：死亡率越高越異質；x 軸標出每代淨成長，說明需要更多代才長到同樣大小。"""
     set_plot_style()
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5.8), layout="constrained")
+    fig, ax = plt.subplots(figsize=(9, 6), layout="constrained")
+    axes = [ax]
     fig.suptitle(
         "Higher cell turnover → more heterogeneity at the same tumor size",
-        fontsize=20,
+        fontsize=17,
         fontweight="bold",
     )
     deaths = list(shannon)
-    for ax, values, key in (
-        (axes[0], shannon, "shannon"),
-        (axes[1], generations, "generations"),
-    ):
+    for ax, values, key in ((axes[0], shannon, "shannon"),):
         for index, death in enumerate(deaths):
             data = values[death]
             if not data:
@@ -134,14 +131,9 @@ def plot_death_rate(
         f"{d:.2f}\n×{(1 - d) * (2 + config.triple_probability):.2f}/gen" for d in deaths
     ]
     axes[0].set(
-        title=f"A  Diversity in {target:,}-cell samples",
+        title=f"Diversity in {target:,}-cell samples",
         ylabel="Shannon diversity (natural log)",
     )
-    axes[1].set(
-        title=f"B  Generations needed to reach {target:,} cells",
-        ylabel="Generation first ≥ target",
-    )
-    axes[1].set_ylim(bottom=0)
     for ax in axes:
         ax.set(
             xticks=range(len(deaths)),

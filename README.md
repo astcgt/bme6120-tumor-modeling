@@ -58,7 +58,7 @@ The `outputs/` directory contains:
 | File | Purpose |
 | --- | --- |
 | `tumor_dashboard.png / .svg` | Ensemble burden, effective genotypes and resistant fraction under therapy; resistance present at therapy start is annotated |
-| `death_rate_heterogeneity.png / .svg` | Shannon diversity of 5,000-cell samples and generations needed to reach 5,000 cells at three death rates |
+| `death_rate_heterogeneity.png / .svg` | Shannon diversity of 5,000-cell samples at three death rates, with each death rate's net growth per generation on the x-axis |
 | `one_hit_vs_two_hit.png / .svg` | No-TSG-advantage control, one-hit and two-hit: linear growth, TSG-loss fraction, and trial burdens at generation 18 |
 | `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | Per-generation comparison data and endpoint medians |
 | `trajectory.csv` | Ensemble statistics per generation: n, mean, sample SD, median, p10, p90 |
@@ -69,7 +69,7 @@ The `outputs/` directory contains:
 
 PNG figures use 240 dpi; SVG figures scale without loss of quality. Growth curves use symlog to display zero, with an approximately logarithmic scale above 1. `suppressor_fraction` records cells meeting the selected TSG threshold; `suppressor_biallelic_fraction` records cells with both alleles lost at at least one TSG. `driver_fraction` continues to refer only to the oncogene threshold.
 
-Growth comparisons keep oncogene effects, mutation rates, and loci identical, varying only the TSG advantage: disabled (control), one-hit, or two-hit; all three appear in `one_hit_vs_two_hit`. By default, growth comparisons show the median and 10th–90th percentile interval across 30 trials. This describes variation across trials, not a confidence interval. Death-rate comparisons sample 5,000 cells without replacement from the first generation to cross 5,000 cells and calculate Shannon H; horizontal bars show medians. These are equal-sized **samples**, conditional on reaching the threshold, rather than whole tumors at an exactly matched size. Panel B of `death_rate_heterogeneity` plots the generation at which each trial first reached 5,000 cells (medians 8 / 14 / 26.5 at death 0.20 / 0.35 / 0.45): more generations mean more divisions and more accumulated mutations at the same size. Trials that do not reach the threshold are excluded but retained in the CSV; the plot reports how many trials reached it.
+Growth comparisons keep oncogene effects, mutation rates, and loci identical, varying only the TSG advantage: disabled (control), one-hit, or two-hit; all three appear in `one_hit_vs_two_hit`. By default, growth comparisons show the median and 10th–90th percentile interval across 30 trials. This describes variation across trials, not a confidence interval. Death-rate comparisons sample 5,000 cells without replacement from the first generation to cross 5,000 cells and calculate Shannon H; horizontal bars show medians. These are equal-sized **samples**, conditional on reaching the threshold, rather than whole tumors at an exactly matched size. The x-axis of `death_rate_heterogeneity` shows the net growth of a mutation-free cell (×1.63 / ×1.33 / ×1.12 per generation at death 0.20 / 0.35 / 0.45); trials took a median of 8 / 14 / 26.5 generations to first reach 5,000 cells (recorded in `comparisons.csv`): more generations mean more divisions and more accumulated mutations at the same size. Trials that do not reach the threshold are excluded but retained in the CSV; the plot reports how many trials reached it.
 
 ### Direct one-hit versus two-hit comparison
 
@@ -240,7 +240,7 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 | 檔案 | 用途 |
 | --- | --- |
 | `tumor_dashboard.png / .svg` | 治療下多次試驗的負荷、有效基因型數與抗藥比例；標示治療開始時已存在的抗藥細胞 |
-| `death_rate_heterogeneity.png / .svg` | 三種死亡率下 5,000 細胞樣本的 Shannon 多樣性，以及長到 5,000 細胞所需代數 |
+| `death_rate_heterogeneity.png / .svg` | 三種死亡率下 5,000 細胞樣本的 Shannon 多樣性，x 軸標出各死亡率的每代淨成長 |
 | `one_hit_vs_two_hit.png / .svg` | 無 TSG 優勢對照組、one-hit、two-hit：線性生長、TSG 達標比例與第 18 代各次試驗負荷 |
 | `one_hit_vs_two_hit.csv / one_hit_vs_two_hit_summary.csv` | 逐代比較資料與終點中位數 |
 | `trajectory.csv` | 多次試驗逐代統計：n、平均、樣本 SD、中位數、p10、p90 |
@@ -251,7 +251,7 @@ VS Code 可將 Python interpreter 選為此資料夾的 `.venv/bin/python`。套
 
 PNG 為 240 dpi；SVG 可無損縮放。生長曲線使用 symlog，0 可顯示，1 以上近似對數尺度。`suppressor_fraction` 記錄符合所選 TSG 門檻的細胞比例；`suppressor_biallelic_fraction` 記錄至少一個 TSG 雙等位基因失活的細胞比例。`driver_fraction` 仍只表示達到 oncogene 門檻的比例。
 
-生長比較固定 oncogene 效果、突變率與基因座，只改變 TSG 優勢條件：取消優勢（對照組）、一擊或兩擊，三者都畫在 `one_hit_vs_two_hit`。預設展示 30 次試驗的中位數及 10–90 百分位區間，這是試驗間變異，並不是信賴區間。死亡率比較使用各試驗首次跨過 5,000 細胞的世代，無放回取樣 5,000 細胞計算 Shannon H；圖上的橫線是中位數。此結果是在達門檻條件下的等大小**樣本**比較，並非精確命中該大小的完整腫瘤。`death_rate_heterogeneity` 的 B 面板畫出每次試驗首次達到 5,000 細胞的世代（死亡率 0.20／0.35／0.45 時中位數 8／14／26.5 代）：代數越多，分裂越多，同樣大小時累積的突變也越多。未達門檻者不納入，但會保留於 CSV 並顯示成功試驗數。
+生長比較固定 oncogene 效果、突變率與基因座，只改變 TSG 優勢條件：取消優勢（對照組）、一擊或兩擊，三者都畫在 `one_hit_vs_two_hit`。預設展示 30 次試驗的中位數及 10–90 百分位區間，這是試驗間變異，並不是信賴區間。死亡率比較使用各試驗首次跨過 5,000 細胞的世代，無放回取樣 5,000 細胞計算 Shannon H；圖上的橫線是中位數。此結果是在達門檻條件下的等大小**樣本**比較，並非精確命中該大小的完整腫瘤。`death_rate_heterogeneity` 的 x 軸標出無突變細胞的每代淨成長（死亡率 0.20／0.35／0.45 時為 ×1.63／×1.33／×1.12）；各試驗首次達到 5,000 細胞的世代中位數為 8／14／26.5 代（記錄於 `comparisons.csv`）：代數越多，分裂越多，同樣大小時累積的突變也越多。未達門檻者不納入，但會保留於 CSV 並顯示成功試驗數。
 
 ### One-hit 與 two-hit 直接比較
 
